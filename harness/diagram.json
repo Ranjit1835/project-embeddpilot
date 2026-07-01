@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "author": "EmbeddPilot",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "board-bmp180",
+      "id": "bmp",
+      "top": 0,
+      "left": 200,
+      "attrs": {
+        "temperature": "24",
+        "pressure": "101325"
+      }
+    }
+  ],
+  "connections": [
+    ["esp:TX",    "$serialMonitor:RX", "", []],
+    ["esp:RX",    "$serialMonitor:TX", "", []],
+    ["esp:GND.1", "bmp:GND", "black", ["v:20"]],
+    ["esp:3V3",   "bmp:VCC", "red",   ["v:10"]],
+    ["esp:21",    "bmp:SDA", "green", ["v:0"]],
+    ["esp:22",    "bmp:SCL", "blue",  ["v:-10"]]
+  ]
+}

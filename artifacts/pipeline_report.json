@@ -1,0 +1,44 @@
+{
+  "timestamp": "2026-07-01T06:18:54.324155+00:00",
+  "max_retries": 2,
+  "iterations": [
+    {
+      "attempt": 1,
+      "steps": {
+        "generate": "PASS",
+        "compile": "PASS",
+        "simulate": {
+          "passed": 5,
+          "failed": 0,
+          "complete": true,
+          "tests": [
+            {
+              "name": "test_i2c_init",
+              "status": "PASS"
+            },
+            {
+              "name": "test_chip_id",
+              "status": "PASS"
+            },
+            {
+              "name": "test_write_read_config",
+              "status": "PASS"
+            },
+            {
+              "name": "test_burst_read",
+              "status": "PASS"
+            },
+            {
+              "name": "test_soft_reset",
+              "status": "PASS"
+            }
+          ],
+          "failures": [],
+          "raw_output": "Wokwi CLI v0.26.1 (9d71b975b7eb)\nConnected to Wokwi Simulation API 1.0.0-20260628-gda8378d0\nStarting simulation...\nets Jul 29 2019 12:21:46\n\nrst:0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)\nconfigsip: 0, SPIWP:0xee\nclk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00\nmode:DIO, clock div:2\nload:0x3fff0030,len:1156\nload:0x40078000,len:11456\nho 0 tail 12 room 4\nload:0x40080400,len:2972\nentry 0x400805dc\n=== EmbeddPilot V1 Verification Harness ===\nTarget: ESP32 I2C0 + BMP180\n---\n[PASS] test_i2c_init\n  chip_id=0x55\n[PASS] test_chip_id\n  ctrl_meas=0x20\n[PASS] test_write_read_config\n  raw_temp=29028\n[PASS] test_burst_read\n  post-reset chip_id OK\n[PASS] test_soft_reset\n---\nHARNESS_COMPLETE\n\n\nExpected text found: \"HARNESS_COMPLETE\"\nTEST PASSED.\n"
+        }
+      },
+      "verdict": "PASS"
+    }
+  ],
+  "final_verdict": "PASS"
+}

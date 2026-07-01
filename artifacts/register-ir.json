@@ -1,0 +1,2229 @@
+{
+  "peripheral": "I2C0",
+  "base_address": "0x3FF53000",
+  "register_size_bits": 32,
+  "registers": [
+    {
+      "name": "I2C_SCL_LOW_PERIOD_REG",
+      "offset": "0x0000",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "Configures the low level width of the SCL clock.",
+      "fields": [
+        {
+          "name": "I2C_SCL_LOW_PERIOD",
+          "bit_offset": 0,
+          "width": 14,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Configures for how long SCL remains low in master mode, in APB clock cycles.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_CTR_REG",
+      "offset": "0x0004",
+      "size_bits": 32,
+      "reset_value": "0x00000003",
+      "description": "Transmission configuration register.",
+      "fields": [
+        {
+          "name": "I2C_SDA_FORCE_OUT",
+          "bit_offset": 0,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 1,
+          "description": "0: direct output; 1: open drain output.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_SCL_FORCE_OUT",
+          "bit_offset": 1,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 1,
+          "description": "0: direct output; 1: open drain output.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_SAMPLE_SCL_LEVEL",
+          "bit_offset": 2,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "1: sample SDA on SCL low level; 0: sample SDA on SCL high level.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_MS_MODE",
+          "bit_offset": 4,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Set to configure as I2C Master. Clear to configure as I2C Slave.",
+          "enum_values": {
+            "0": "Slave",
+            "1": "Master"
+          },
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TRANS_START",
+          "bit_offset": 5,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Set this bit to start sending the data in txfifo.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TX_LSB_FIRST",
+          "bit_offset": 6,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "1: send data from LSB; 0: send data from MSB.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_RX_LSB_FIRST",
+          "bit_offset": 7,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "1: receive data from LSB; 0: receive data from MSB.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_SR_REG",
+      "offset": "0x0008",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "Describes I2C work status.",
+      "fields": [
+        {
+          "name": "I2C_ACK_REC",
+          "bit_offset": 0,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Stores the value of the received ACK bit.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_SLAVE_RW",
+          "bit_offset": 1,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "In slave mode, 1: master reads from slave; 0: master writes to slave.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TIME_OUT",
+          "bit_offset": 2,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "When the I2C controller takes more than I2C_TIME_OUT clocks to receive a data bit, changes to 1.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_ARB_LOST",
+          "bit_offset": 3,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "When the I2C controller loses control of SCL line, changes to 1.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_BUS_BUSY",
+          "bit_offset": 4,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "1: I2C bus is busy transferring data; 0: I2C bus is idle.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_SLAVE_ADDRESSED",
+          "bit_offset": 5,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "High when configured as slave and address sent by master matches slave address.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_BYTE_TRANS",
+          "bit_offset": 6,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Changes to 1 when one byte is transferred.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_RXFIFO_CNT",
+          "bit_offset": 8,
+          "width": 6,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Amount of data needed to be sent.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TXFIFO_CNT",
+          "bit_offset": 18,
+          "width": 6,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Amount of received data in RAM.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_SCL_MAIN_STATE_LAST",
+          "bit_offset": 24,
+          "width": 3,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "States of I2C module state machine.",
+          "enum_values": {
+            "0": "Idle",
+            "1": "Address shift",
+            "2": "ACK address",
+            "3": "Rx data",
+            "4": "Tx data",
+            "5": "Send ACK",
+            "6": "Wait ACK"
+          },
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_SCL_STATE_LAST",
+          "bit_offset": 28,
+          "width": 3,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "States of the state machine used to produce SCL.",
+          "enum_values": {
+            "0": "Idle",
+            "1": "Start",
+            "2": "Negative edge",
+            "3": "Low",
+            "4": "Positive edge",
+            "5": "High",
+            "6": "Stop"
+          },
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_TO_REG",
+      "offset": "0x000c",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "Timeout control register.",
+      "fields": [
+        {
+          "name": "I2C_TIME_OUT_REG",
+          "bit_offset": 0,
+          "width": 20,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Timeout for receiving a data bit in APB clock cycles.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_SLAVE_ADDR_REG",
+      "offset": "0x0010",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "Configures the I2C slave address.",
+      "fields": [
+        {
+          "name": "I2C_SLAVE_ADDR",
+          "bit_offset": 0,
+          "width": 15,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When configured as I2C Slave, this field configures the slave address.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_SLAVE_ADDR_10BIT_EN",
+          "bit_offset": 31,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Enables slave 10-bit addressing mode in master mode.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_RXFIFO_ST_REG",
+      "offset": "0x0014",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "FIFO status register.",
+      "fields": [
+        {
+          "name": "I2C_RXFIFO_START_ADDR",
+          "bit_offset": 0,
+          "width": 5,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Offset address of the last received data, as described in nonfifo_rx_thres register.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_RXFIFO_END_ADDR",
+          "bit_offset": 5,
+          "width": 5,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Offset address of the last received data. Refreshes when RX_REC_FULL_INT or TRANS_COMPLETE_INT is generated.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TXFIFO_START_ADDR",
+          "bit_offset": 10,
+          "width": 5,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Offset address of the first sent data, as described in nonfifo_tx_thres register.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TXFIFO_END_ADDR",
+          "bit_offset": 15,
+          "width": 5,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Offset address of the last sent data. Refreshes when TX_SEND_EMPTY_INT or TRANS_COMPLETE_INT is generated.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_FIFO_CONF_REG",
+      "offset": "0x0018",
+      "size_bits": 32,
+      "reset_value": "0x01554000",
+      "description": "FIFO configuration register.",
+      "fields": [
+        {
+          "name": "I2C_RXFIFO_FULL_THRHD",
+          "bit_offset": 0,
+          "width": 5,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "RX FIFO threshold in non-FIFO mode. When RX FIFO count > this value, RXFIFO_FULL_INT_RAW is valid.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TXFIFO_EMPTY_THRHD",
+          "bit_offset": 5,
+          "width": 5,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "TX FIFO threshold in non-FIFO mode. When TX FIFO count > this value, TXFIFO_EMPTY_INT_RAW is valid.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_NONFIFO_EN",
+          "bit_offset": 10,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Set to enable APB nonfifo access.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_FIFO_ADDR_CFG_EN",
+          "bit_offset": 11,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When set, byte received after I2C address byte represents offset address in I2C Slave RAM.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_NONFIFO_RX_THRES",
+          "bit_offset": 14,
+          "width": 6,
+          "access": "RW",
+          "reset_value": 21,
+          "description": "When I2C receives more than this many bytes, rx_send_full_int_raw interrupt is generated.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_NONFIFO_TX_THRES",
+          "bit_offset": 20,
+          "width": 6,
+          "access": "RW",
+          "reset_value": 21,
+          "description": "When I2C sends more than this many bytes, tx_send_empty_int_raw interrupt is generated.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_INT_RAW_REG",
+      "offset": "0x0020",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "I2C interrupt raw register.",
+      "fields": [
+        {
+          "name": "I2C_RXFIFO_FULL_INT_RAW",
+          "bit_offset": 0,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Raw interrupt status bit for RX FIFO full threshold interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TXFIFO_EMPTY_INT_RAW",
+          "bit_offset": 1,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Raw interrupt status bit for TX FIFO empty threshold interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_RXFIFO_OVF_INT_RAW",
+          "bit_offset": 2,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Raw interrupt status bit for RX FIFO overflow interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_END_DETECT_INT_RAW",
+          "bit_offset": 3,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Raw interrupt status bit for END command detected interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_SLAVE_TRAN_COMP_INT_RAW",
+          "bit_offset": 4,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Raw interrupt status bit for Slave transaction complete interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_ARBITRATION_LOST_INT_RAW",
+          "bit_offset": 5,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Raw interrupt status bit for Arbitration lost interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_MASTER_TRAN_COMP_INT_RAW",
+          "bit_offset": 6,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Raw interrupt status bit for Master transaction complete interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TRANS_COMPLETE_INT_RAW",
+          "bit_offset": 7,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Raw interrupt status bit for Transaction complete interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TIME_OUT_INT_RAW",
+          "bit_offset": 8,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Raw interrupt status bit for Timeout interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TRANS_START_INT_RAW",
+          "bit_offset": 9,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Raw interrupt status bit for Transaction start interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_ACK_ERR_INT_RAW",
+          "bit_offset": 10,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Raw interrupt status bit for ACK error interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_RX_REC_FULL_INT_RAW",
+          "bit_offset": 11,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Raw interrupt status bit for RX receive full interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TX_SEND_EMPTY_INT_RAW",
+          "bit_offset": 12,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Raw interrupt status bit for TX send empty interrupt.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_INT_CLR_REG",
+      "offset": "0x0024",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "I2C interrupt clr register.",
+      "fields": [
+        {
+          "name": "I2C_RXFIFO_FULL_INT_CLR",
+          "bit_offset": 0,
+          "width": 1,
+          "access": "WO",
+          "reset_value": 0,
+          "description": "Set this bit to clear the RX FIFO full threshold interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TXFIFO_EMPTY_INT_CLR",
+          "bit_offset": 1,
+          "width": 1,
+          "access": "WO",
+          "reset_value": 0,
+          "description": "Set this bit to clear the TX FIFO empty threshold interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_RXFIFO_OVF_INT_CLR",
+          "bit_offset": 2,
+          "width": 1,
+          "access": "WO",
+          "reset_value": 0,
+          "description": "Set this bit to clear the RX FIFO overflow interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_END_DETECT_INT_CLR",
+          "bit_offset": 3,
+          "width": 1,
+          "access": "WO",
+          "reset_value": 0,
+          "description": "Set this bit to clear the END command detected interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_SLAVE_TRAN_COMP_INT_CLR",
+          "bit_offset": 4,
+          "width": 1,
+          "access": "WO",
+          "reset_value": 0,
+          "description": "Set this bit to clear the Slave transaction complete interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_ARBITRATION_LOST_INT_CLR",
+          "bit_offset": 5,
+          "width": 1,
+          "access": "WO",
+          "reset_value": 0,
+          "description": "Set this bit to clear the Arbitration lost interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_MASTER_TRAN_COMP_INT_CLR",
+          "bit_offset": 6,
+          "width": 1,
+          "access": "WO",
+          "reset_value": 0,
+          "description": "Set this bit to clear the Master transaction complete interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TRANS_COMPLETE_INT_CLR",
+          "bit_offset": 7,
+          "width": 1,
+          "access": "WO",
+          "reset_value": 0,
+          "description": "Set this bit to clear the Transaction complete interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TIME_OUT_INT_CLR",
+          "bit_offset": 8,
+          "width": 1,
+          "access": "WO",
+          "reset_value": 0,
+          "description": "Set this bit to clear the Timeout interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TRANS_START_INT_CLR",
+          "bit_offset": 9,
+          "width": 1,
+          "access": "WO",
+          "reset_value": 0,
+          "description": "Set this bit to clear the Transaction start interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_ACK_ERR_INT_CLR",
+          "bit_offset": 10,
+          "width": 1,
+          "access": "WO",
+          "reset_value": 0,
+          "description": "Set this bit to clear the ACK error interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_RX_REC_FULL_INT_CLR",
+          "bit_offset": 11,
+          "width": 1,
+          "access": "WO",
+          "reset_value": 0,
+          "description": "Set this bit to clear the RX receive full interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TX_SEND_EMPTY_INT_CLR",
+          "bit_offset": 12,
+          "width": 1,
+          "access": "WO",
+          "reset_value": 0,
+          "description": "Set this bit to clear the TX send empty interrupt.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_INT_ENA_REG",
+      "offset": "0x0028",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "I2C interrupt ena register.",
+      "fields": [
+        {
+          "name": "I2C_RXFIFO_FULL_INT_ENA",
+          "bit_offset": 0,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Interrupt enable bit for RX FIFO full threshold interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TXFIFO_EMPTY_INT_ENA",
+          "bit_offset": 1,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Interrupt enable bit for TX FIFO empty threshold interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_RXFIFO_OVF_INT_ENA",
+          "bit_offset": 2,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Interrupt enable bit for RX FIFO overflow interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_END_DETECT_INT_ENA",
+          "bit_offset": 3,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Interrupt enable bit for END command detected interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_SLAVE_TRAN_COMP_INT_ENA",
+          "bit_offset": 4,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Interrupt enable bit for Slave transaction complete interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_ARBITRATION_LOST_INT_ENA",
+          "bit_offset": 5,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Interrupt enable bit for Arbitration lost interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_MASTER_TRAN_COMP_INT_ENA",
+          "bit_offset": 6,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Interrupt enable bit for Master transaction complete interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TRANS_COMPLETE_INT_ENA",
+          "bit_offset": 7,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Interrupt enable bit for Transaction complete interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TIME_OUT_INT_ENA",
+          "bit_offset": 8,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Interrupt enable bit for Timeout interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TRANS_START_INT_ENA",
+          "bit_offset": 9,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Interrupt enable bit for Transaction start interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_ACK_ERR_INT_ENA",
+          "bit_offset": 10,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Interrupt enable bit for ACK error interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_RX_REC_FULL_INT_ENA",
+          "bit_offset": 11,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Interrupt enable bit for RX receive full interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TX_SEND_EMPTY_INT_ENA",
+          "bit_offset": 12,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Interrupt enable bit for TX send empty interrupt.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_INT_STATUS_REG",
+      "offset": "0x002c",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "I2C interrupt st register.",
+      "fields": [
+        {
+          "name": "I2C_RXFIFO_FULL_INT_ST",
+          "bit_offset": 0,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Masked interrupt status bit for RX FIFO full threshold interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TXFIFO_EMPTY_INT_ST",
+          "bit_offset": 1,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Masked interrupt status bit for TX FIFO empty threshold interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_RXFIFO_OVF_INT_ST",
+          "bit_offset": 2,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Masked interrupt status bit for RX FIFO overflow interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_END_DETECT_INT_ST",
+          "bit_offset": 3,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Masked interrupt status bit for END command detected interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_SLAVE_TRAN_COMP_INT_ST",
+          "bit_offset": 4,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Masked interrupt status bit for Slave transaction complete interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_ARBITRATION_LOST_INT_ST",
+          "bit_offset": 5,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Masked interrupt status bit for Arbitration lost interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_MASTER_TRAN_COMP_INT_ST",
+          "bit_offset": 6,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Masked interrupt status bit for Master transaction complete interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TRANS_COMPLETE_INT_ST",
+          "bit_offset": 7,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Masked interrupt status bit for Transaction complete interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TIME_OUT_INT_ST",
+          "bit_offset": 8,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Masked interrupt status bit for Timeout interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TRANS_START_INT_ST",
+          "bit_offset": 9,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Masked interrupt status bit for Transaction start interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_ACK_ERR_INT_ST",
+          "bit_offset": 10,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Masked interrupt status bit for ACK error interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_RX_REC_FULL_INT_ST",
+          "bit_offset": 11,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Masked interrupt status bit for RX receive full interrupt.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_TX_SEND_EMPTY_INT_ST",
+          "bit_offset": 12,
+          "width": 1,
+          "access": "RO",
+          "reset_value": 0,
+          "description": "Masked interrupt status bit for TX send empty interrupt.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_SDA_HOLD_REG",
+      "offset": "0x0030",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "Configures the hold time after a negative SCL edge.",
+      "fields": [
+        {
+          "name": "I2C_SDA_HOLD_TIME",
+          "bit_offset": 0,
+          "width": 10,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Time to hold data after the negative edge of SCL, in APB clock cycles.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_SDA_SAMPLE_REG",
+      "offset": "0x0034",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "Configures the sample time after a positive SCL edge.",
+      "fields": [
+        {
+          "name": "I2C_SDA_SAMPLE_TIME",
+          "bit_offset": 0,
+          "width": 10,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Time to sample SDA after the positive edge of SCL, in APB clock cycles.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_SCL_HIGH_PERIOD_REG",
+      "offset": "0x0038",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "Configures the high level width of the SCL clock.",
+      "fields": [
+        {
+          "name": "I2C_SCL_HIGH_PERIOD",
+          "bit_offset": 0,
+          "width": 14,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Configures for how long SCL remains high in master mode, in APB clock cycles.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_SCL_START_HOLD_REG",
+      "offset": "0x0040",
+      "size_bits": 32,
+      "reset_value": "0x00000008",
+      "description": "Configures the delay between the SDA and SCL negative edge for a start condition.",
+      "fields": [
+        {
+          "name": "I2C_SCL_START_HOLD_TIME",
+          "bit_offset": 0,
+          "width": 10,
+          "access": "RW",
+          "reset_value": 8,
+          "description": "Time between negative edge of SDA and negative edge of SCL for START condition, in APB clock cycles.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_SCL_RSTART_SETUP_REG",
+      "offset": "0x0044",
+      "size_bits": 32,
+      "reset_value": "0x00000008",
+      "description": "Configures the delay between the positive edge of SCL and the negative edge of SDA for a RESTART condition.",
+      "fields": [
+        {
+          "name": "I2C_SCL_RSTART_SETUP_TIME",
+          "bit_offset": 0,
+          "width": 10,
+          "access": "RW",
+          "reset_value": 8,
+          "description": "Time between positive edge of SCL and negative edge of SDA for RESTART condition, in APB clock cycles.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_SCL_STOP_HOLD_REG",
+      "offset": "0x0048",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "Configures the delay after the SCL clock edge for a stop condition.",
+      "fields": [
+        {
+          "name": "I2C_SCL_STOP_HOLD_TIME",
+          "bit_offset": 0,
+          "width": 14,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Delay after the STOP condition, in APB clock cycles.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_SCL_STOP_SETUP_REG",
+      "offset": "0x004c",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "Configures the delay between the SDA and SCL positive edge for a stop condition.",
+      "fields": [
+        {
+          "name": "I2C_SCL_STOP_SETUP_TIME",
+          "bit_offset": 0,
+          "width": 10,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Time between positive edge of SCL and positive edge of SDA, in APB clock cycles.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_SCL_FILTER_CFG_REG",
+      "offset": "0x0050",
+      "size_bits": 32,
+      "reset_value": "0x00000008",
+      "description": "SCL filter configuration register.",
+      "fields": [
+        {
+          "name": "I2C_SCL_FILTER_THRES",
+          "bit_offset": 0,
+          "width": 3,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Pulses on SCL shorter than this value in APB clock cycles are ignored.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_SCL_FILTER_EN",
+          "bit_offset": 3,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 1,
+          "description": "Filter enable bit for SCL.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_SDA_FILTER_CFG_REG",
+      "offset": "0x0054",
+      "size_bits": 32,
+      "reset_value": "0x00000008",
+      "description": "SDA filter configuration register.",
+      "fields": [
+        {
+          "name": "I2C_SDA_FILTER_THRES",
+          "bit_offset": 0,
+          "width": 3,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Pulses on SDA shorter than this value in APB clock cycles are ignored.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_SDA_FILTER_EN",
+          "bit_offset": 3,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 1,
+          "description": "Filter enable bit for SDA.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_COMD0_REG",
+      "offset": "0x0058",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "I2C command register 0.",
+      "fields": [
+        {
+          "name": "I2C_COMMAND0_BYTE_NUM",
+          "bit_offset": 0,
+          "width": 8,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Number of bytes to read or written. Max 255, min 1. Meaningless for RSTART/STOP/END.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND0_ACK_EN",
+          "bit_offset": 8,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Enable ACK value checking for transmitter. 1: enabled, 0: disabled.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND0_ACK_EXP",
+          "bit_offset": 9,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Expected ACK value for the transmitter.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND0_ACK_VAL",
+          "bit_offset": 10,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When receiving data, indicates whether receiver sends ACK after this byte.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND0_OP_CODE",
+          "bit_offset": 11,
+          "width": 3,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Command opcode.",
+          "enum_values": {
+            "0": "RSTART",
+            "1": "WRITE",
+            "2": "READ",
+            "3": "STOP",
+            "4": "END"
+          },
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND0_DONE",
+          "bit_offset": 31,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When command n is done in I2C Master mode, this bit changes to high level.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_COMD1_REG",
+      "offset": "0x005c",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "I2C command register 1.",
+      "fields": [
+        {
+          "name": "I2C_COMMAND1_BYTE_NUM",
+          "bit_offset": 0,
+          "width": 8,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Number of bytes to read or written. Max 255, min 1. Meaningless for RSTART/STOP/END.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND1_ACK_EN",
+          "bit_offset": 8,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Enable ACK value checking for transmitter. 1: enabled, 0: disabled.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND1_ACK_EXP",
+          "bit_offset": 9,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Expected ACK value for the transmitter.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND1_ACK_VAL",
+          "bit_offset": 10,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When receiving data, indicates whether receiver sends ACK after this byte.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND1_OP_CODE",
+          "bit_offset": 11,
+          "width": 3,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Command opcode.",
+          "enum_values": {
+            "0": "RSTART",
+            "1": "WRITE",
+            "2": "READ",
+            "3": "STOP",
+            "4": "END"
+          },
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND1_DONE",
+          "bit_offset": 31,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When command n is done in I2C Master mode, this bit changes to high level.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_COMD2_REG",
+      "offset": "0x0060",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "I2C command register 2.",
+      "fields": [
+        {
+          "name": "I2C_COMMAND2_BYTE_NUM",
+          "bit_offset": 0,
+          "width": 8,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Number of bytes to read or written. Max 255, min 1. Meaningless for RSTART/STOP/END.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND2_ACK_EN",
+          "bit_offset": 8,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Enable ACK value checking for transmitter. 1: enabled, 0: disabled.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND2_ACK_EXP",
+          "bit_offset": 9,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Expected ACK value for the transmitter.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND2_ACK_VAL",
+          "bit_offset": 10,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When receiving data, indicates whether receiver sends ACK after this byte.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND2_OP_CODE",
+          "bit_offset": 11,
+          "width": 3,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Command opcode.",
+          "enum_values": {
+            "0": "RSTART",
+            "1": "WRITE",
+            "2": "READ",
+            "3": "STOP",
+            "4": "END"
+          },
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND2_DONE",
+          "bit_offset": 31,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When command n is done in I2C Master mode, this bit changes to high level.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_COMD3_REG",
+      "offset": "0x0064",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "I2C command register 3.",
+      "fields": [
+        {
+          "name": "I2C_COMMAND3_BYTE_NUM",
+          "bit_offset": 0,
+          "width": 8,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Number of bytes to read or written. Max 255, min 1. Meaningless for RSTART/STOP/END.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND3_ACK_EN",
+          "bit_offset": 8,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Enable ACK value checking for transmitter. 1: enabled, 0: disabled.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND3_ACK_EXP",
+          "bit_offset": 9,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Expected ACK value for the transmitter.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND3_ACK_VAL",
+          "bit_offset": 10,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When receiving data, indicates whether receiver sends ACK after this byte.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND3_OP_CODE",
+          "bit_offset": 11,
+          "width": 3,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Command opcode.",
+          "enum_values": {
+            "0": "RSTART",
+            "1": "WRITE",
+            "2": "READ",
+            "3": "STOP",
+            "4": "END"
+          },
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND3_DONE",
+          "bit_offset": 31,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When command n is done in I2C Master mode, this bit changes to high level.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_COMD4_REG",
+      "offset": "0x0068",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "I2C command register 4.",
+      "fields": [
+        {
+          "name": "I2C_COMMAND4_BYTE_NUM",
+          "bit_offset": 0,
+          "width": 8,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Number of bytes to read or written. Max 255, min 1. Meaningless for RSTART/STOP/END.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND4_ACK_EN",
+          "bit_offset": 8,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Enable ACK value checking for transmitter. 1: enabled, 0: disabled.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND4_ACK_EXP",
+          "bit_offset": 9,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Expected ACK value for the transmitter.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND4_ACK_VAL",
+          "bit_offset": 10,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When receiving data, indicates whether receiver sends ACK after this byte.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND4_OP_CODE",
+          "bit_offset": 11,
+          "width": 3,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Command opcode.",
+          "enum_values": {
+            "0": "RSTART",
+            "1": "WRITE",
+            "2": "READ",
+            "3": "STOP",
+            "4": "END"
+          },
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND4_DONE",
+          "bit_offset": 31,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When command n is done in I2C Master mode, this bit changes to high level.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_COMD5_REG",
+      "offset": "0x006c",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "I2C command register 5.",
+      "fields": [
+        {
+          "name": "I2C_COMMAND5_BYTE_NUM",
+          "bit_offset": 0,
+          "width": 8,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Number of bytes to read or written. Max 255, min 1. Meaningless for RSTART/STOP/END.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND5_ACK_EN",
+          "bit_offset": 8,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Enable ACK value checking for transmitter. 1: enabled, 0: disabled.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND5_ACK_EXP",
+          "bit_offset": 9,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Expected ACK value for the transmitter.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND5_ACK_VAL",
+          "bit_offset": 10,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When receiving data, indicates whether receiver sends ACK after this byte.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND5_OP_CODE",
+          "bit_offset": 11,
+          "width": 3,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Command opcode.",
+          "enum_values": {
+            "0": "RSTART",
+            "1": "WRITE",
+            "2": "READ",
+            "3": "STOP",
+            "4": "END"
+          },
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND5_DONE",
+          "bit_offset": 31,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When command n is done in I2C Master mode, this bit changes to high level.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_COMD6_REG",
+      "offset": "0x0070",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "I2C command register 6.",
+      "fields": [
+        {
+          "name": "I2C_COMMAND6_BYTE_NUM",
+          "bit_offset": 0,
+          "width": 8,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Number of bytes to read or written. Max 255, min 1. Meaningless for RSTART/STOP/END.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND6_ACK_EN",
+          "bit_offset": 8,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Enable ACK value checking for transmitter. 1: enabled, 0: disabled.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND6_ACK_EXP",
+          "bit_offset": 9,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Expected ACK value for the transmitter.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND6_ACK_VAL",
+          "bit_offset": 10,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When receiving data, indicates whether receiver sends ACK after this byte.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND6_OP_CODE",
+          "bit_offset": 11,
+          "width": 3,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Command opcode.",
+          "enum_values": {
+            "0": "RSTART",
+            "1": "WRITE",
+            "2": "READ",
+            "3": "STOP",
+            "4": "END"
+          },
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND6_DONE",
+          "bit_offset": 31,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When command n is done in I2C Master mode, this bit changes to high level.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_COMD7_REG",
+      "offset": "0x0074",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "I2C command register 7.",
+      "fields": [
+        {
+          "name": "I2C_COMMAND7_BYTE_NUM",
+          "bit_offset": 0,
+          "width": 8,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Number of bytes to read or written. Max 255, min 1. Meaningless for RSTART/STOP/END.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND7_ACK_EN",
+          "bit_offset": 8,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Enable ACK value checking for transmitter. 1: enabled, 0: disabled.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND7_ACK_EXP",
+          "bit_offset": 9,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Expected ACK value for the transmitter.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND7_ACK_VAL",
+          "bit_offset": 10,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When receiving data, indicates whether receiver sends ACK after this byte.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND7_OP_CODE",
+          "bit_offset": 11,
+          "width": 3,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Command opcode.",
+          "enum_values": {
+            "0": "RSTART",
+            "1": "WRITE",
+            "2": "READ",
+            "3": "STOP",
+            "4": "END"
+          },
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND7_DONE",
+          "bit_offset": 31,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When command n is done in I2C Master mode, this bit changes to high level.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_COMD8_REG",
+      "offset": "0x0078",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "I2C command register 8.",
+      "fields": [
+        {
+          "name": "I2C_COMMAND8_BYTE_NUM",
+          "bit_offset": 0,
+          "width": 8,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Number of bytes to read or written. Max 255, min 1. Meaningless for RSTART/STOP/END.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND8_ACK_EN",
+          "bit_offset": 8,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Enable ACK value checking for transmitter. 1: enabled, 0: disabled.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND8_ACK_EXP",
+          "bit_offset": 9,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Expected ACK value for the transmitter.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND8_ACK_VAL",
+          "bit_offset": 10,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When receiving data, indicates whether receiver sends ACK after this byte.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND8_OP_CODE",
+          "bit_offset": 11,
+          "width": 3,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Command opcode.",
+          "enum_values": {
+            "0": "RSTART",
+            "1": "WRITE",
+            "2": "READ",
+            "3": "STOP",
+            "4": "END"
+          },
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND8_DONE",
+          "bit_offset": 31,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When command n is done in I2C Master mode, this bit changes to high level.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_COMD9_REG",
+      "offset": "0x007c",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "I2C command register 9.",
+      "fields": [
+        {
+          "name": "I2C_COMMAND9_BYTE_NUM",
+          "bit_offset": 0,
+          "width": 8,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Number of bytes to read or written. Max 255, min 1. Meaningless for RSTART/STOP/END.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND9_ACK_EN",
+          "bit_offset": 8,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Enable ACK value checking for transmitter. 1: enabled, 0: disabled.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND9_ACK_EXP",
+          "bit_offset": 9,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Expected ACK value for the transmitter.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND9_ACK_VAL",
+          "bit_offset": 10,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When receiving data, indicates whether receiver sends ACK after this byte.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND9_OP_CODE",
+          "bit_offset": 11,
+          "width": 3,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Command opcode.",
+          "enum_values": {
+            "0": "RSTART",
+            "1": "WRITE",
+            "2": "READ",
+            "3": "STOP",
+            "4": "END"
+          },
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND9_DONE",
+          "bit_offset": 31,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When command n is done in I2C Master mode, this bit changes to high level.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_COMD10_REG",
+      "offset": "0x0080",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "I2C command register 10.",
+      "fields": [
+        {
+          "name": "I2C_COMMAND10_BYTE_NUM",
+          "bit_offset": 0,
+          "width": 8,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Number of bytes to read or written. Max 255, min 1. Meaningless for RSTART/STOP/END.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND10_ACK_EN",
+          "bit_offset": 8,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Enable ACK value checking for transmitter. 1: enabled, 0: disabled.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND10_ACK_EXP",
+          "bit_offset": 9,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Expected ACK value for the transmitter.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND10_ACK_VAL",
+          "bit_offset": 10,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When receiving data, indicates whether receiver sends ACK after this byte.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND10_OP_CODE",
+          "bit_offset": 11,
+          "width": 3,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Command opcode.",
+          "enum_values": {
+            "0": "RSTART",
+            "1": "WRITE",
+            "2": "READ",
+            "3": "STOP",
+            "4": "END"
+          },
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND10_DONE",
+          "bit_offset": 31,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When command n is done in I2C Master mode, this bit changes to high level.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_COMD11_REG",
+      "offset": "0x0084",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "I2C command register 11.",
+      "fields": [
+        {
+          "name": "I2C_COMMAND11_BYTE_NUM",
+          "bit_offset": 0,
+          "width": 8,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Number of bytes to read or written. Max 255, min 1. Meaningless for RSTART/STOP/END.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND11_ACK_EN",
+          "bit_offset": 8,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Enable ACK value checking for transmitter. 1: enabled, 0: disabled.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND11_ACK_EXP",
+          "bit_offset": 9,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Expected ACK value for the transmitter.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND11_ACK_VAL",
+          "bit_offset": 10,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When receiving data, indicates whether receiver sends ACK after this byte.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND11_OP_CODE",
+          "bit_offset": 11,
+          "width": 3,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Command opcode.",
+          "enum_values": {
+            "0": "RSTART",
+            "1": "WRITE",
+            "2": "READ",
+            "3": "STOP",
+            "4": "END"
+          },
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND11_DONE",
+          "bit_offset": 31,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When command n is done in I2C Master mode, this bit changes to high level.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_COMD12_REG",
+      "offset": "0x0088",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "I2C command register 12.",
+      "fields": [
+        {
+          "name": "I2C_COMMAND12_BYTE_NUM",
+          "bit_offset": 0,
+          "width": 8,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Number of bytes to read or written. Max 255, min 1. Meaningless for RSTART/STOP/END.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND12_ACK_EN",
+          "bit_offset": 8,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Enable ACK value checking for transmitter. 1: enabled, 0: disabled.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND12_ACK_EXP",
+          "bit_offset": 9,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Expected ACK value for the transmitter.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND12_ACK_VAL",
+          "bit_offset": 10,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When receiving data, indicates whether receiver sends ACK after this byte.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND12_OP_CODE",
+          "bit_offset": 11,
+          "width": 3,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Command opcode.",
+          "enum_values": {
+            "0": "RSTART",
+            "1": "WRITE",
+            "2": "READ",
+            "3": "STOP",
+            "4": "END"
+          },
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND12_DONE",
+          "bit_offset": 31,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When command n is done in I2C Master mode, this bit changes to high level.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_COMD13_REG",
+      "offset": "0x008c",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "I2C command register 13.",
+      "fields": [
+        {
+          "name": "I2C_COMMAND13_BYTE_NUM",
+          "bit_offset": 0,
+          "width": 8,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Number of bytes to read or written. Max 255, min 1. Meaningless for RSTART/STOP/END.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND13_ACK_EN",
+          "bit_offset": 8,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Enable ACK value checking for transmitter. 1: enabled, 0: disabled.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND13_ACK_EXP",
+          "bit_offset": 9,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Expected ACK value for the transmitter.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND13_ACK_VAL",
+          "bit_offset": 10,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When receiving data, indicates whether receiver sends ACK after this byte.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND13_OP_CODE",
+          "bit_offset": 11,
+          "width": 3,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Command opcode.",
+          "enum_values": {
+            "0": "RSTART",
+            "1": "WRITE",
+            "2": "READ",
+            "3": "STOP",
+            "4": "END"
+          },
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND13_DONE",
+          "bit_offset": 31,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When command n is done in I2C Master mode, this bit changes to high level.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_COMD14_REG",
+      "offset": "0x0090",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "I2C command register 14.",
+      "fields": [
+        {
+          "name": "I2C_COMMAND14_BYTE_NUM",
+          "bit_offset": 0,
+          "width": 8,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Number of bytes to read or written. Max 255, min 1. Meaningless for RSTART/STOP/END.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND14_ACK_EN",
+          "bit_offset": 8,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Enable ACK value checking for transmitter. 1: enabled, 0: disabled.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND14_ACK_EXP",
+          "bit_offset": 9,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Expected ACK value for the transmitter.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND14_ACK_VAL",
+          "bit_offset": 10,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When receiving data, indicates whether receiver sends ACK after this byte.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND14_OP_CODE",
+          "bit_offset": 11,
+          "width": 3,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Command opcode.",
+          "enum_values": {
+            "0": "RSTART",
+            "1": "WRITE",
+            "2": "READ",
+            "3": "STOP",
+            "4": "END"
+          },
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND14_DONE",
+          "bit_offset": 31,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When command n is done in I2C Master mode, this bit changes to high level.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "I2C_COMD15_REG",
+      "offset": "0x0094",
+      "size_bits": 32,
+      "reset_value": "0x00000000",
+      "description": "I2C command register 15.",
+      "fields": [
+        {
+          "name": "I2C_COMMAND15_BYTE_NUM",
+          "bit_offset": 0,
+          "width": 8,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Number of bytes to read or written. Max 255, min 1. Meaningless for RSTART/STOP/END.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND15_ACK_EN",
+          "bit_offset": 8,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Enable ACK value checking for transmitter. 1: enabled, 0: disabled.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND15_ACK_EXP",
+          "bit_offset": 9,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Expected ACK value for the transmitter.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND15_ACK_VAL",
+          "bit_offset": 10,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When receiving data, indicates whether receiver sends ACK after this byte.",
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND15_OP_CODE",
+          "bit_offset": 11,
+          "width": 3,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "Command opcode.",
+          "enum_values": {
+            "0": "RSTART",
+            "1": "WRITE",
+            "2": "READ",
+            "3": "STOP",
+            "4": "END"
+          },
+          "confidence": "high"
+        },
+        {
+          "name": "I2C_COMMAND15_DONE",
+          "bit_offset": 31,
+          "width": 1,
+          "access": "RW",
+          "reset_value": 0,
+          "description": "When command n is done in I2C Master mode, this bit changes to high level.",
+          "confidence": "high"
+        }
+      ],
+      "confidence": "high"
+    }
+  ],
+  "meta": {
+    "datasheet_source": "esp32_technical_reference_manual_en.pdf",
+    "datasheet_version": "V5.7",
+    "mcu_family": "ESP32",
+    "mcu_part": "ESP32-WROOM-32",
+    "extraction_tool": "manual_extraction_with_pymupdf",
+    "extraction_timestamp": "2026-06-30T07:24:57.146554+00:00",
+    "schema_version": "1.0.0"
+  }
+}
