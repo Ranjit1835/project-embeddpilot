@@ -20,7 +20,7 @@ DRIVERS_DIR = PROJECT_ROOT / "drivers" / "generated"
 EXTRACTION_DIR = PROJECT_ROOT / "extraction"
 
 # --- CTA URL (human fills this) ---
-CTA_FORM_URL = "https://forms.gle/YourFormIDHere"
+CTA_FORM_URL = "https://forms.gle/G6ySZjJEa4wEi8c76"
 
 st.set_page_config(
     page_title="EmbeddPilot V1.1",
