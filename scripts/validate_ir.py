@@ -30,15 +30,22 @@ def validate_consistency(ir: dict) -> list[str]:
     issues = []
     seen_offsets = {}
     reg_size = ir.get("register_size_bits", 32)
+    is_sensor_ir = "device" in ir
 
     for i, reg in enumerate(ir.get("registers", [])):
         name = reg.get("name", f"register[{i}]")
-        offset = reg.get("offset", "")
+        offset = reg.get("offset", "") or reg.get("address", "")
         size = reg.get("size_bits", reg_size)
 
-        if offset in seen_offsets:
+        if offset and offset in seen_offsets:
             issues.append(f"CRITICAL [overlap] Register '{name}' has same offset {offset} as '{seen_offsets[offset]}'")
-        seen_offsets[offset] = name
+        if offset:
+            seen_offsets[offset] = name
+
+        if is_sensor_ir:
+            if reg.get("confidence") == "low":
+                issues.append(f"WARNING [low-confidence] Register '{name}' flagged low-confidence — needs human review")
+            continue
 
         fields = reg.get("fields", [])
         occupied_bits = set()

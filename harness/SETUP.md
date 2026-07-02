@@ -50,17 +50,17 @@ python scripts/run_harness.py --driver path/to/driver.cpp
 
 ```
 === EmbeddPilot V1 Verification Harness ===
-Target: ESP32 I2C0 + BMP280
+Target: ESP32 I2C0 + BMP180
 ---
 [PASS] test_i2c_init
+  chip_id=0x55
 [PASS] test_chip_id
-  chip_id=0x58
+  ctrl_meas=0x20
 [PASS] test_write_read_config
-  ctrl_meas=0x27
+  raw_temp=29028
 [PASS] test_burst_read
-  raw_press=..., raw_temp=...
+  post-reset chip_id OK
 [PASS] test_soft_reset
-  post-reset ctrl_meas=0x00 (sleep mode)
 ---
 HARNESS_COMPLETE
 ```

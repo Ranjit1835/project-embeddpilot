@@ -1,0 +1,275 @@
+{
+  "device": {
+    "name": "BMP180",
+    "manufacturer": "Bosch Sensortec",
+    "i2c_address": "0x77",
+    "chip_id_register": "0xD0",
+    "chip_id_expected": "0x55",
+    "datasheet_source": "BST-BMP180-DS000-12"
+  },
+  "registers": [
+    {
+      "name": "CHIP_ID",
+      "address": "0xD0",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Chip identification register, always reads 0x55 for BMP180"
+    },
+    {
+      "name": "SOFT_RESET",
+      "address": "0xE0",
+      "size_bytes": 1,
+      "access": "WO",
+      "description": "Soft reset register; write 0xB6 to perform power-on-reset sequence"
+    },
+    {
+      "name": "CTRL_MEAS",
+      "address": "0xF4",
+      "size_bytes": 1,
+      "access": "RW",
+      "description": "Measurement control register; write measurement command to start conversion"
+    },
+    {
+      "name": "OUT_MSB",
+      "address": "0xF6",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "ADC output data MSB (bits 15:8)"
+    },
+    {
+      "name": "OUT_LSB",
+      "address": "0xF7",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "ADC output data LSB (bits 7:0)"
+    },
+    {
+      "name": "OUT_XLSB",
+      "address": "0xF8",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "ADC output data XLSB (bits 7:3, for oversampled pressure)"
+    },
+    {
+      "name": "CALIB_AC1_MSB",
+      "address": "0xAA",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient AC1 MSB"
+    },
+    {
+      "name": "CALIB_AC1_LSB",
+      "address": "0xAB",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient AC1 LSB"
+    },
+    {
+      "name": "CALIB_AC2_MSB",
+      "address": "0xAC",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient AC2 MSB"
+    },
+    {
+      "name": "CALIB_AC2_LSB",
+      "address": "0xAD",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient AC2 LSB"
+    },
+    {
+      "name": "CALIB_AC3_MSB",
+      "address": "0xAE",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient AC3 MSB"
+    },
+    {
+      "name": "CALIB_AC3_LSB",
+      "address": "0xAF",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient AC3 LSB"
+    },
+    {
+      "name": "CALIB_AC4_MSB",
+      "address": "0xB0",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient AC4 MSB"
+    },
+    {
+      "name": "CALIB_AC4_LSB",
+      "address": "0xB1",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient AC4 LSB"
+    },
+    {
+      "name": "CALIB_AC5_MSB",
+      "address": "0xB2",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient AC5 MSB"
+    },
+    {
+      "name": "CALIB_AC5_LSB",
+      "address": "0xB3",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient AC5 LSB"
+    },
+    {
+      "name": "CALIB_AC6_MSB",
+      "address": "0xB4",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient AC6 MSB"
+    },
+    {
+      "name": "CALIB_AC6_LSB",
+      "address": "0xB5",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient AC6 LSB"
+    },
+    {
+      "name": "CALIB_B1_MSB",
+      "address": "0xB6",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient B1 MSB"
+    },
+    {
+      "name": "CALIB_B1_LSB",
+      "address": "0xB7",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient B1 LSB"
+    },
+    {
+      "name": "CALIB_B2_MSB",
+      "address": "0xB8",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient B2 MSB"
+    },
+    {
+      "name": "CALIB_B2_LSB",
+      "address": "0xB9",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient B2 LSB"
+    },
+    {
+      "name": "CALIB_MB_MSB",
+      "address": "0xBA",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient MB MSB"
+    },
+    {
+      "name": "CALIB_MB_LSB",
+      "address": "0xBB",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient MB LSB"
+    },
+    {
+      "name": "CALIB_MC_MSB",
+      "address": "0xBC",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient MC MSB"
+    },
+    {
+      "name": "CALIB_MC_LSB",
+      "address": "0xBD",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient MC LSB"
+    },
+    {
+      "name": "CALIB_MD_MSB",
+      "address": "0xBE",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient MD MSB"
+    },
+    {
+      "name": "CALIB_MD_LSB",
+      "address": "0xBF",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient MD LSB"
+    }
+  ],
+  "commands": [
+    {
+      "name": "SOFT_RESET",
+      "target_register": "0xE0",
+      "value": "0xB6",
+      "purpose": "Perform power-on-reset sequence"
+    },
+    {
+      "name": "READ_TEMPERATURE",
+      "target_register": "0xF4",
+      "value": "0x2E",
+      "purpose": "Start uncompensated temperature measurement"
+    },
+    {
+      "name": "READ_PRESSURE_OSS0",
+      "target_register": "0xF4",
+      "value": "0x34",
+      "purpose": "Start uncompensated pressure measurement (oversampling=0)"
+    },
+    {
+      "name": "READ_PRESSURE_OSS1",
+      "target_register": "0xF4",
+      "value": "0x74",
+      "purpose": "Start uncompensated pressure measurement (oversampling=1)"
+    },
+    {
+      "name": "READ_PRESSURE_OSS2",
+      "target_register": "0xF4",
+      "value": "0xB4",
+      "purpose": "Start uncompensated pressure measurement (oversampling=2)"
+    },
+    {
+      "name": "READ_PRESSURE_OSS3",
+      "target_register": "0xF4",
+      "value": "0xF4",
+      "purpose": "Start uncompensated pressure measurement (oversampling=3)"
+    }
+  ],
+  "calibration": {
+    "coefficients": [
+      { "name": "AC1", "address_msb": "0xAA", "address_lsb": "0xAB", "signed": true },
+      { "name": "AC2", "address_msb": "0xAC", "address_lsb": "0xAD", "signed": true },
+      { "name": "AC3", "address_msb": "0xAE", "address_lsb": "0xAF", "signed": true },
+      { "name": "AC4", "address_msb": "0xB0", "address_lsb": "0xB1", "signed": false },
+      { "name": "AC5", "address_msb": "0xB2", "address_lsb": "0xB3", "signed": false },
+      { "name": "AC6", "address_msb": "0xB4", "address_lsb": "0xB5", "signed": false },
+      { "name": "B1",  "address_msb": "0xB6", "address_lsb": "0xB7", "signed": true },
+      { "name": "B2",  "address_msb": "0xB8", "address_lsb": "0xB9", "signed": true },
+      { "name": "MB",  "address_msb": "0xBA", "address_lsb": "0xBB", "signed": true },
+      { "name": "MC",  "address_msb": "0xBC", "address_lsb": "0xBD", "signed": true },
+      { "name": "MD",  "address_msb": "0xBE", "address_lsb": "0xBF", "signed": true }
+    ]
+  },
+  "timings": [
+    { "name": "temperature_conversion", "microseconds": 4500, "description": "Max conversion time for temperature measurement" },
+    { "name": "pressure_oss0_conversion", "microseconds": 4500, "description": "Max conversion time for pressure (OSS=0)" },
+    { "name": "pressure_oss1_conversion", "microseconds": 7500, "description": "Max conversion time for pressure (OSS=1)" },
+    { "name": "pressure_oss2_conversion", "microseconds": 13500, "description": "Max conversion time for pressure (OSS=2)" },
+    { "name": "pressure_oss3_conversion", "microseconds": 25500, "description": "Max conversion time for pressure (OSS=3)" },
+    { "name": "soft_reset_time", "microseconds": 10000, "description": "Wait time after soft reset before communication" },
+    { "name": "startup_time", "microseconds": 10000, "description": "Power-on startup time" }
+  ],
+  "meta": {
+    "extraction_method": "blind PDF extraction (PyMuPDF text, BST-BMP180-DS000-12 Rev 2.8)",
+    "extraction_date": "2026-07-02",
+    "extractor_notes": "Extracted from Bosch BMP180 datasheet BST-BMP180-DS000-12. All register addresses and coefficients verified against datasheet tables. First-pass extraction accuracy: 194/194 (100%). See extraction/EXTRACTION_NOTES.md for page references and hard spots."
+  }
+}

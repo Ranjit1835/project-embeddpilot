@@ -2,21 +2,18 @@
 """
 EmbeddPilot Driver Generator — Main Entry Point.
 
-Reads the validated IR, generates:
+Reads BOTH validated IRs (controller + sensor), generates:
 1. Register header file (i2c0_regs.h)
-2. Driver source file (driver.cpp)
-3. Copies them into drivers/generated/
+2. Driver library: bmp180_driver.h + bmp180_driver.cpp
 
-Then compiles the driver against the harness to verify it builds.
+All sensor constants come from the sensor IR. Zero hardcoded hex.
 
 Usage:
     python scripts/generate_driver.py
-    python scripts/generate_driver.py --compile   # also compile via PlatformIO
+    python scripts/generate_driver.py --ir path/to/controller-ir.json --sensor-ir path/to/sensor-ir.json
 """
 
 import argparse
-import shutil
-import subprocess
 import sys
 from pathlib import Path
 
@@ -24,88 +21,72 @@ PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from codegen.ir_parser import parse_ir
+from codegen.sensor_ir_parser import parse_sensor_ir
 from codegen.header_gen import generate_header
 from codegen.driver_gen import generate_driver
 
-IR_PATH = PROJECT_ROOT / "artifacts" / "register-ir.json"
+CONTROLLER_IR_PATH = PROJECT_ROOT / "artifacts" / "controller-ir.json"
+SENSOR_IR_PATH = PROJECT_ROOT / "artifacts" / "sensor-ir.json"
 OUTPUT_DIR = PROJECT_ROOT / "drivers" / "generated"
-HARNESS_DIR = PROJECT_ROOT / "harness"
-
-SENSOR_CONFIG = {
-    "sensor_addr": "0x77",
-    "sensor_name": "BMP180",
-    "chip_id_reg": "0xD0",
-    "chip_id_value": "0x55",
-    "reset_reg": "0xE0",
-    "reset_cmd": "0xB6",
-    "ctrl_reg": "0xF4",
-    "ctrl_value": "0x2E",
-    "data_start_reg": "0xF6",
-    "data_len": "3",
-    "sda_pin": "21",
-    "scl_pin": "22",
-    "i2c_freq": "100000",
-}
 
 
 def main():
     parser = argparse.ArgumentParser(description="EmbeddPilot Driver Generator")
-    parser.add_argument("--compile", action="store_true", help="Compile after generation")
-    parser.add_argument("--ir", type=str, default=str(IR_PATH), help="Path to IR JSON")
+    parser.add_argument("--ir", type=str, default=str(CONTROLLER_IR_PATH), help="Path to controller IR JSON")
+    parser.add_argument("--sensor-ir", type=str, default=str(SENSOR_IR_PATH), help="Path to sensor IR JSON")
     args = parser.parse_args()
 
     ir_path = Path(args.ir)
+    sensor_ir_path = Path(args.sensor_ir)
+
     if not ir_path.exists():
-        print(f"ERROR: IR file not found: {ir_path}")
+        print(f"ERROR: Controller IR file not found: {ir_path}")
+        sys.exit(1)
+    if not sensor_ir_path.exists():
+        print(f"ERROR: Sensor IR file not found: {sensor_ir_path}")
         sys.exit(1)
 
-    print(f"=== EmbeddPilot Driver Generator ===")
-    print(f"IR: {ir_path}")
+    print("=== EmbeddPilot Driver Generator ===")
+    print(f"Controller IR: {ir_path}")
+    print(f"Sensor IR:     {sensor_ir_path}")
     print()
 
-    # Parse IR
     ir = parse_ir(ir_path)
-    print(f"Parsed: {ir.peripheral} @ {ir.base_address}")
+    print(f"Controller: {ir.peripheral} @ {ir.base_address}")
     print(f"  {len(ir.registers)} registers, {sum(len(r.fields) for r in ir.registers)} fields")
+
+    sensor_ir = parse_sensor_ir(sensor_ir_path)
+    print(f"Sensor: {sensor_ir.name} ({sensor_ir.manufacturer}) @ {sensor_ir.i2c_address}")
+    print(f"  {len(sensor_ir.registers)} registers, {len(sensor_ir.commands)} commands, {len(sensor_ir.coefficients)} calibration coefficients")
     print()
 
-    # Generate header
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
     header_content = generate_header(ir)
     header_path = OUTPUT_DIR / "i2c0_regs.h"
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     header_path.write_text(header_content, encoding="utf-8")
     header_lines = header_content.count("\n")
     print(f"Generated: {header_path.name} ({header_lines} lines)")
 
-    # Generate driver
-    driver_content = generate_driver(ir, SENSOR_CONFIG)
-    driver_path = OUTPUT_DIR / "driver.cpp"
-    driver_path.write_text(driver_content, encoding="utf-8")
-    driver_lines = driver_content.count("\n")
-    print(f"Generated: {driver_path.name} ({driver_lines} lines)")
+    result = generate_driver(ir, sensor_ir)
 
-    # Validation gate: check that driver doesn't reference any register
-    # address not in the IR (training-memory leak detection)
-    _validate_no_hallucinated_registers(driver_content, ir)
+    drv_header_path = OUTPUT_DIR / "bmp180_driver.h"
+    drv_header_path.write_text(result["header"], encoding="utf-8")
+    print(f"Generated: {drv_header_path.name} ({result['header'].count(chr(10))} lines)")
+
+    drv_source_path = OUTPUT_DIR / "bmp180_driver.cpp"
+    drv_source_path.write_text(result["source"], encoding="utf-8")
+    print(f"Generated: {drv_source_path.name} ({result['source'].count(chr(10))} lines)")
+
+    _validate_no_hallucinated_registers(result["header"] + result["source"], ir, sensor_ir)
 
     print()
     print(f"Output directory: {OUTPUT_DIR}")
-
-    if args.compile:
-        print()
-        print("=== Compiling generated driver ===")
-        success = _compile_driver(driver_path)
-        if not success:
-            print("COMPILE FAILED")
-            sys.exit(1)
-        print("COMPILE OK")
-
     print()
     print("GENERATION COMPLETE")
 
 
-def _validate_no_hallucinated_registers(code: str, ir):
-    """Ensure the generated code doesn't contain register addresses not in the IR."""
+def _validate_no_hallucinated_registers(code: str, ir, sensor_ir):
     import re
     hex_refs = re.findall(r"0x[0-9A-Fa-f]{4,8}", code)
 
@@ -116,7 +97,15 @@ def _validate_no_hallucinated_registers(code: str, ir):
         ir_addresses.add(f"0x{abs_addr:08x}")
         ir_addresses.add(reg.offset.lower())
 
-    sensor_addrs = {"0x76", "0x77", "0xd0", "0xe0", "0xf4", "0xf5", "0xf6", "0xf7", "0xfa", "0xb6", "0x55", "0x58", "0x2e"}
+    sensor_addrs = set()
+    sensor_addrs.add(sensor_ir.i2c_address.lower())
+    sensor_addrs.add(sensor_ir.chip_id_register.lower())
+    sensor_addrs.add(sensor_ir.chip_id_expected.lower())
+    for reg in sensor_ir.registers:
+        sensor_addrs.add(reg.address.lower())
+    for cmd in sensor_ir.commands:
+        sensor_addrs.add(cmd.target_register.lower())
+        sensor_addrs.add(cmd.value.lower())
 
     for href in hex_refs:
         h = href.lower()
@@ -125,33 +114,6 @@ def _validate_no_hallucinated_registers(code: str, ir):
         if int(h, 16) <= 0xFF:
             continue
         print(f"  WARNING: Code references {href} which is not in the IR or sensor config")
-
-
-def _compile_driver(driver_path: Path) -> bool:
-    """Copy driver into harness and compile via PlatformIO."""
-    harness_src = HARNESS_DIR / "src" / "main.cpp"
-    backup = harness_src.with_suffix(".cpp.bak")
-
-    try:
-        shutil.copy2(harness_src, backup)
-        shutil.copy2(driver_path, harness_src)
-
-        result = subprocess.run(
-            ["pio", "run"],
-            cwd=str(HARNESS_DIR),
-            capture_output=True,
-            text=True,
-            timeout=300,
-        )
-
-        if result.returncode != 0:
-            print(result.stderr[-2000:])
-            return False
-        return True
-    finally:
-        if backup.exists():
-            shutil.copy2(backup, harness_src)
-            backup.unlink()
 
 
 if __name__ == "__main__":

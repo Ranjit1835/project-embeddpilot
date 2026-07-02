@@ -1,76 +1,78 @@
-# EmbeddPilot
+# EmbeddPilot V1.1
 
-**Datasheet -> Verified Peripheral Driver, Automatically.**
+**Real datasheets. Validated register maps. Verified drivers.**
 
-EmbeddPilot is an AI-powered pipeline that reads MCU peripheral datasheets and produces simulation-verified C drivers. Not "probably correct" — verified in simulation with proof.
+EmbeddPilot is a case study in honest embedded tooling: a real sensor datasheet (Bosch BMP180) turned into a validated sensor IR, deterministically generated into a driver library, and verified by an independent simulation harness. Designed and built with Claude Code.
 
-## How It Works
+## Architecture: AI at Ingestion, Deterministic at Emission
 
 ```
-Datasheet PDF
+Datasheet PDF (BMP180)
     |
-    v
-[Datasheet Extractor] -- extracts register map
+    v  [agent-assisted extraction]
+Sensor IR (28 registers, 6 commands, 11 calibration coefficients)
+    +
+Controller IR (ESP32 I2C0, 36 registers, 191 bit fields)
     |
-    v
-Register-Map IR (JSON) -- the contract
+    v  [deterministic f-string template — same input = same output]
+Driver Library (bmp180_driver.h + bmp180_driver.cpp)
     |
-    v
-[Extraction Validator] -- catches extraction errors
+    v  [contamination guard — zero test logic in library]
+Independent Harness (5 scenarios, harness-owned expected values)
     |
-    v
-[Driver Codegen] -- generates C driver from IR only
-    |
-    v
-[Wokwi Sim Harness] -- runs firmware against virtual hardware
-    |
-    v
-[Verification Runner] -- pass/fail verdict with specifics
-    |
-    v (on fail)
-[Self-Correcting Loop] -- feeds failure back to codegen, max 5 retries
-    |
-    v
-Verified Driver + Simulation Proof Report
+    v  [Wokwi CLI simulation]
+Verified Driver + Proof  (5/5 PASS)
 ```
 
-## V1 Scope
+**Two-layer IR:** Controller IR describes the MCU peripheral (ESP32 I2C0). Sensor IR describes the I2C device (BMP180). Every sensor constant in the generated driver comes from the sensor IR — zero hardcoded hex literals. Change an IR value, the emitted code changes, the harness catches it.
 
-- **MCU:** ESP32 (ESP-IDF)
-- **Peripheral:** I2C controller
-- **Simulator:** Wokwi (headless CLI)
-- **Sensor:** BMP280 (virtual)
+**Extraction accuracy:** First-pass blind PDF extraction matched prior knowledge-authored IR 194/194 fields (100%).
 
-See [TARGET.md](TARGET.md) for the full target lock and [DONE.md](DONE.md) for exit criteria.
+## Live Demo
+
+[**View the live case study**](https://ranjit1835-project-embeddpilot-app-ldwvma.streamlit.app/)
+
+## V1.1 Target
+
+- **MCU:** ESP32-WROOM-32 (Arduino/Wire, PlatformIO)
+- **Sensor:** BMP180 (I2C 0x77, chip ID 0x55)
+- **Simulator:** Wokwi CLI (headless)
+
+## Quick Start
+
+```bash
+# Full pipeline: validate → generate → guard → compile → simulate → package
+python embeddpilot.py
+
+# Dry run (skip simulation)
+python embeddpilot.py --dry-run
+
+# Custom IR paths
+python embeddpilot.py --ir artifacts/controller-ir.json --sensor-ir artifacts/sensor-ir.json
+```
 
 ## Project Structure
 
 ```
 project-embeddpilot/
-├── schema/                 # IR JSON Schema (the contract)
-├── extraction/             # Datasheet PDF input + extraction logic
-│   ├── input/              # Source datasheet PDFs
-│   └── output/             # Raw extraction intermediates
-├── codegen/                # Driver code generation logic
-├── harness/                # Simulation verification harness
-│   ├── reference/          # Hand-written reference drivers
-│   └── scenarios/          # Test scenarios with assertions
-├── drivers/
-│   └── generated/          # AI-generated drivers
-├── artifacts/              # Pipeline artifacts (IR JSON, reports)
-├── scripts/                # Utility scripts (validation, benchmarks)
-├── tests/                  # Unit and integration tests
-└── .claude/agents/         # Specialist sub-agent definitions
+├── schema/                 # IR schemas (controller + sensor)
+├── extraction/             # Datasheet PDFs + extraction notes
+├── artifacts/              # IR JSON files + pipeline reports
+├── codegen/                # Code generation (template + parsers)
+├── harness/                # Independent verification harness (PERMANENT)
+├── drivers/generated/      # Generated driver library
+├── contracts/              # API contract (DRIVER_API.md)
+├── scripts/                # Validation + generation scripts
+├── app.py                  # Streamlit live case study
+└── embeddpilot.py          # One-command pipeline
 ```
 
-## Key Principle
+## Phase History
 
-**The generator is never the judge.** The agent that writes the driver does not decide whether it passed. A separate verification agent + the Wokwi simulator decide. This is what makes the output trustworthy.
-
-## Build Order
-
-1. **Extraction first** (make-or-break: a wrong register map poisons everything)
-2. **Verification harness** (build the judge before the thing being judged)
-3. **Codegen** (generate the driver from validated IR)
-4. **Self-correcting loop** (fix on failure, prove determinism)
-5. **Usable wrapper** (one command: datasheet in, verified driver out)
+| Phase | What | Report |
+|-------|------|--------|
+| A | Read-only architectural audit | FINDINGS.md |
+| B | Truth pass — make every claim honest | PHASE_B_REPORT.md |
+| C | Independent judge + library form factor | PHASE_C_REPORT.md |
+| D | IR-grounded generation (two-layer IR) | PHASE_D_REPORT.md |
+| E | Extraction provenance + live case study | PHASE_E_REPORT.md |

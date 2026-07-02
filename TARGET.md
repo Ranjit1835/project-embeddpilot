@@ -1,7 +1,7 @@
 # V1 Target Lock
 
 ## MCU Family
-**ESP32** (Xtensa LX6 dual-core, ESP-IDF framework)
+**ESP32** (Xtensa LX6 dual-core, Arduino framework (Wire library), PlatformIO build system)
 
 ## Specific Part
 **ESP32-WROOM-32** (most common module, widest Wokwi support)

@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EmbeddPilot Sensor IR",
+  "description": "I2C sensor register map. Contract between datasheet extraction and driver generation.",
+  "type": "object",
+  "required": ["device", "registers", "commands"],
+  "properties": {
+    "device": {
+      "type": "object",
+      "required": ["name", "i2c_address", "chip_id_register", "chip_id_expected"],
+      "properties": {
+        "name": { "type": "string", "description": "Sensor part number (e.g. BMP180)" },
+        "manufacturer": { "type": "string" },
+        "i2c_address": { "type": "string", "pattern": "^0x[0-9A-Fa-f]{2}$", "description": "7-bit I2C address as hex string" },
+        "chip_id_register": { "type": "string", "pattern": "^0x[0-9A-Fa-f]{2}$", "description": "Register address for chip identification" },
+        "chip_id_expected": { "type": "string", "pattern": "^0x[0-9A-Fa-f]{2}$", "description": "Expected chip ID value" },
+        "datasheet_source": { "type": "string", "description": "Datasheet filename or reference" }
+      },
+      "additionalProperties": false
+    },
+    "registers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "address", "size_bytes", "access"],
+        "properties": {
+          "name": { "type": "string", "description": "Register name matching datasheet nomenclature" },
+          "address": { "type": "string", "pattern": "^0x[0-9A-Fa-f]{2}$", "description": "8-bit register address" },
+          "size_bytes": { "type": "integer", "minimum": 1, "description": "Register size in bytes" },
+          "access": { "type": "string", "enum": ["RO", "WO", "RW"], "description": "Read-only, write-only, or read-write" },
+          "description": { "type": "string" },
+          "confidence": { "type": "string", "enum": ["high", "low"], "default": "high" },
+          "notes": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "target_register", "value", "purpose"],
+        "properties": {
+          "name": { "type": "string" },
+          "target_register": { "type": "string", "pattern": "^0x[0-9A-Fa-f]{2}$", "description": "Register to write the command to" },
+          "value": { "type": "string", "pattern": "^0x[0-9A-Fa-f]{2}$", "description": "Command byte value" },
+          "purpose": { "type": "string", "description": "What this command does" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "calibration": {
+      "type": "object",
+      "properties": {
+        "coefficients": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "address_msb", "address_lsb", "signed"],
+            "properties": {
+              "name": { "type": "string", "description": "Coefficient name from datasheet" },
+              "address_msb": { "type": "string", "pattern": "^0x[0-9A-Fa-f]{2}$" },
+              "address_lsb": { "type": "string", "pattern": "^0x[0-9A-Fa-f]{2}$" },
+              "signed": { "type": "boolean", "description": "True if the coefficient is a signed 16-bit integer" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "timings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "microseconds"],
+        "properties": {
+          "name": { "type": "string" },
+          "microseconds": { "type": "integer", "minimum": 0, "description": "Timing value in microseconds" },
+          "description": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "extraction_method": { "type": "string" },
+        "extraction_date": { "type": "string" },
+        "extractor_notes": { "type": "string" }
+      }
+    }
+  },
+  "additionalProperties": false
+}

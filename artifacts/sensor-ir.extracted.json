@@ -1,0 +1,275 @@
+{
+  "device": {
+    "name": "BMP180",
+    "manufacturer": "Bosch Sensortec",
+    "i2c_address": "0x77",
+    "chip_id_register": "0xD0",
+    "chip_id_expected": "0x55",
+    "datasheet_source": "BST-BMP180-DS000-12"
+  },
+  "registers": [
+    {
+      "name": "CHIP_ID",
+      "address": "0xD0",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Chip identification register, fixed value 0x55 (p18: 'Chip-id (register D0h): This value is fixed to 0x55')"
+    },
+    {
+      "name": "SOFT_RESET",
+      "address": "0xE0",
+      "size_bytes": 1,
+      "access": "WO",
+      "description": "Soft reset register, write-only (p18: 'Soft reset (register E0h): Write only register. If set to 0xB6, will perform the same sequence as power on reset.')"
+    },
+    {
+      "name": "CTRL_MEAS",
+      "address": "0xF4",
+      "size_bytes": 1,
+      "access": "RW",
+      "description": "Measurement control register (p18: 'Measurement control (register F4h <4:0>): Controls measurements'). Bits [4:0]=measurement control, bit [5]=SCO start-of-conversion, bits [7:6]=OSS oversampling."
+    },
+    {
+      "name": "OUT_MSB",
+      "address": "0xF6",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "ADC output data MSB (p22: 'Temperature or pressure value UT or UP 0xF6 (MSB)')"
+    },
+    {
+      "name": "OUT_LSB",
+      "address": "0xF7",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "ADC output data LSB (p22: '0xF7 (LSB)')"
+    },
+    {
+      "name": "OUT_XLSB",
+      "address": "0xF8",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "ADC output data XLSB for ultra high resolution pressure (p18: 'out_xlsb F8h', p22: 'optionally 0xF8 (XLSB)')"
+    },
+    {
+      "name": "CALIB_AC1_MSB",
+      "address": "0xAA",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient AC1 MSB (p13 Table 5)"
+    },
+    {
+      "name": "CALIB_AC1_LSB",
+      "address": "0xAB",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient AC1 LSB (p13 Table 5)"
+    },
+    {
+      "name": "CALIB_AC2_MSB",
+      "address": "0xAC",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient AC2 MSB (p13 Table 5)"
+    },
+    {
+      "name": "CALIB_AC2_LSB",
+      "address": "0xAD",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient AC2 LSB (p13 Table 5)"
+    },
+    {
+      "name": "CALIB_AC3_MSB",
+      "address": "0xAE",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient AC3 MSB (p13 Table 5)"
+    },
+    {
+      "name": "CALIB_AC3_LSB",
+      "address": "0xAF",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient AC3 LSB (p13 Table 5)"
+    },
+    {
+      "name": "CALIB_AC4_MSB",
+      "address": "0xB0",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient AC4 MSB (p13 Table 5)"
+    },
+    {
+      "name": "CALIB_AC4_LSB",
+      "address": "0xB1",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient AC4 LSB (p13 Table 5)"
+    },
+    {
+      "name": "CALIB_AC5_MSB",
+      "address": "0xB2",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient AC5 MSB (p13 Table 5)"
+    },
+    {
+      "name": "CALIB_AC5_LSB",
+      "address": "0xB3",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient AC5 LSB (p13 Table 5)"
+    },
+    {
+      "name": "CALIB_AC6_MSB",
+      "address": "0xB4",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient AC6 MSB (p13 Table 5)"
+    },
+    {
+      "name": "CALIB_AC6_LSB",
+      "address": "0xB5",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient AC6 LSB (p13 Table 5)"
+    },
+    {
+      "name": "CALIB_B1_MSB",
+      "address": "0xB6",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient B1 MSB (p13 Table 5)"
+    },
+    {
+      "name": "CALIB_B1_LSB",
+      "address": "0xB7",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient B1 LSB (p13 Table 5)"
+    },
+    {
+      "name": "CALIB_B2_MSB",
+      "address": "0xB8",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient B2 MSB (p13 Table 5)"
+    },
+    {
+      "name": "CALIB_B2_LSB",
+      "address": "0xB9",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient B2 LSB (p13 Table 5)"
+    },
+    {
+      "name": "CALIB_MB_MSB",
+      "address": "0xBA",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient MB MSB (p13 Table 5)"
+    },
+    {
+      "name": "CALIB_MB_LSB",
+      "address": "0xBB",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient MB LSB (p13 Table 5)"
+    },
+    {
+      "name": "CALIB_MC_MSB",
+      "address": "0xBC",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient MC MSB (p13 Table 5)"
+    },
+    {
+      "name": "CALIB_MC_LSB",
+      "address": "0xBD",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient MC LSB (p13 Table 5)"
+    },
+    {
+      "name": "CALIB_MD_MSB",
+      "address": "0xBE",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient MD MSB (p13 Table 5)"
+    },
+    {
+      "name": "CALIB_MD_LSB",
+      "address": "0xBF",
+      "size_bytes": 1,
+      "access": "RO",
+      "description": "Calibration coefficient MD LSB (p13 Table 5)"
+    }
+  ],
+  "commands": [
+    {
+      "name": "SOFT_RESET",
+      "target_register": "0xE0",
+      "value": "0xB6",
+      "purpose": "Perform power-on-reset sequence (p18: 'If set to 0xB6, will perform the same sequence as power on reset')"
+    },
+    {
+      "name": "READ_TEMPERATURE",
+      "target_register": "0xF4",
+      "value": "0x2E",
+      "purpose": "Start uncompensated temperature measurement (p21 Table 8: Temperature 0x2E, 4.5ms max)"
+    },
+    {
+      "name": "READ_PRESSURE_OSS0",
+      "target_register": "0xF4",
+      "value": "0x34",
+      "purpose": "Start uncompensated pressure measurement, oversampling=0 (p21 Table 8: 0x34, 4.5ms max)"
+    },
+    {
+      "name": "READ_PRESSURE_OSS1",
+      "target_register": "0xF4",
+      "value": "0x74",
+      "purpose": "Start uncompensated pressure measurement, oversampling=1 (p21 Table 8: 0x74, 7.5ms max)"
+    },
+    {
+      "name": "READ_PRESSURE_OSS2",
+      "target_register": "0xF4",
+      "value": "0xB4",
+      "purpose": "Start uncompensated pressure measurement, oversampling=2 (p21 Table 8: 0xB4, 13.5ms max)"
+    },
+    {
+      "name": "READ_PRESSURE_OSS3",
+      "target_register": "0xF4",
+      "value": "0xF4",
+      "purpose": "Start uncompensated pressure measurement, oversampling=3 (p21 Table 8: 0xF4, 25.5ms max)"
+    }
+  ],
+  "calibration": {
+    "coefficients": [
+      { "name": "AC1", "address_msb": "0xAA", "address_lsb": "0xAB", "signed": true },
+      { "name": "AC2", "address_msb": "0xAC", "address_lsb": "0xAD", "signed": true },
+      { "name": "AC3", "address_msb": "0xAE", "address_lsb": "0xAF", "signed": true },
+      { "name": "AC4", "address_msb": "0xB0", "address_lsb": "0xB1", "signed": false },
+      { "name": "AC5", "address_msb": "0xB2", "address_lsb": "0xB3", "signed": false },
+      { "name": "AC6", "address_msb": "0xB4", "address_lsb": "0xB5", "signed": false },
+      { "name": "B1",  "address_msb": "0xB6", "address_lsb": "0xB7", "signed": true },
+      { "name": "B2",  "address_msb": "0xB8", "address_lsb": "0xB9", "signed": true },
+      { "name": "MB",  "address_msb": "0xBA", "address_lsb": "0xBB", "signed": true },
+      { "name": "MC",  "address_msb": "0xBC", "address_lsb": "0xBD", "signed": true },
+      { "name": "MD",  "address_msb": "0xBE", "address_lsb": "0xBF", "signed": true }
+    ]
+  },
+  "timings": [
+    { "name": "temperature_conversion", "microseconds": 4500, "description": "Max conversion time for temperature (p7/p21 Table 8: 4.5ms)" },
+    { "name": "pressure_oss0_conversion", "microseconds": 4500, "description": "Max conversion time for pressure OSS=0 (p12 Table 3 / p21 Table 8: 4.5ms)" },
+    { "name": "pressure_oss1_conversion", "microseconds": 7500, "description": "Max conversion time for pressure OSS=1 (p12 Table 3 / p21 Table 8: 7.5ms)" },
+    { "name": "pressure_oss2_conversion", "microseconds": 13500, "description": "Max conversion time for pressure OSS=2 (p12 Table 3 / p21 Table 8: 13.5ms)" },
+    { "name": "pressure_oss3_conversion", "microseconds": 25500, "description": "Max conversion time for pressure OSS=3 (p12 Table 3 / p21 Table 8: 25.5ms)" },
+    { "name": "soft_reset_time", "microseconds": 10000, "description": "Wait after soft reset — same as startup time (p19 Table 6: tStart min 10ms)" },
+    { "name": "startup_time", "microseconds": 10000, "description": "Power-on startup time before first communication (p19 Table 6: tStart min 10ms)" }
+  ],
+  "meta": {
+    "extraction_method": "blind PDF extraction (PyMuPDF text, BST-BMP180-DS000-12 Rev 2.8)",
+    "extraction_date": "2026-07-02",
+    "extractor_notes": "Extracted from Bosch BMP180 datasheet. Register map from p18 Figure 6 / text. Calibration from p13 Table 5. Commands from p21 Table 8. Timings from p7 Table 1 and p12 Table 3. Signed/unsigned for calibration coefficients inferred from API code convention (AC1-AC3 signed, AC4-AC6 unsigned, B1-B2 signed, MB-MC-MD signed) — datasheet Table 5 does not explicitly state signedness. I2C address 0x77 from p20 Table 7 (0xEE/0xEF → 7-bit 0x77)."
+  }
+}

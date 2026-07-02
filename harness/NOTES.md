@@ -2,10 +2,10 @@
 
 ## What the harness DOES verify
 - I2C bus initialization succeeds
-- Correct slave address targeting (0x76 for BMP280)
-- Single-register read (chip ID = 0x58)
+- Correct slave address targeting (0x77 for BMP180)
+- Single-register read (chip ID = 0x55)
 - Single-register write + read-back (ctrl_meas configuration)
-- Burst read of 6 bytes (pressure + temperature raw data)
+- Burst read of 3 bytes (temperature raw data)
 - Soft reset and post-reset state verification
 
 ## What the harness does NOT verify
