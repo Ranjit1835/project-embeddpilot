@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+@theme {
+  /* precision-instrument palette: near-black, phosphor green accent */
+  --color-bg: #0b0f14;
+  --color-panel: #10161d;
+  --color-panel-2: #141c25;
+  --color-line: #1e2833;
+  --color-line-2: #2a3644;
+  --color-ink: #c9d4df;
+  --color-ink-dim: #7a8899;
+  --color-ink-faint: #4d5a68;
+  --color-accent: #3fe081;
+  --color-accent-dim: #1d7a48;
+  --color-amber: #e0a63c;
+  --color-red: #e5533c;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "Cascadia Code", monospace;
+}
+
+html {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-size: 15px;
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* keyboard navigability: visible, consistent focus */
+:focus-visible {
+  outline: 1.5px solid var(--color-accent);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-2) transparent;
+}
+
+/* editable table cells: quiet until focused */
+input.cell {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  padding: 1px 4px;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+}
+input.cell:hover {
+  border-color: var(--color-line-2);
+}
+input.cell:focus {
+  border-color: var(--color-accent-dim);
+  outline: none;
+  background: var(--color-panel-2);
+}

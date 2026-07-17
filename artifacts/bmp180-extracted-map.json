@@ -1,0 +1,425 @@
+{
+  "peripheral": "pressure-sensor",
+  "chip": "BMP180",
+  "registers": [
+    {
+      "name": "AC1_MSB",
+      "offset": "0xAA",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        13
+      ]
+    },
+    {
+      "name": "AC1_LSB",
+      "offset": "0xAB",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        13
+      ]
+    },
+    {
+      "name": "AC2_MSB",
+      "offset": "0xAC",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        13
+      ]
+    },
+    {
+      "name": "AC2_LSB",
+      "offset": "0xAD",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        13
+      ]
+    },
+    {
+      "name": "AC3_MSB",
+      "offset": "0xAE",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        13
+      ]
+    },
+    {
+      "name": "AC3_LSB",
+      "offset": "0xAF",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        13
+      ]
+    },
+    {
+      "name": "AC4_MSB",
+      "offset": "0xB0",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        13
+      ]
+    },
+    {
+      "name": "AC4_LSB",
+      "offset": "0xB1",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        13
+      ]
+    },
+    {
+      "name": "AC5_MSB",
+      "offset": "0xB2",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        13
+      ]
+    },
+    {
+      "name": "AC5_LSB",
+      "offset": "0xB3",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        13
+      ]
+    },
+    {
+      "name": "AC6_MSB",
+      "offset": "0xB4",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        13
+      ]
+    },
+    {
+      "name": "AC6_LSB",
+      "offset": "0xB5",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        13
+      ]
+    },
+    {
+      "name": "B1_MSB",
+      "offset": "0xB6",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        13
+      ]
+    },
+    {
+      "name": "B1_LSB",
+      "offset": "0xB7",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        13
+      ]
+    },
+    {
+      "name": "B2_MSB",
+      "offset": "0xB8",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        13
+      ]
+    },
+    {
+      "name": "B2_LSB",
+      "offset": "0xB9",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        13
+      ]
+    },
+    {
+      "name": "MB_MSB",
+      "offset": "0xBA",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        13
+      ]
+    },
+    {
+      "name": "MB_LSB",
+      "offset": "0xBB",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        13
+      ]
+    },
+    {
+      "name": "MC_MSB",
+      "offset": "0xBC",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        13
+      ]
+    },
+    {
+      "name": "MC_LSB",
+      "offset": "0xBD",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        13
+      ]
+    },
+    {
+      "name": "MD_MSB",
+      "offset": "0xBE",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        13
+      ]
+    },
+    {
+      "name": "MD_LSB",
+      "offset": "0xBF",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        13
+      ]
+    },
+    {
+      "name": "out_xlsb",
+      "offset": "0xF8",
+      "reset_value": "0x00",
+      "access": null,
+      "fields": [
+        {
+          "name": "adc_out_xlsb",
+          "bits": "[7:3]",
+          "description": ""
+        }
+      ],
+      "confidence": "high",
+      "source_pages": [
+        18
+      ]
+    },
+    {
+      "name": "out_lsb",
+      "offset": "0xF7",
+      "reset_value": null,
+      "access": null,
+      "fields": [
+        {
+          "name": "adc_out_msb",
+          "bits": "[7:0]",
+          "description": ""
+        }
+      ],
+      "confidence": "medium",
+      "source_pages": [
+        18
+      ]
+    },
+    {
+      "name": "out_msb",
+      "offset": "0xF6",
+      "reset_value": "0x80",
+      "access": null,
+      "fields": [
+        {
+          "name": "adc_out_lsb",
+          "bits": "[7:0]",
+          "description": ""
+        }
+      ],
+      "confidence": "high",
+      "source_pages": [
+        18
+      ]
+    },
+    {
+      "name": "ctrl_meas",
+      "offset": "0xF4",
+      "reset_value": "0x00",
+      "access": null,
+      "fields": [
+        {
+          "name": "oss",
+          "bits": "[7:6]",
+          "description": ""
+        },
+        {
+          "name": "sco",
+          "bits": "[5:5]",
+          "description": ""
+        },
+        {
+          "name": "measurement",
+          "bits": "[4:0]",
+          "description": ""
+        }
+      ],
+      "confidence": "high",
+      "source_pages": [
+        18
+      ]
+    },
+    {
+      "name": "soft",
+      "offset": "0xE0",
+      "reset_value": "0x00",
+      "access": null,
+      "fields": [
+        {
+          "name": "reset",
+          "bits": "[7:0]",
+          "description": ""
+        }
+      ],
+      "confidence": "high",
+      "source_pages": [
+        18
+      ]
+    },
+    {
+      "name": "id",
+      "offset": "0xD0",
+      "reset_value": "0x55",
+      "access": null,
+      "fields": [
+        {
+          "name": "id",
+          "bits": "[7:0]",
+          "description": ""
+        }
+      ],
+      "confidence": "high",
+      "source_pages": [
+        18
+      ]
+    }
+  ],
+  "commands": [
+    {
+      "name": "Temperature",
+      "opcode": "0x2E",
+      "description": "sequence: 4.5",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "none",
+      "source_pages": [
+        21
+      ]
+    },
+    {
+      "name": "Pressure (oss = 0)",
+      "opcode": "0x34",
+      "description": "sequence: 4.5",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "none",
+      "source_pages": [
+        21
+      ]
+    },
+    {
+      "name": "Pressure (oss = 1)",
+      "opcode": "0x74",
+      "description": "sequence: 7.5",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "none",
+      "source_pages": [
+        21
+      ]
+    },
+    {
+      "name": "Pressure (oss = 2)",
+      "opcode": "0xB4",
+      "description": "sequence: 13.5",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "none",
+      "source_pages": [
+        21
+      ]
+    },
+    {
+      "name": "Pressure",
+      "opcode": "0xF4",
+      "description": "sequence: 25.5",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "none",
+      "source_pages": [
+        21
+      ]
+    }
+  ],
+  "extraction_confidence": "medium",
+  "source_pages": [
+    13,
+    18,
+    21
+  ],
+  "warnings": [],
+  "low_confidence_pages": []
+}

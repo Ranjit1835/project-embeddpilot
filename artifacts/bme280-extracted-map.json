@@ -1,0 +1,586 @@
+{
+  "peripheral": "",
+  "chip": "BME280",
+  "registers": [
+    {
+      "name": "dig_T1_LSB",
+      "offset": "0x88",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_T1_MSB",
+      "offset": "0x89",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_T2_LSB",
+      "offset": "0x8A",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_T2_MSB",
+      "offset": "0x8B",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_T3_LSB",
+      "offset": "0x8C",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_T3_MSB",
+      "offset": "0x8D",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_P1_LSB",
+      "offset": "0x8E",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_P1_MSB",
+      "offset": "0x8F",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_P2_LSB",
+      "offset": "0x90",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_P2_MSB",
+      "offset": "0x91",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_P3_LSB",
+      "offset": "0x92",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_P3_MSB",
+      "offset": "0x93",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_P4_LSB",
+      "offset": "0x94",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_P4_MSB",
+      "offset": "0x95",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_P5_LSB",
+      "offset": "0x96",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_P5_MSB",
+      "offset": "0x97",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_P6_LSB",
+      "offset": "0x98",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_P6_MSB",
+      "offset": "0x99",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_P7_LSB",
+      "offset": "0x9A",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_P7_MSB",
+      "offset": "0x9B",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_P8_LSB",
+      "offset": "0x9C",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_P8_MSB",
+      "offset": "0x9D",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_P9_LSB",
+      "offset": "0x9E",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_P9_MSB",
+      "offset": "0x9F",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_H1",
+      "offset": "0xA1",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "low",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_H2_LSB",
+      "offset": "0xE1",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_H2_MSB",
+      "offset": "0xE2",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "dig_H3",
+      "offset": "0xE3",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "low",
+      "source_pages": [
+        24
+      ]
+    },
+    {
+      "name": "hum_lsb",
+      "offset": "0xFE",
+      "reset_value": "0x00",
+      "access": null,
+      "fields": [
+        {
+          "name": "hum_lsb",
+          "bits": "[7:0]",
+          "description": ""
+        }
+      ],
+      "confidence": "high",
+      "source_pages": [
+        27
+      ]
+    },
+    {
+      "name": "hum_msb",
+      "offset": "0xFD",
+      "reset_value": "0x80",
+      "access": null,
+      "fields": [
+        {
+          "name": "hum_msb",
+          "bits": "[7:0]",
+          "description": ""
+        }
+      ],
+      "confidence": "high",
+      "source_pages": [
+        27
+      ]
+    },
+    {
+      "name": "temp_xlsb",
+      "offset": "0xFC",
+      "reset_value": "0x00",
+      "access": null,
+      "fields": [
+        {
+          "name": "temp_xlsb",
+          "bits": "[7:4]",
+          "description": ""
+        }
+      ],
+      "confidence": "high",
+      "source_pages": [
+        27
+      ]
+    },
+    {
+      "name": "temp_lsb",
+      "offset": "0xFB",
+      "reset_value": "0x00",
+      "access": null,
+      "fields": [
+        {
+          "name": "temp_lsb",
+          "bits": "[7:0]",
+          "description": ""
+        }
+      ],
+      "confidence": "high",
+      "source_pages": [
+        27
+      ]
+    },
+    {
+      "name": "temp_msb",
+      "offset": "0xFA",
+      "reset_value": "0x80",
+      "access": null,
+      "fields": [
+        {
+          "name": "temp_msb",
+          "bits": "[7:0]",
+          "description": ""
+        }
+      ],
+      "confidence": "high",
+      "source_pages": [
+        27
+      ]
+    },
+    {
+      "name": "press_xlsb",
+      "offset": "0xF9",
+      "reset_value": "0x00",
+      "access": null,
+      "fields": [
+        {
+          "name": "press_xlsb",
+          "bits": "[7:4]",
+          "description": ""
+        }
+      ],
+      "confidence": "high",
+      "source_pages": [
+        27
+      ]
+    },
+    {
+      "name": "press_lsb",
+      "offset": "0xF8",
+      "reset_value": "0x00",
+      "access": null,
+      "fields": [
+        {
+          "name": "press_lsb",
+          "bits": "[7:0]",
+          "description": ""
+        }
+      ],
+      "confidence": "high",
+      "source_pages": [
+        27
+      ]
+    },
+    {
+      "name": "press_msb",
+      "offset": "0xF7",
+      "reset_value": "0x80",
+      "access": null,
+      "fields": [
+        {
+          "name": "press_msb",
+          "bits": "[7:0]",
+          "description": ""
+        }
+      ],
+      "confidence": "high",
+      "source_pages": [
+        27
+      ]
+    },
+    {
+      "name": "config",
+      "offset": "0xF5",
+      "reset_value": "0x00",
+      "access": null,
+      "fields": [
+        {
+          "name": "t_sb",
+          "bits": "[7:5]",
+          "description": ""
+        },
+        {
+          "name": "filter",
+          "bits": "[4:2]",
+          "description": ""
+        },
+        {
+          "name": "spi3w_en",
+          "bits": "[0:0]",
+          "description": ""
+        }
+      ],
+      "confidence": "high",
+      "source_pages": [
+        27
+      ]
+    },
+    {
+      "name": "ctrl_meas",
+      "offset": "0xF4",
+      "reset_value": "0x00",
+      "access": null,
+      "fields": [
+        {
+          "name": "osrs_t",
+          "bits": "[7:5]",
+          "description": ""
+        },
+        {
+          "name": "osrs_p",
+          "bits": "[4:2]",
+          "description": ""
+        },
+        {
+          "name": "mode",
+          "bits": "[1:0]",
+          "description": ""
+        }
+      ],
+      "confidence": "high",
+      "source_pages": [
+        27
+      ]
+    },
+    {
+      "name": "status",
+      "offset": "0xF3",
+      "reset_value": "0x00",
+      "access": null,
+      "fields": [
+        {
+          "name": "measuring",
+          "bits": "[3:3]",
+          "description": ""
+        },
+        {
+          "name": "im_update",
+          "bits": "[0:0]",
+          "description": ""
+        }
+      ],
+      "confidence": "high",
+      "source_pages": [
+        27
+      ]
+    },
+    {
+      "name": "ctrl_hum",
+      "offset": "0xF2",
+      "reset_value": "0x00",
+      "access": null,
+      "fields": [
+        {
+          "name": "osrs_h",
+          "bits": "[2:0]",
+          "description": ""
+        }
+      ],
+      "confidence": "high",
+      "source_pages": [
+        27
+      ]
+    },
+    {
+      "name": "reset",
+      "offset": "0xE0",
+      "reset_value": "0x00",
+      "access": null,
+      "fields": [
+        {
+          "name": "reset",
+          "bits": "[7:0]",
+          "description": ""
+        }
+      ],
+      "confidence": "high",
+      "source_pages": [
+        27
+      ]
+    },
+    {
+      "name": "id",
+      "offset": "0xD0",
+      "reset_value": "0x60",
+      "access": null,
+      "fields": [
+        {
+          "name": "chip_id",
+          "bits": "[7:0]",
+          "description": ""
+        }
+      ],
+      "confidence": "high",
+      "source_pages": [
+        27
+      ]
+    }
+  ],
+  "extraction_confidence": "medium",
+  "source_pages": [
+    24,
+    27
+  ],
+  "warnings": [],
+  "low_confidence_pages": [
+    24
+  ]
+}

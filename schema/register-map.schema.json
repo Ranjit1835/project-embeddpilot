@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "embeddpilot/register-map.schema.json",
+  "title": "Canonical extracted register map (V1.5 ingestion output)",
+  "type": "object",
+  "required": ["peripheral", "chip", "registers", "extraction_confidence", "source_pages"],
+  "properties": {
+    "peripheral": { "type": "string" },
+    "chip": { "type": "string" },
+    "base_address": {
+      "type": ["string", "null"],
+      "pattern": "^0x[0-9A-Fa-f]+$"
+    },
+    "registers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "offset", "source_pages"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "offset": { "type": "string", "pattern": "^0x[0-9A-Fa-f]+$" },
+          "reset_value": { "type": ["string", "null"], "pattern": "^0x[0-9A-Fa-f]+$" },
+          "access": { "type": ["string", "null"], "enum": ["RW", "RO", "WO", null] },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "bits"],
+              "properties": {
+                "name": { "type": "string", "minLength": 1 },
+                "bits": { "type": "string", "pattern": "^\\[\\d+:\\d+\\]$" },
+                "description": { "type": "string" }
+              }
+            }
+          },
+          "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+          "source_pages": { "type": "array", "items": { "type": "integer", "minimum": 1 } }
+        }
+      }
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "opcode", "source_pages"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "opcode": { "type": "string", "pattern": "^0x[0-9A-Fa-f]+$" },
+          "description": { "type": "string" },
+          "address_bytes": { "type": ["integer", "null"], "minimum": 0 },
+          "dummy_cycles": { "type": ["integer", "null"], "minimum": 0 },
+          "data_direction": { "type": ["string", "null"], "enum": ["read", "write", "none", null] },
+          "source_pages": { "type": "array", "items": { "type": "integer", "minimum": 1 } }
+        }
+      }
+    },
+    "extraction_confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+    "source_pages": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
+    "warnings": { "type": "array", "items": { "type": "string" } },
+    "low_confidence_pages": { "type": "array", "items": { "type": "integer" } }
+  }
+}
