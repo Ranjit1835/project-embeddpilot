@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { downloadUrl } from "../lib/api";
+import { downloadDemoBundle } from "../lib/demo";
 import type { GenerationResult } from "../lib/types";
 import { Button, EASE, Panel, VerdictBadge, type Verdict } from "./ui";
 
@@ -66,9 +67,15 @@ export function ResultsScreen({
       <div className="flex items-center justify-between flex-wrap gap-3">
         <VerdictBadge verdict={result.status as Verdict} />
         <div className="flex gap-2">
-          <a href={downloadUrl(jobId)} download>
-            <Button>Download all (.zip)</Button>
-          </a>
+          {jobId.startsWith("demo:") ? (
+            <Button onClick={() => downloadDemoBundle(jobId.slice(5))}>
+              Download bundle (.json)
+            </Button>
+          ) : (
+            <a href={downloadUrl(jobId)} download>
+              <Button>Download all (.zip)</Button>
+            </a>
+          )}
           <Button onClick={onStartOver}>New datasheet</Button>
         </div>
       </div>

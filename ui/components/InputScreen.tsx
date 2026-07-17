@@ -6,6 +6,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getSample, listSamples, startIngest, subscribeJob } from "../lib/api";
+import { isDemoActive } from "../lib/demo";
 import type { JobEvent, RegisterMap, Sample } from "../lib/types";
 import { Button, CheckGlyph, EASE, Field, Panel, inputCls } from "./ui";
 
@@ -41,6 +42,12 @@ export function InputScreen({
 
   const submit = useCallback(async () => {
     setError("");
+    if (isDemoActive()) {
+      setError(
+        "Datasheet extraction needs the local backend — this hosted demo replays recorded runs; pick a sample map below.",
+      );
+      return;
+    }
     if (!file && !url) {
       setError("Choose a datasheet file or provide a URL.");
       return;

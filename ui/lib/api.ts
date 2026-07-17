@@ -1,6 +1,19 @@
+import {
+  demoResult,
+  demoRun,
+  demoRunIdForMap,
+  demoSamples,
+  isDemoActive,
+  markDemo,
+  playDemoRun,
+} from "./demo";
 import type { GenerationResult, JobEvent, RegisterMap, Sample } from "./types";
 
-/* The Next dev server rewrites /api/* to the FastAPI service (next.config). */
+/* The Next dev server rewrites /api/* to the FastAPI service (next.config).
+   When no backend is reachable (hosted case-study deployments), calls fall
+   back to recorded-demo mode — real captured runs, clearly labeled. */
+
+const DEMO_PREFIX = "demo:";
 
 export async function startIngest(form: FormData): Promise<string> {
   const res = await fetch("/api/ingest", { method: "POST", body: form });
@@ -15,13 +28,22 @@ export async function startGenerate(payload: {
   max_retries?: number;
   edits?: string[];
 }): Promise<string> {
-  const res = await fetch("/api/generate", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error((await res.json()).detail ?? res.statusText);
-  return (await res.json()).job_id;
+  if (!isDemoActive()) {
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) return (await res.json()).job_id;
+      const detail = (await res.json().catch(() => null))?.detail;
+      if (res.status === 422) throw new Error(detail ?? res.statusText);
+    } catch (e) {
+      if (e instanceof Error && !e.message.includes("fetch")) throw e;
+    }
+  }
+  markDemo();
+  return DEMO_PREFIX + demoRunIdForMap(payload.register_map);
 }
 
 export interface JobSnapshot {
@@ -34,6 +56,13 @@ export interface JobSnapshot {
 }
 
 export async function jobSnapshot(jobId: string): Promise<JobSnapshot> {
+  if (jobId.startsWith(DEMO_PREFIX)) {
+    const id = jobId.slice(DEMO_PREFIX.length);
+    return {
+      id: jobId, kind: "generate", status: "done",
+      events: [], result: demoResult(id), error: null,
+    };
+  }
   const res = await fetch(`/api/jobs/${jobId}`);
   if (!res.ok) throw new Error(res.statusText);
   return res.json();
@@ -46,6 +75,9 @@ export function subscribeJob(
   jobId: string,
   onEvent: (e: JobEvent) => void,
 ): () => void {
+  if (jobId.startsWith(DEMO_PREFIX)) {
+    return playDemoRun(jobId.slice(DEMO_PREFIX.length), onEvent);
+  }
   let delivered = 0;
   let done = false;
   let es: EventSource | null = null;
@@ -95,16 +127,34 @@ export function subscribeJob(
 }
 
 export async function listSamples(): Promise<Sample[]> {
-  const res = await fetch("/api/samples");
-  return res.ok ? res.json() : [];
+  try {
+    const res = await fetch("/api/samples");
+    if (res.ok) return res.json();
+  } catch {
+    /* backend unreachable */
+  }
+  markDemo();
+  return demoSamples;
 }
 
 export async function getSample(
   id: string,
 ): Promise<{ register_map: RegisterMap; platform: string; label: string }> {
-  const res = await fetch(`/api/samples/${id}`);
-  if (!res.ok) throw new Error(res.statusText);
-  return res.json();
+  if (!isDemoActive()) {
+    try {
+      const res = await fetch(`/api/samples/${id}`);
+      if (res.ok) return res.json();
+    } catch {
+      /* backend unreachable */
+    }
+  }
+  markDemo();
+  const run = demoRun(id);
+  return {
+    register_map: run.register_map,
+    platform: run.platform,
+    label: demoSamples.find((s) => s.id === id)?.label ?? id,
+  };
 }
 
 export function downloadUrl(jobId: string): string {

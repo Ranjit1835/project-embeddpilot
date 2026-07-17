@@ -1,7 +1,8 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useSyncExternalStore } from "react";
+import { isDemoActive, subscribeDemoFlag } from "../lib/demo";
 import {
   GenerationScreen,
   attemptsFromEvents,
@@ -40,6 +41,7 @@ export default function Home() {
   const [jobId, setJobId] = useState("");
   const events = useRef<JobEvent[]>([]);
   const unsub = useRef<(() => void) | null>(null);
+  const demo = useSyncExternalStore(subscribeDemoFlag, isDemoActive, () => false);
 
   const onMapReady = useCallback((m: RegisterMap, p: string) => {
     setMap(m);
@@ -127,6 +129,17 @@ export default function Home() {
           })}
         </nav>
       </header>
+
+      {demo && (
+        <div
+          role="note"
+          className="border-b border-amber/30 bg-amber/10 px-5 py-1.5 font-mono text-[11.5px] text-amber"
+        >
+          recorded case study — replaying real pipeline runs captured
+          2026-07-17; clone the repo and run the FastAPI backend for live
+          generation against your own datasheets
+        </div>
+      )}
 
       <main className="flex-1 px-5 py-6 w-full max-w-6xl mx-auto">
         <AnimatePresence mode="wait">
