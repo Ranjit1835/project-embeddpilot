@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from typing import Protocol
 
 # proven live 2026-07-17: gpt-oss-120b converged in 2 attempts on the W25Q64
@@ -56,8 +57,18 @@ class GroqProvider:
         effort = os.environ.get("GROQ_REASONING_EFFORT", "low" if is_reasoning else "")
         if effort:
             kwargs["reasoning_effort"] = effort
-        max_tokens = int(os.environ.get("GROQ_MAX_TOKENS", "5000"))
-        while True:
+        # free-tier TPM counts prompt + max_tokens against one per-minute
+        # budget, so size the output reservation from the actual prompt.
+        # chars/4 tracks real tokenization for this JSON-heavy prompt; a
+        # too-safe estimate (chars/3) starves the reservation and truncates
+        # the JSON payload — reasoning tokens spend from max_tokens too.
+        # If chars/4 ever underestimates, the 413 handler below trims.
+        configured = int(os.environ.get("GROQ_MAX_TOKENS", "5000"))
+        tpm_budget = int(os.environ.get("GROQ_TPM_BUDGET", "8000"))
+        prompt_est = (len(system) + len(user)) // 4
+        max_tokens = max(2500, min(configured, tpm_budget - prompt_est - 300))
+        delay = float(os.environ.get("GROQ_RETRY_DELAY", "15"))
+        for attempt in range(5):
             try:
                 resp = self._client.chat.completions.create(
                     model=self.model,
@@ -70,12 +81,18 @@ class GroqProvider:
                     **kwargs,
                 )
                 break
-            except groq.APIStatusError as e:  # incl. 413/429 rate limits
-                # free-tier TPM counts prompt + max_tokens against one budget;
-                # a 413 usually means the output reservation is too greedy —
-                # shrink it and retry before giving up
-                if e.status_code == 413 and max_tokens > 2500:
-                    max_tokens = max(2500, max_tokens // 2)
+            except groq.APIStatusError as e:
+                # free-tier TPM counts prompt + max_tokens against a
+                # per-minute budget. Prefer WAITING for the window to roll
+                # over shrinking max_tokens — a shrunken reservation
+                # truncates the JSON payload, which is a worse failure
+                # than a slow response.
+                if e.status_code in (413, 429) and attempt < 4:
+                    time.sleep(delay)
+                    delay = min(delay * 2, 60)
+                    if e.status_code == 413 and attempt >= 1 and max_tokens > 2000:
+                        # window rolled and it's STILL too large: trim gently
+                        max_tokens = max(2000, int(max_tokens * 0.8))
                     continue
                 raise ProviderError(f"groq API error {e.status_code}: {e.message}") from e
             except groq.APIConnectionError as e:

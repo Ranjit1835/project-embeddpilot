@@ -1,0 +1,9 @@
+ui/
+build/
+extraction/
+node_modules/
+.git/
+__pycache__/
+harness/
+drivers/
+artifacts/ws3_screens/
