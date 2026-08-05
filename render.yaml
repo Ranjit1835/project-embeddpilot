@@ -1,0 +1,16 @@
+# Render blueprint for the EmbeddPilot backend (FastAPI + ingestion +
+# generation + validator). Builds the Dockerfile, which installs the real
+# validator toolchain (arm-none-eabi-gcc + newlib + cppcheck). The frontend on
+# Vercel proxies /api/* here via its BACKEND_URL env.
+services:
+  - type: web
+    name: embeddpilot-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    # Render injects PORT; the Dockerfile CMD already binds 0.0.0.0:$PORT.
+    healthCheckPath: /api/samples
+    envVars:
+      # set this in the Render dashboard (or via API) — never commit the key
+      - key: GROQ_API_KEY
+        sync: false
