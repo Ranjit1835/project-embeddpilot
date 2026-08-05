@@ -39,6 +39,13 @@ export function ResultsScreen({
   const lastReport = result.reports?.[result.reports.length - 1];
   const unverified = (result.unverified_fields ?? []).filter(Boolean);
   const isFallback = result.status === "unvalidated";
+  // which compiler actually ran (Priority 3): the validator records it in notes
+  const compiler = lastReport?.notes
+    ?.find((n) => n.toLowerCase().startsWith("compiler:"))
+    ?.split(":")
+    .slice(1)
+    .join(":")
+    .trim();
 
   const unverifiedLines = useMemo(() => {
     const m = new Map<string, Set<number>>();
@@ -161,6 +168,7 @@ export function ResultsScreen({
               <Row k="Route" v={result.decision?.user_label ?? "—"} />
               <Row k="Reason" v={result.decision?.reason ?? "—"} dim />
               <Row k="Model" v={result.provider ?? "—"} mono />
+              {compiler && <Row k="Compiler" v={compiler} mono tone="accent" />}
               <Row k="Attempts" v={String(result.attempts ?? "—")} mono />
               {result.register_map && (
                 <Row

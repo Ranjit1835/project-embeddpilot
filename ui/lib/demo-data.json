@@ -1,1 +1,1761 @@
-{"samples": [{"id": "bme280", "platform": "esp32", "label": "BME280 environmental sensor (I2C bus device)"}, {"id": "w25q64", "platform": "esp32", "label": "W25Q64JV SPI flash (command device)"}, {"id": "esp32-i2c", "platform": "esp32", "label": "ESP32 I2C controller (memory-mapped, empty fields)"}], "runs": {"bme280": {"platform": "esp32", "register_map": {"peripheral": "", "chip": "BME280", "registers": [{"name": "dig_T1_LSB", "offset": "0x88", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_T1_MSB", "offset": "0x89", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_T2_LSB", "offset": "0x8A", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_T2_MSB", "offset": "0x8B", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_T3_LSB", "offset": "0x8C", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_T3_MSB", "offset": "0x8D", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_P1_LSB", "offset": "0x8E", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_P1_MSB", "offset": "0x8F", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_P2_LSB", "offset": "0x90", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_P2_MSB", "offset": "0x91", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_P3_LSB", "offset": "0x92", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_P3_MSB", "offset": "0x93", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_P4_LSB", "offset": "0x94", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_P4_MSB", "offset": "0x95", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_P5_LSB", "offset": "0x96", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_P5_MSB", "offset": "0x97", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_P6_LSB", "offset": "0x98", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_P6_MSB", "offset": "0x99", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_P7_LSB", "offset": "0x9A", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_P7_MSB", "offset": "0x9B", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_P8_LSB", "offset": "0x9C", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_P8_MSB", "offset": "0x9D", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_P9_LSB", "offset": "0x9E", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_P9_MSB", "offset": "0x9F", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_H1", "offset": "0xA1", "reset_value": null, "access": null, "fields": [], "confidence": "low", "source_pages": [24]}, {"name": "dig_H2_LSB", "offset": "0xE1", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_H2_MSB", "offset": "0xE2", "reset_value": null, "access": null, "fields": [], "confidence": "medium", "source_pages": [24]}, {"name": "dig_H3", "offset": "0xE3", "reset_value": null, "access": null, "fields": [], "confidence": "low", "source_pages": [24]}, {"name": "hum_lsb", "offset": "0xFE", "reset_value": "0x00", "access": null, "fields": [{"name": "hum_lsb", "bits": "[7:0]", "description": ""}], "confidence": "high", "source_pages": [27]}, {"name": "hum_msb", "offset": "0xFD", "reset_value": "0x80", "access": null, "fields": [{"name": "hum_msb", "bits": "[7:0]", "description": ""}], "confidence": "high", "source_pages": [27]}, {"name": "temp_xlsb", "offset": "0xFC", "reset_value": "0x00", "access": null, "fields": [{"name": "temp_xlsb", "bits": "[7:4]", "description": ""}], "confidence": "high", "source_pages": [27]}, {"name": "temp_lsb", "offset": "0xFB", "reset_value": "0x00", "access": null, "fields": [{"name": "temp_lsb", "bits": "[7:0]", "description": ""}], "confidence": "high", "source_pages": [27]}, {"name": "temp_msb", "offset": "0xFA", "reset_value": "0x80", "access": null, "fields": [{"name": "temp_msb", "bits": "[7:0]", "description": ""}], "confidence": "high", "source_pages": [27]}, {"name": "press_xlsb", "offset": "0xF9", "reset_value": "0x00", "access": null, "fields": [{"name": "press_xlsb", "bits": "[7:4]", "description": ""}], "confidence": "high", "source_pages": [27]}, {"name": "press_lsb", "offset": "0xF8", "reset_value": "0x00", "access": null, "fields": [{"name": "press_lsb", "bits": "[7:0]", "description": ""}], "confidence": "high", "source_pages": [27]}, {"name": "press_msb", "offset": "0xF7", "reset_value": "0x80", "access": null, "fields": [{"name": "press_msb", "bits": "[7:0]", "description": ""}], "confidence": "high", "source_pages": [27]}, {"name": "config", "offset": "0xF5", "reset_value": "0x00", "access": null, "fields": [{"name": "t_sb", "bits": "[7:5]", "description": ""}, {"name": "filter", "bits": "[4:2]", "description": ""}, {"name": "spi3w_en", "bits": "[0:0]", "description": ""}], "confidence": "high", "source_pages": [27]}, {"name": "ctrl_meas", "offset": "0xF4", "reset_value": "0x00", "access": null, "fields": [{"name": "osrs_t", "bits": "[7:5]", "description": ""}, {"name": "osrs_p", "bits": "[4:2]", "description": ""}, {"name": "mode", "bits": "[1:0]", "description": ""}], "confidence": "high", "source_pages": [27]}, {"name": "status", "offset": "0xF3", "reset_value": "0x00", "access": null, "fields": [{"name": "measuring", "bits": "[3:3]", "description": ""}, {"name": "im_update", "bits": "[0:0]", "description": ""}], "confidence": "high", "source_pages": [27]}, {"name": "ctrl_hum", "offset": "0xF2", "reset_value": "0x00", "access": null, "fields": [{"name": "osrs_h", "bits": "[2:0]", "description": ""}], "confidence": "high", "source_pages": [27]}, {"name": "reset", "offset": "0xE0", "reset_value": "0x00", "access": null, "fields": [{"name": "reset", "bits": "[7:0]", "description": ""}], "confidence": "high", "source_pages": [27]}, {"name": "id", "offset": "0xD0", "reset_value": "0x60", "access": null, "fields": [{"name": "chip_id", "bits": "[7:0]", "description": ""}], "confidence": "high", "source_pages": [27]}], "extraction_confidence": "medium", "source_pages": [24, 27], "warnings": [], "low_confidence_pages": [24]}, "result": {"status": "validated", "decision": {"path": "llm", "framing": "register", "template_id": null, "reason": "no template for chip 'BME280' on 'esp32'; 42 registers -> memory-mapped register framing", "user_label": "Generated via AI with validation"}, "files": {"bme280_driver.c": "#include \"bme280_driver.h\"\n#include <stddef.h>\n\nint bme280_init(bme280_t *dev, bme280_reg_read_t read_cb, bme280_reg_write_t write_cb)\n{\n    if (!dev || !read_cb || !write_cb) {\n        return -1;\n    }\n    dev->read = read_cb;\n    dev->write = write_cb;\n    return 0;\n}\n\nstatic int bme280_write_reg(bme280_t *dev, uint8_t reg, uint8_t val)\n{\n    return dev->write(reg, &val, 1U);\n}\n\nstatic int bme280_read_regs(bme280_t *dev, uint8_t start_reg, uint8_t *buf, uint32_t len)\n{\n    return dev->read(start_reg, buf, len);\n}\n\nint bme280_set_mode(bme280_t *dev, bme280_mode_t mode)\n{\n    uint8_t ctrl_meas;\n    if (bme280_read_regs(dev, BME280_REG_CTRL_MEAS, &ctrl_meas, 1U) != 0) {\n        return -1;\n    }\n    ctrl_meas = (ctrl_meas & 0xFC) | (uint8_t)mode;\n    return bme280_write_reg(dev, BME280_REG_CTRL_MEAS, ctrl_meas);\n}\n\nint bme280_set_oversampling(bme280_t *dev, bme280_osrs_t osrs_t, bme280_osrs_t osrs_p, bme280_osrs_t osrs_h)\n{\n    uint8_t ctrl_meas, ctrl_hum;\n    /* humidity oversampling */\n    ctrl_hum = (uint8_t)osrs_h & 0x07U;\n    if (bme280_write_reg(dev, BME280_REG_CTRL_HUM, ctrl_hum) != 0) {\n        return -1;\n    }\n    /* temperature and pressure oversampling */\n    if (bme280_read_regs(dev, BME280_REG_CTRL_MEAS, &ctrl_meas, 1U) != 0) {\n        return -1;\n    }\n    ctrl_meas = ((uint8_t)osrs_t << 5) | ((uint8_t)osrs_p << 2) | (ctrl_meas & 0x03U);\n    return bme280_write_reg(dev, BME280_REG_CTRL_MEAS, ctrl_meas);\n}\n\nint bme280_read_raw(bme280_t *dev, uint32_t *press_raw, uint32_t *temp_raw, uint16_t *hum_raw)\n{\n    uint8_t buf[8];\n    if (bme280_read_regs(dev, BME280_REG_PRESS_MSB, buf, 8U) != 0) {\n        return -1;\n    }\n    *press_raw = ((uint32_t)buf[0] << 12) | ((uint32_t)buf[1] << 4) | ((uint32_t)buf[2] >> 4);\n    *temp_raw  = ((uint32_t)buf[3] << 12) | ((uint32_t)buf[4] << 4) | ((uint32_t)buf[5] >> 4);\n    *hum_raw   = ((uint16_t)buf[6] << 8) | (uint16_t)buf[7];\n    return 0;\n}\n", "bme280_driver.h": "#ifndef BME280_DRIVER_H\n#define BME280_DRIVER_H\n\n#include <stdint.h>\n\n/* Callback type definitions */\ntypedef int (*bme280_reg_read_t)(uint8_t reg, uint8_t *buf, uint32_t len);\ntypedef int (*bme280_reg_write_t)(uint8_t reg, const uint8_t *buf, uint32_t len);\n\n/* Driver context */\ntypedef struct {\n    bme280_reg_read_t  read;\n    bme280_reg_write_t write;\n} bme280_t;\n\n/* Register addresses (bus offsets) */\n#define BME280_REG_ID          0xD0U\n#define BME280_REG_RESET       0xE0U\n#define BME280_REG_CTRL_HUM    0xF2U\n#define BME280_REG_CTRL_MEAS   0xF4U\n#define BME280_REG_CONFIG      0xF5U\n#define BME280_REG_PRESS_MSB   0xF7U\n#define BME280_REG_PRESS_LSB   0xF8U\n#define BME280_REG_PRESS_XLSB  0xF9U\n#define BME280_REG_TEMP_MSB    0xFAU\n#define BME280_REG_TEMP_LSB    0xFBU\n#define BME280_REG_TEMP_XLSB   0xFCU\n#define BME280_REG_HUM_MSB     0xFDU\n#define BME280_REG_HUM_LSB     0xFEU\n\n/* Configuration enums */\ntypedef enum {\n    BME280_MODE_SLEEP = 0x00,\n    BME280_MODE_FORCED = 0x01,\n    BME280_MODE_NORMAL = 0x03\n} bme280_mode_t;\n\ntypedef enum {\n    BME280_OSRS_SKIP = 0x00,\n    BME280_OSRS_1    = 0x01,\n    BME280_OSRS_2    = 0x02,\n    BME280_OSRS_4    = 0x03,\n    BME280_OSRS_8    = 0x04,\n    BME280_OSRS_16   = 0x05\n} bme280_osrs_t;\n\n/* Public API */\nint bme280_init(bme280_t *dev, bme280_reg_read_t read_cb, bme280_reg_write_t write_cb);\nint bme280_set_mode(bme280_t *dev, bme280_mode_t mode);\nint bme280_set_oversampling(bme280_t *dev, bme280_osrs_t osrs_t, bme280_osrs_t osrs_p, bme280_osrs_t osrs_h);\nint bme280_read_raw(bme280_t *dev, uint32_t *press_raw, uint32_t *temp_raw, uint16_t *hum_raw);\n\n#endif /* BME280_DRIVER_H */\n", "bme280_example.c": "#include <stdio.h>\n#include \"bme280_driver.h\"\n\n/* Mock I2C read/write functions for demonstration */\nstatic int mock_read(uint8_t reg, uint8_t *buf, uint32_t len)\n{\n    (void)reg; /* suppress unused parameter warning */\n    /* In a real implementation, fill buf with data from the device */\n    for (uint32_t i = 0; i < len; ++i) {\n        buf[i] = 0x00U;\n    }\n    return 0;\n}\n\nstatic int mock_write(uint8_t reg, const uint8_t *buf, uint32_t len)\n{\n    (void)reg; (void)buf; (void)len; /* suppress unused warnings */\n    return 0;\n}\n\nint main(void)\n{\n    bme280_t dev;\n    if (bme280_init(&dev, mock_read, mock_write) != 0) {\n        printf(\"Failed to init driver\\n\");\n        return -1;\n    }\n    if (bme280_set_oversampling(&dev, BME280_OSRS_1, BME280_OSRS_1, BME280_OSRS_1) != 0) {\n        printf(\"Failed to set oversampling\\n\");\n        return -1;\n    }\n    if (bme280_set_mode(&dev, BME280_MODE_FORCED) != 0) {\n        printf(\"Failed to set mode\\n\");\n        return -1;\n    }\n    uint32_t press_raw = 0, temp_raw = 0;\n    uint16_t hum_raw = 0;\n    if (bme280_read_raw(&dev, &press_raw, &temp_raw, &hum_raw) != 0) {\n        printf(\"Failed to read raw data\\n\");\n        return -1;\n    }\n    printf(\"Raw pressure: %u, temperature: %u, humidity: %u\\n\", press_raw, temp_raw, hum_raw);\n    return 0;\n}\n"}, "attempts": 3, "reports": [{"status": "failed", "checks": {"register_crosscheck": "pass", "compile": "fail", "static_analysis": "skipped"}, "failures": [{"check": "compile", "file": "bme280_example.c", "line": null, "message": "[xtensa-esp32-elf-gcc -Wall -Wextra -Werror]\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/bme280\\attempt_1\\bme280_example.c: In function 'main':\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/bme280\\attempt_1\\bme280_example.c:32:32: error: format '%lu' expects argument of type 'long unsigned int', but argument 2 has type 'uint32_t' {aka 'unsigned int'} [-Werror=format=]\n         printf(\"Raw pressure=%lu, temp=%lu, hum=%u\\n\", press, temp, hum);\n                              ~~^                       ~~~~~\n                              %u\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/bme280\\attempt_1\\bme280_example.c:32:42: error: format '%lu' expects argument of type 'long unsigned int', but argument 3 has type 'uint32_t' {aka 'unsigned int'} [-Werror=format=]\n         printf(\"Raw pressure=%lu, temp=%lu, hum=%u\\n\", press, temp, hum);\n                                        ~~^                    ~~~~\n                                        %u\ncc1.exe: all warnings being treated as errors"}], "unverified_fields": [], "notes": ["compiler: xtensa-esp32-elf-gcc", "static analysis skipped (cppcheck unavailable) \u2014 install cppcheck for full coverage"]}, {"status": "failed", "checks": {"register_crosscheck": "pass", "compile": "fail", "static_analysis": "skipped"}, "failures": [{"check": "compile", "file": "bme280_example.c", "line": null, "message": "[xtensa-esp32-elf-gcc -Wall -Wextra -Werror]\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/bme280\\attempt_2\\bme280_example.c: In function 'mock_read':\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/bme280\\attempt_2\\bme280_example.c:5:30: error: unused parameter 'reg' [-Werror=unused-parameter]\n static int mock_read(uint8_t reg, uint8_t *buf, uint32_t len)\n                      ~~~~~~~~^~~\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/bme280\\attempt_2\\bme280_example.c: In function 'main':\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/bme280\\attempt_2\\bme280_example.c:40:33: error: format '%lu' expects argument of type 'long unsigned int', but argument 2 has type 'uint32_t' {aka 'unsigned int'} [-Werror=format=]\n         printf(\"Raw pressure: %lu, temperature: %lu, humidity: %u\\n\", press_raw, temp_raw, hum_raw);\n                               ~~^                                     ~~~~~~~~~\n                               %u\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/bme280\\attempt_2\\bme280_example.c:40:51: error: format '%lu' expects argument of type 'long unsigned int', but argument 3 has type 'uint32_t' {aka 'unsigned int'} [-Werror=format=]\n         printf(\"Raw pressure: %lu, temperature: %lu, humidity: %u\\n\", press_raw, temp_raw, hum_raw);\n                                                 ~~^                              ~~~~~~~~\n                                                 %u\ncc1.exe: all warnings being treated as errors"}], "unverified_fields": [], "notes": ["compiler: xtensa-esp32-elf-gcc", "static analysis skipped (cppcheck unavailable) \u2014 install cppcheck for full coverage"]}, {"status": "validated", "checks": {"register_crosscheck": "pass", "compile": "pass", "static_analysis": "skipped"}, "failures": [], "unverified_fields": [], "notes": ["compiler: xtensa-esp32-elf-gcc", "static analysis skipped (cppcheck unavailable) \u2014 install cppcheck for full coverage"]}], "unverified_fields": [], "provider": "groq/openai/gpt-oss-120b (recorded 2026-07-17)"}}, "w25q64": {"platform": "esp32", "register_map": {"peripheral": "spi-flash", "chip": "W25Q64JV", "registers": [{"name": "Security", "offset": "0x00", "reset_value": null, "access": null, "fields": [], "confidence": "high", "source_pages": [52, 53, 54]}], "commands": [{"name": "Write Enable", "opcode": "0x06", "description": "", "address_bytes": null, "dummy_cycles": null, "data_direction": "none", "source_pages": [23]}, {"name": "Volatile SR Write Enable", "opcode": "0x50", "description": "", "address_bytes": null, "dummy_cycles": null, "data_direction": "none", "source_pages": [23]}, {"name": "Write Disable", "opcode": "0x04", "description": "", "address_bytes": null, "dummy_cycles": null, "data_direction": "none", "source_pages": [23]}, {"name": "Release Power-down / ID", "opcode": "0xAB", "description": "3 dummy byte(s); sequence: (ID7-ID0)(2)", "address_bytes": null, "dummy_cycles": null, "data_direction": "read", "source_pages": [23]}, {"name": "Manufacturer/Device ID", "opcode": "0x90", "description": "2 dummy byte(s); sequence: 00h, (MF7-MF0), (ID7-ID0)", "address_bytes": null, "dummy_cycles": null, "data_direction": "read", "source_pages": [23]}, {"name": "JEDEC ID", "opcode": "0x9F", "description": "sequence: (MF7-MF0), (ID15-ID8), (ID7-ID0)", "address_bytes": null, "dummy_cycles": null, "data_direction": "read", "source_pages": [23]}, {"name": "Read Unique ID", "opcode": "0x4B", "description": "4 dummy byte(s); sequence: (UID63-0)", "address_bytes": null, "dummy_cycles": null, "data_direction": "read", "source_pages": [23]}, {"name": "Read Data", "opcode": "0x03", "description": "sequence: A23-A16, A15-A8, A7-A0, (D7-D0)", "address_bytes": 3, "dummy_cycles": null, "data_direction": "read", "source_pages": [23]}, {"name": "Fast Read", "opcode": "0x0B", "description": "1 dummy byte(s); sequence: A23-A16, A15-A8, A7-A0, (D7-D0)", "address_bytes": 3, "dummy_cycles": null, "data_direction": "read", "source_pages": [23]}, {"name": "Page Program", "opcode": "0x02", "description": "sequence: A23-A16, A15-A8, A7-A0, D7-D0, D7-D0(3)", "address_bytes": 3, "dummy_cycles": null, "data_direction": "write", "source_pages": [23]}, {"name": "Sector Erase (4KB)", "opcode": "0x20", "description": "sequence: A23-A16, A15-A8, A7-A0", "address_bytes": 3, "dummy_cycles": null, "data_direction": "none", "source_pages": [23]}, {"name": "Block Erase (32KB)", "opcode": "0x52", "description": "sequence: A23-A16, A15-A8, A7-A0", "address_bytes": 3, "dummy_cycles": null, "data_direction": "none", "source_pages": [23]}, {"name": "Block Erase (64KB)", "opcode": "0xD8", "description": "sequence: A23-A16, A15-A8, A7-A0", "address_bytes": 3, "dummy_cycles": null, "data_direction": "none", "source_pages": [23]}, {"name": "Read Status Register-1", "opcode": "0x05", "description": "sequence: (S7-S0)(2)", "address_bytes": null, "dummy_cycles": null, "data_direction": "read", "source_pages": [23]}, {"name": "Write Status Register-1(4)", "opcode": "0x01", "description": "sequence: (S7-S0)(4)", "address_bytes": null, "dummy_cycles": null, "data_direction": "read", "source_pages": [23]}, {"name": "Read Status Register-2", "opcode": "0x35", "description": "sequence: (S15-S8)(2)", "address_bytes": null, "dummy_cycles": null, "data_direction": "read", "source_pages": [23]}, {"name": "Write Status Register-2", "opcode": "0x31", "description": "sequence: (S15-S8)", "address_bytes": null, "dummy_cycles": null, "data_direction": "read", "source_pages": [23]}, {"name": "Read Status Register-3", "opcode": "0x15", "description": "sequence: (S23-S16)(2)", "address_bytes": null, "dummy_cycles": null, "data_direction": "read", "source_pages": [23]}, {"name": "Write Status Register-3", "opcode": "0x11", "description": "sequence: (S23-S16)", "address_bytes": null, "dummy_cycles": null, "data_direction": "read", "source_pages": [23]}, {"name": "Read SFDP Register", "opcode": "0x5A", "description": "1 dummy byte(s); sequence: 00h, 00h, A7\u2013A0, (D7-0)", "address_bytes": null, "dummy_cycles": null, "data_direction": "read", "source_pages": [23]}, {"name": "Erase Security Register(5)", "opcode": "0x44", "description": "sequence: A23-A16, A15-A8, A7-A0", "address_bytes": 3, "dummy_cycles": null, "data_direction": "none", "source_pages": [23]}, {"name": "Program Security Register(5)", "opcode": "0x42", "description": "sequence: A23-A16, A15-A8, A7-A0, D7-D0, D7-D0(3)", "address_bytes": 3, "dummy_cycles": null, "data_direction": "write", "source_pages": [23]}, {"name": "Read Security Register(5)", "opcode": "0x48", "description": "1 dummy byte(s); sequence: A23-A16, A15-A8, A7-A0, (D7-D0)", "address_bytes": 3, "dummy_cycles": null, "data_direction": "read", "source_pages": [23]}, {"name": "Global Block Lock", "opcode": "0x7E", "description": "", "address_bytes": null, "dummy_cycles": null, "data_direction": "none", "source_pages": [23]}, {"name": "Global Block Unlock", "opcode": "0x98", "description": "", "address_bytes": null, "dummy_cycles": null, "data_direction": "none", "source_pages": [23]}, {"name": "Read Block Lock", "opcode": "0x3D", "description": "sequence: A23-A16, A15-A8, A7-A0, (L7-L0)", "address_bytes": 3, "dummy_cycles": null, "data_direction": "read", "source_pages": [23]}, {"name": "Individual Block Lock", "opcode": "0x36", "description": "sequence: A23-A16, A15-A8, A7-A0", "address_bytes": 3, "dummy_cycles": null, "data_direction": "none", "source_pages": [23]}, {"name": "Individual Block Unlock", "opcode": "0x39", "description": "sequence: A23-A16, A15-A8, A7-A0", "address_bytes": 3, "dummy_cycles": null, "data_direction": "none", "source_pages": [23]}, {"name": "Erase / Program Suspend", "opcode": "0x75", "description": "", "address_bytes": null, "dummy_cycles": null, "data_direction": "none", "source_pages": [23]}, {"name": "Erase / Program Resume", "opcode": "0x7A", "description": "", "address_bytes": null, "dummy_cycles": null, "data_direction": "none", "source_pages": [23]}, {"name": "Power-down", "opcode": "0xB9", "description": "", "address_bytes": null, "dummy_cycles": null, "data_direction": "none", "source_pages": [23]}, {"name": "Enable Reset", "opcode": "0x66", "description": "", "address_bytes": null, "dummy_cycles": null, "data_direction": "none", "source_pages": [23]}, {"name": "Reset Device", "opcode": "0x99", "description": "", "address_bytes": null, "dummy_cycles": null, "data_direction": "none", "source_pages": [23]}, {"name": "Fast Read Dual Output", "opcode": "0x3B", "description": "2 dummy byte(s); sequence: A23-A16, A15-A8, A7-A0, (D7-D0)(7)", "address_bytes": 3, "dummy_cycles": null, "data_direction": "read", "source_pages": [24]}, {"name": "Fast Read Dual I/O", "opcode": "0xBB", "description": "1 dummy byte(s); sequence: A23-A16(6), A15-A8(6), A7-A0(6), (D7-D0)(7)", "address_bytes": 3, "dummy_cycles": null, "data_direction": "read", "source_pages": [24]}, {"name": "Mftr./Device ID Dual I/O", "opcode": "0x92", "description": "1 dummy byte(s); sequence: A23-A16(6), A15-A8(6), 00(6), (MF7-MF0), (ID7-ID0)(7)", "address_bytes": 2, "dummy_cycles": null, "data_direction": "read", "source_pages": [24]}, {"name": "Quad Input Page Program", "opcode": "0x32", "description": "sequence: A23-A16, A15-A8, A7-A0, (D7-D0)(9), (D7-D0)(3), \u2026", "address_bytes": 3, "dummy_cycles": null, "data_direction": "read", "source_pages": [24]}, {"name": "Fast Read Quad Output", "opcode": "0x6B", "description": "4 dummy byte(s); sequence: A23-A16, A15-A8, A7-A0, (D7-D0)(10)", "address_bytes": 3, "dummy_cycles": null, "data_direction": "read", "source_pages": [24]}, {"name": "Mftr./Device ID Quad I/O", "opcode": "0x94", "description": "3 dummy byte(s); sequence: A23-A16, A15-A8, 00, (MF7-MF0), (ID7-ID0)", "address_bytes": 2, "dummy_cycles": null, "data_direction": "read", "source_pages": [24]}, {"name": "Fast Read Quad I/O", "opcode": "0xEB", "description": "3 dummy byte(s); sequence: A23-A16, A15-A8, A7-A0, (D7-D0)", "address_bytes": 3, "dummy_cycles": null, "data_direction": "read", "source_pages": [24]}, {"name": "Set Burst with Wrap", "opcode": "0x77", "description": "3 dummy byte(s); sequence: W8-W0", "address_bytes": null, "dummy_cycles": null, "data_direction": "none", "source_pages": [24]}], "extraction_confidence": "high", "source_pages": [23, 24, 52, 53, 54], "warnings": [], "low_confidence_pages": []}, "result": {"status": "validated", "decision": {"path": "llm", "framing": "command", "template_id": null, "reason": "no template for chip 'W25Q64JV' on 'esp32'; 41 commands vs 1 registers -> command-driver framing", "user_label": "Generated via AI with validation"}, "files": {"w25q64jv_driver.c": "#include \"w25q64jv_driver.h\"\n\n/* Helper: send a command with optional address and dummy bytes */\nstatic int w25q64jv_tx_rx(w25q64jv_t *dev, const uint8_t *tx_buf, uint8_t *rx_buf, size_t len)\n{\n    if (!dev || !dev->transfer) {\n        return -1;\n    }\n    return dev->transfer(tx_buf, rx_buf, len);\n}\n\nint w25q64jv_init(w25q64jv_t *dev, w25q64jv_spi_transfer_t transfer_cb)\n{\n    if (!dev || !transfer_cb) {\n        return -1;\n    }\n    dev->transfer = transfer_cb;\n    return 0;\n}\n\nint w25q64jv_write_enable(w25q64jv_t *dev)\n{\n    uint8_t cmd = W25Q64JV_CMD_WRITE_ENABLE;\n    return w25q64jv_tx_rx(dev, &cmd, NULL, 1);\n}\n\nint w25q64jv_write_disable(w25q64jv_t *dev)\n{\n    uint8_t cmd = W25Q64JV_CMD_WRITE_DISABLE;\n    return w25q64jv_tx_rx(dev, &cmd, NULL, 1);\n}\n\nint w25q64jv_read_status1(w25q64jv_t *dev, uint8_t *status)\n{\n    uint8_t tx[2] = { W25Q64JV_CMD_READ_STATUS1, 0x00 };\n    uint8_t rx[2] = {0};\n    int ret = w25q64jv_tx_rx(dev, tx, rx, 2);\n    if (ret == 0 && status) {\n        *status = rx[1];\n    }\n    return ret;\n}\n\nint w25q64jv_read_jedec_id(w25q64jv_t *dev, uint8_t *buf)\n{\n    uint8_t tx[4] = { W25Q64JV_CMD_JEDEC_ID, 0x00, 0x00, 0x00 };\n    uint8_t rx[4] = {0};\n    int ret = w25q64jv_tx_rx(dev, tx, rx, 4);\n    if (ret == 0 && buf) {\n        buf[0] = rx[1]; // Manufacturer ID\n        buf[1] = rx[2]; // Memory Type\n        buf[2] = rx[3]; // Capacity\n    }\n    return ret;\n}\n\nint w25q64jv_read_data(w25q64jv_t *dev, uint32_t addr, uint8_t *buf, size_t len)\n{\n    if (!buf || len == 0) {\n        return -1;\n    }\n    uint8_t tx[4];\n    tx[0] = W25Q64JV_CMD_READ_DATA;\n    tx[1] = (addr >> 16) & 0xFFu;\n    tx[2] = (addr >> 8) & 0xFFu;\n    tx[3] = addr & 0xFFu;\n    /* Send command+address, then read data */\n    int ret = w25q64jv_tx_rx(dev, tx, NULL, 4);\n    if (ret) return ret;\n    return w25q64jv_tx_rx(dev, NULL, buf, len);\n}\n\nint w25q64jv_page_program(w25q64jv_t *dev, uint32_t addr, const uint8_t *buf, size_t len)\n{\n    if (!buf || len == 0 || len > W25Q64JV_PAGE_SIZE) {\n        return -1;\n    }\n    uint8_t header[4];\n    header[0] = W25Q64JV_CMD_PAGE_PROGRAM;\n    header[1] = (addr >> 16) & 0xFFu;\n    header[2] = (addr >> 8) & 0xFFu;\n    header[3] = addr & 0xFFu;\n    int ret = w25q64jv_tx_rx(dev, header, NULL, 4);\n    if (ret) return ret;\n    return w25q64jv_tx_rx(dev, buf, NULL, len);\n}\n\nint w25q64jv_sector_erase(w25q64jv_t *dev, uint32_t addr)\n{\n    uint8_t tx[4];\n    tx[0] = W25Q64JV_CMD_SECTOR_ERASE;\n    tx[1] = (addr >> 16) & 0xFFu;\n    tx[2] = (addr >> 8) & 0xFFu;\n    tx[3] = addr & 0xFFu;\n    return w25q64jv_tx_rx(dev, tx, NULL, 4);\n}\n\nint w25q64jv_chip_erase(w25q64jv_t *dev)\n{\n    /* Chip erase is not listed explicitly; use block erase 64KB covering whole memory */\n    /* For simplicity, perform a sequence of 64KB block erases covering 8 MB (max address 0x7FFFFF) */\n    uint32_t addr;\n    int ret = 0;\n    for (addr = 0; addr < 0x800000u; addr += W25Q64JV_BLOCK64K_SIZE) {\n        ret = w25q64jv_tx_rx(dev, (uint8_t[]){W25Q64JV_CMD_BLOCK_ERASE_64K,\n                                            (addr >> 16) & 0xFFu,\n                                            (addr >> 8) & 0xFFu,\n                                            addr & 0xFFu}, NULL, 4);\n        if (ret) break;\n    }\n    return ret;\n}\n", "w25q64jv_driver.h": "#ifndef W25Q64JV_DRIVER_H\n#define W25Q64JV_DRIVER_H\n\n#include <stdint.h>\n#include <stddef.h>\n\n/* Callback type that the user must implement. It must perform a full SPI transaction.\n *   tx  \u2013 pointer to data to transmit (may be NULL if only receiving)\n *   rx  \u2013 pointer to buffer for received data (may be NULL if only transmitting)\n *   len \u2013 number of bytes in the transaction\n * Return 0 on success, non\u2011zero on error.\n */\ntypedef int (*w25q64jv_spi_transfer_t)(const uint8_t *tx, uint8_t *rx, size_t len);\n\n/* Driver context \u2013 holds the user supplied transfer callback. */\ntypedef struct {\n    w25q64jv_spi_transfer_t transfer;\n} w25q64jv_t;\n\n/* Command opcodes */\n#define W25Q64JV_CMD_WRITE_ENABLE               0x06u\n#define W25Q64JV_CMD_VOLATILE_SR_WRITE_ENABLE    0x50u\n#define W25Q64JV_CMD_WRITE_DISABLE               0x04u\n#define W25Q64JV_CMD_RELEASE_POWER_DOWN_ID       0xABu\n#define W25Q64JV_CMD_MANUFACTURER_DEVICE_ID      0x90u\n#define W25Q64JV_CMD_JEDEC_ID                    0x9Fu\n#define W25Q64JV_CMD_READ_UNIQUE_ID              0x4Bu\n#define W25Q64JV_CMD_READ_DATA                   0x03u\n#define W25Q64JV_CMD_FAST_READ                   0x0Bu\n#define W25Q64JV_CMD_PAGE_PROGRAM                0x02u\n#define W25Q64JV_CMD_SECTOR_ERASE                0x20u\n#define W25Q64JV_CMD_BLOCK_ERASE_32K             0x52u\n#define W25Q64JV_CMD_BLOCK_ERASE_64K             0xD8u\n#define W25Q64JV_CMD_READ_STATUS1                0x05u\n#define W25Q64JV_CMD_WRITE_STATUS1               0x01u\n#define W25Q64JV_CMD_READ_STATUS2                0x35u\n#define W25Q64JV_CMD_WRITE_STATUS2               0x31u\n#define W25Q64JV_CMD_READ_STATUS3                0x15u\n#define W25Q64JV_CMD_WRITE_STATUS3               0x11u\n#define W25Q64JV_CMD_READ_SFDP                   0x5Au\n#define W25Q64JV_CMD_ERASE_SECURITY_REG          0x44u\n#define W25Q64JV_CMD_PROGRAM_SECURITY_REG        0x42u\n#define W25Q64JV_CMD_READ_SECURITY_REG           0x48u\n#define W25Q64JV_CMD_GLOBAL_BLOCK_LOCK           0x7Eu\n#define W25Q64JV_CMD_GLOBAL_BLOCK_UNLOCK         0x98u\n#define W25Q64JV_CMD_READ_BLOCK_LOCK             0x3Du\n#define W25Q64JV_CMD_INDIVIDUAL_BLOCK_LOCK       0x36u\n#define W25Q64JV_CMD_INDIVIDUAL_BLOCK_UNLOCK     0x39u\n#define W25Q64JV_CMD_ERASE_PROGRAM_SUSPEND       0x75u\n#define W25Q64JV_CMD_ERASE_PROGRAM_RESUME        0x7Au\n#define W25Q64JV_CMD_POWER_DOWN                  0xB9u\n#define W25Q64JV_CMD_ENABLE_RESET                0x66u\n#define W25Q64JV_CMD_RESET_DEVICE                0x99u\n#define W25Q64JV_CMD_FAST_READ_DUAL_OUTPUT       0x3Bu\n#define W25Q64JV_CMD_FAST_READ_DUAL_IO           0xBBu\n#define W25Q64JV_CMD_MFTR_DEVICE_ID_DUAL_IO      0x92u\n#define W25Q64JV_CMD_QUAD_INPUT_PAGE_PROGRAM     0x32u\n#define W25Q64JV_CMD_FAST_READ_QUAD_OUTPUT       0x6Bu\n#define W25Q64JV_CMD_MFTR_DEVICE_ID_QUAD_IO      0x94u\n#define W25Q64JV_CMD_FAST_READ_QUAD_IO           0xEBu\n#define W25Q64JV_CMD_SET_BURST_WITH_WRAP         0x77u\n\n/* Size definitions */\n#define W25Q64JV_PAGE_SIZE       256u   /* bytes per page */\n#define W25Q64JV_SECTOR_SIZE     4096u  /* 4 KiB */\n#define W25Q64JV_BLOCK32K_SIZE   32768u /* 32 KiB */\n#define W25Q64JV_BLOCK64K_SIZE   65536u /* 64 KiB */\n\n/* UNVERIFIED: bit positions not confirmed against datasheet \u2014 verify manually (see p.52,53,54) */\n#define W25Q64JV_SECURITY_REG    0x00u  /* placeholder offset for Security register */\n\n/* Driver API */\nint w25q64jv_init(w25q64jv_t *dev, w25q64jv_spi_transfer_t transfer_cb);\nint w25q64jv_write_enable(w25q64jv_t *dev);\nint w25q64jv_write_disable(w25q64jv_t *dev);\nint w25q64jv_read_status1(w25q64jv_t *dev, uint8_t *status);\nint w25q64jv_read_data(w25q64jv_t *dev, uint32_t addr, uint8_t *buf, size_t len);\nint w25q64jv_page_program(w25q64jv_t *dev, uint32_t addr, const uint8_t *buf, size_t len);\nint w25q64jv_sector_erase(w25q64jv_t *dev, uint32_t addr);\nint w25q64jv_chip_erase(w25q64jv_t *dev);\nint w25q64jv_read_jedec_id(w25q64jv_t *dev, uint8_t *buf);\n\n#endif /* W25Q64JV_DRIVER_H */\n", "w25q64jv_example.c": "#include <stdio.h>\n#include \"w25q64jv_driver.h\"\n\n/* Simple SPI transfer stub for demonstration \u2013 replace with real ESP32 SPI driver. */\nstatic int spi_transfer_stub(const uint8_t *tx, uint8_t *rx, size_t len)\n{\n    /* In a real implementation you would assert CS, send tx, read rx, deassert CS. */\n    (void)tx; (void)rx; (void)len;\n    return 0; /* pretend success */\n}\n\nint main(void)\n{\n    w25q64jv_t flash;\n    if (w25q64jv_init(&flash, spi_transfer_stub) != 0) {\n        printf(\"Failed to init driver\\n\");\n        return -1;\n    }\n\n    if (w25q64jv_write_enable(&flash) != 0) {\n        printf(\"Write Enable failed\\n\");\n        return -1;\n    }\n\n    uint8_t jedec[3];\n    if (w25q64jv_read_jedec_id(&flash, jedec) == 0) {\n        printf(\"JEDEC ID: %02X %02X %02X\\n\", jedec[0], jedec[1], jedec[2]);\n    }\n\n    /* Example: read first 16 bytes */\n    uint8_t data[16];\n    if (w25q64jv_read_data(&flash, 0x000000, data, sizeof(data)) == 0) {\n        printf(\"Data at 0x000000: \");\n        for (size_t i = 0; i < sizeof(data); ++i) {\n            printf(\"%02X \", data[i]);\n        }\n        printf(\"\\n\");\n    }\n\n    return 0;\n}\n"}, "attempts": 1, "reports": [{"status": "validated", "checks": {"register_crosscheck": "pass", "compile": "pass", "static_analysis": "skipped"}, "failures": [], "unverified_fields": [], "notes": ["compiler: xtensa-esp32-elf-gcc", "static analysis skipped (cppcheck unavailable) \u2014 install cppcheck for full coverage"]}], "unverified_fields": [], "provider": "groq/openai/gpt-oss-120b (recorded 2026-07-17)"}}, "esp32-i2c": {"platform": "esp32", "register_map": {"peripheral": "I2C0", "chip": "ESP32", "base_address": "0x3FF53000", "registers": [{"name": "I2C_CTR_REG", "offset": "0x0004", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402, 403]}, {"name": "I2C_TO_REG", "offset": "0x000C", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402, 404]}, {"name": "I2C_SLAVE_ADDR_REG", "offset": "0x0010", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402, 405]}, {"name": "I2C_RXFIFO_ST_REG", "offset": "0x0014", "reset_value": null, "access": "RO", "fields": [], "confidence": "high", "source_pages": [401, 402, 405]}, {"name": "I2C_FIFO_CONF_REG", "offset": "0x0018", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402, 406]}, {"name": "I2C_SR_REG", "offset": "0x0008", "reset_value": null, "access": "RO", "fields": [], "confidence": "high", "source_pages": [401, 402, 404]}, {"name": "I2C_SDA_HOLD_REG", "offset": "0x0030", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402, 411]}, {"name": "I2C_SDA_SAMPLE_REG", "offset": "0x0034", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402, 411]}, {"name": "I2C_SCL_LOW_PERIOD_REG", "offset": "0x0000", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402, 403]}, {"name": "I2C_SCL_HIGH_PERIOD_REG", "offset": "0x0038", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402, 411]}, {"name": "I2C_SCL_START_HOLD_REG", "offset": "0x0040", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402, 412]}, {"name": "I2C_SCL_RSTART_SETUP_REG", "offset": "0x0044", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402, 412]}, {"name": "I2C_SCL_STOP_HOLD_REG", "offset": "0x0048", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402, 412]}, {"name": "I2C_SCL_STOP_SETUP_REG", "offset": "0x004C", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402, 413]}, {"name": "I2C_SCL_FILTER_CFG_REG", "offset": "0x0050", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402, 413]}, {"name": "I2C_SDA_FILTER_CFG_REG", "offset": "0x0054", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402, 413]}, {"name": "I2C_INT_RAW_REG", "offset": "0x0020", "reset_value": null, "access": "RO", "fields": [], "confidence": "high", "source_pages": [401, 402, 407]}, {"name": "I2C_INT_CLR_REG", "offset": "0x0024", "reset_value": null, "access": "WO", "fields": [], "confidence": "high", "source_pages": [401, 402, 408]}, {"name": "I2C_INT_ENA_REG", "offset": "0x0028", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402, 409]}, {"name": "I2C_INT_STATUS_REG", "offset": "0x002C", "reset_value": null, "access": "RO", "fields": [], "confidence": "high", "source_pages": [401, 402, 410]}, {"name": "I2C_COMD0_REG", "offset": "0x0058", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402]}, {"name": "I2C_COMD1_REG", "offset": "0x005C", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402]}, {"name": "I2C_COMD2_REG", "offset": "0x0060", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402]}, {"name": "I2C_COMD3_REG", "offset": "0x0064", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402]}, {"name": "I2C_COMD4_REG", "offset": "0x0068", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402]}, {"name": "I2C_COMD5_REG", "offset": "0x006C", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402]}, {"name": "I2C_COMD6_REG", "offset": "0x0070", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402]}, {"name": "I2C_COMD7_REG", "offset": "0x0074", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402]}, {"name": "I2C_COMD8_REG", "offset": "0x0078", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402]}, {"name": "I2C_COMD9_REG", "offset": "0x007C", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402]}, {"name": "I2C_COMD10_REG", "offset": "0x0080", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402]}, {"name": "I2C_COMD11_REG", "offset": "0x0084", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402]}, {"name": "I2C_COMD12_REG", "offset": "0x0088", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402]}, {"name": "I2C_COMD13_REG", "offset": "0x008C", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402]}, {"name": "I2C_COMD14_REG", "offset": "0x0090", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402]}, {"name": "I2C_COMD15_REG", "offset": "0x0094", "reset_value": null, "access": "RW", "fields": [], "confidence": "high", "source_pages": [401, 402]}], "commands": [], "extraction_confidence": "high", "source_pages": [401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413], "warnings": ["rebased 16 absolute addresses using inferred base 0x3FF53000 (confirmed by 17 register(s) seen both ways)"], "low_confidence_pages": []}, "result": {"status": "validated", "decision": {"path": "llm", "framing": "register", "template_id": null, "reason": "no template for chip 'ESP32' on 'esp32'; 36 registers -> memory-mapped register framing", "user_label": "Generated via AI with validation"}, "files": {"esp32_driver.c": "#include \"esp32_driver.h\"\n\n/* Helper macro to access a register */\n#define REG32(offset) (*(volatile uint32_t *)(ESP32_BASE + (offset)))\n\nbool i2c_init(void)\n{\n    /* Minimal initialization: enable I2C controller in master mode.\n       The exact bit definitions are unknown, so we write a placeholder value.\n       Users must verify the bits against the datasheet. */\n    REG32(I2C_CTR_REG) = 0x00000001U; /* enable */\n    return true;\n}\n\nbool i2c_write(uint8_t slave_addr, const uint8_t *data, size_t len)\n{\n    if (data == NULL || len == 0)\n        return false;\n\n    /* Simple polling stub \u2013 actual command sequence is device\u2011specific and\n       requires proper configuration of command registers, which are unknown.\n       This function returns false to indicate that a real implementation is\n       needed. */\n    (void)slave_addr;\n    (void)data;\n    (void)len;\n    return false;\n}\n\nbool i2c_read(uint8_t slave_addr, uint8_t *data, size_t len)\n{\n    if (data == NULL || len == 0)\n        return false;\n\n    /* Simple polling stub \u2013 see i2c_write for details. */\n    (void)slave_addr;\n    (void)data;\n    (void)len;\n    return false;\n}\n", "esp32_driver.h": "#ifndef ESP32_DRIVER_H_\n#define ESP32_DRIVER_H_\n\n#include <stdint.h>\n#include <stddef.h>\n#include <stdbool.h>\n\n/* Base address for I2C0 */\n#define ESP32_BASE 0x3FF53000U\n\n/* Register offsets */\n#define I2C_SCL_LOW_PERIOD_REG      (0x0000U)\n#define I2C_CTR_REG                 (0x0004U)\n#define I2C_SR_REG                  (0x0008U)\n#define I2C_TO_REG                  (0x000CU)\n#define I2C_SLAVE_ADDR_REG          (0x0010U)\n#define I2C_RXFIFO_ST_REG           (0x0014U)\n#define I2C_FIFO_CONF_REG           (0x0018U)\n#define I2C_INT_RAW_REG             (0x0020U)\n#define I2C_INT_CLR_REG             (0x0024U)\n#define I2C_INT_ENA_REG             (0x0028U)\n#define I2C_INT_STATUS_REG          (0x002CU)\n#define I2C_SDA_HOLD_REG            (0x0030U)\n#define I2C_SDA_SAMPLE_REG          (0x0034U)\n#define I2C_SCL_HIGH_PERIOD_REG     (0x0038U)\n#define I2C_SCL_START_HOLD_REG      (0x0040U)\n#define I2C_SCL_RSTART_SETUP_REG    (0x0044U)\n#define I2C_SCL_STOP_HOLD_REG       (0x0048U)\n#define I2C_SCL_STOP_SETUP_REG      (0x004CU)\n#define I2C_SCL_FILTER_CFG_REG      (0x0050U)\n#define I2C_SDA_FILTER_CFG_REG      (0x0054U)\n#define I2C_COMD0_REG               (0x0058U)\n#define I2C_COMD1_REG               (0x005CU)\n#define I2C_COMD2_REG               (0x0060U)\n#define I2C_COMD3_REG               (0x0064U)\n#define I2C_COMD4_REG               (0x0068U)\n#define I2C_COMD5_REG               (0x006CU)\n#define I2C_COMD6_REG               (0x0070U)\n#define I2C_COMD7_REG               (0x0074U)\n#define I2C_COMD8_REG               (0x0078U)\n#define I2C_COMD9_REG               (0x007CU)\n#define I2C_COMD10_REG              (0x0080U)\n#define I2C_COMD11_REG              (0x0084U)\n#define I2C_COMD12_REG              (0x0088U)\n#define I2C_COMD13_REG              (0x008CU)\n#define I2C_COMD14_REG              (0x0090U)\n#define I2C_COMD15_REG              (0x0094U)\n\n/* Public API */\nbool i2c_init(void);\nbool i2c_write(uint8_t slave_addr, const uint8_t *data, size_t len);\nbool i2c_read(uint8_t slave_addr, uint8_t *data, size_t len);\n\n#endif /* ESP32_DRIVER_H_ */\n", "esp32_example.c": "#include \"esp32_driver.h\"\n\nint main(void)\n{\n    uint8_t tx_data[2] = {0x00, 0xFF};\n    uint8_t rx_data[2] = {0};\n\n    if (!i2c_init()) {\n        return -1;\n    }\n\n    /* Attempt a write \u2013 the stub returns false, but the call demonstrates API usage */\n    i2c_write(0x50, tx_data, sizeof(tx_data));\n\n    /* Attempt a read */\n    i2c_read(0x50, rx_data, sizeof(rx_data));\n\n    return 0;\n}\n"}, "attempts": 2, "reports": [{"status": "failed", "checks": {"register_crosscheck": "pass", "compile": "fail", "static_analysis": "skipped"}, "failures": [{"check": "compile", "file": "esp32_driver.c", "line": null, "message": "[xtensa-esp32-elf-gcc -Wall -Wextra -Werror]\nIn file included from C:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.c:1:\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.h:75:57: error: unknown type name 'size_t'\n bool i2c_write(uint8_t slave_addr, const uint8_t *data, size_t len);\n                                                         ^~~~~~\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.h:75:57: note: 'size_t' is defined in header '<stddef.h>'; did you forget to '#include <stddef.h>'?\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.h:6:1:\n+#include <stddef.h>\n \nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.h:75:57:\n bool i2c_write(uint8_t slave_addr, const uint8_t *data, size_t len);\n                                                         ^~~~~~\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.h:85:50: error: unknown type name 'size_t'\n bool i2c_read(uint8_t slave_addr, uint8_t *data, size_t len);\n                                                  ^~~~~~\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.h:85:50: note: 'size_t' is defined in header '<stddef.h>'; did you forget to '#include <stddef.h>'?\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.c:112:57: error: unknown type name 'size_t'\n bool i2c_write(uint8_t slave_addr, const uint8_t *data, size_t len)\n                                                         ^~~~~~\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.c:112:57: note: 'size_t' is defined in header '<stddef.h>'; did you forget to '#include <stddef.h>'?\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.c:2:1:\n+#include <stddef.h>\n \nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.c:112:57:\n bool i2c_write(uint8_t slave_addr, const uint8_t *data, size_t len)\n                                                         ^~~~~~\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.c:136:50: error: unknown type name 'size_t'\n bool i2c_read(uint8_t slave_addr, uint8_t *data, size_t len)\n                                                  ^~~~~~\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.c:136:50: note: 'size_t' is defined in header '<stddef.h>'; did you forget to '#include <stddef.h>'?\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.c:106:13: error: 'i2c_clear_int' defined but not used [-Werror=unused-function]"}, {"check": "compile", "file": "esp32_example.c", "line": null, "message": "[xtensa-esp32-elf-gcc -Wall -Wextra -Werror]\nIn file included from C:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_example.c:1:\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.h:75:57: error: unknown type name 'size_t'\n bool i2c_write(uint8_t slave_addr, const uint8_t *data, size_t len);\n                                                         ^~~~~~\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.h:75:57: note: 'size_t' is defined in header '<stddef.h>'; did you forget to '#include <stddef.h>'?\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.h:6:1:\n+#include <stddef.h>\n \nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.h:75:57:\n bool i2c_write(uint8_t slave_addr, const uint8_t *data, size_t len);\n                                                         ^~~~~~\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.h:85:50: error: unknown type name 'size_t'\n bool i2c_read(uint8_t slave_addr, uint8_t *data, size_t len);\n                                                  ^~~~~~\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.h:85:50: note: 'size_t' is defined in header '<stddef.h>'; did you forget to '#include <stddef.h>'?\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_example.c: In function 'main':\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_example.c:13:9: error: implicit declaration of function 'i2c_write'; did you mean 'i2c_init'? [-Werror=implicit-function-declaration]\n     if (i2c_write(0x50, tx_data, sizeof(tx_data))) {\n         ^~~~~~~~~\n         i2c_init\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_example.c:20:9: error: implicit declaration of function 'i2c_read'; did you mean 'fread'? [-Werror=implicit-function-declaration]\n     if (i2c_read(0x50, rx_data, sizeof(rx_data))) {\n         ^~~~~~~~\n         fread\ncc1.exe: all warnings being treated as errors"}], "unverified_fields": [], "notes": ["compiler: xtensa-esp32-elf-gcc", "static analysis skipped (cppcheck unavailable) \u2014 install cppcheck for full coverage"]}, {"status": "validated", "checks": {"register_crosscheck": "pass", "compile": "pass", "static_analysis": "skipped"}, "failures": [], "unverified_fields": [], "notes": ["compiler: xtensa-esp32-elf-gcc", "static analysis skipped (cppcheck unavailable) \u2014 install cppcheck for full coverage"]}], "unverified_fields": [], "provider": "groq/openai/gpt-oss-120b (recorded 2026-07-17)"}}}}
+{
+ "samples": [
+  {
+   "id": "bme280",
+   "platform": "esp32",
+   "label": "BME280 environmental sensor (I2C bus device)"
+  },
+  {
+   "id": "w25q64",
+   "platform": "esp32",
+   "label": "W25Q64JV SPI flash (command device)"
+  },
+  {
+   "id": "esp32-i2c",
+   "platform": "esp32",
+   "label": "ESP32 I2C controller (memory-mapped, empty fields)"
+  }
+ ],
+ "runs": {
+  "bme280": {
+   "platform": "esp32",
+   "register_map": {
+    "peripheral": "I2C",
+    "chip": "BME280",
+    "registers": [
+     {
+      "name": "dig_T1_LSB",
+      "offset": "0x88",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_T1_MSB",
+      "offset": "0x89",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_T2_LSB",
+      "offset": "0x8A",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_T2_MSB",
+      "offset": "0x8B",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_T3_LSB",
+      "offset": "0x8C",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_T3_MSB",
+      "offset": "0x8D",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_P1_LSB",
+      "offset": "0x8E",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_P1_MSB",
+      "offset": "0x8F",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_P2_LSB",
+      "offset": "0x90",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_P2_MSB",
+      "offset": "0x91",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_P3_LSB",
+      "offset": "0x92",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_P3_MSB",
+      "offset": "0x93",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_P4_LSB",
+      "offset": "0x94",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_P4_MSB",
+      "offset": "0x95",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_P5_LSB",
+      "offset": "0x96",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_P5_MSB",
+      "offset": "0x97",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_P6_LSB",
+      "offset": "0x98",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_P6_MSB",
+      "offset": "0x99",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_P7_LSB",
+      "offset": "0x9A",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_P7_MSB",
+      "offset": "0x9B",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_P8_LSB",
+      "offset": "0x9C",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_P8_MSB",
+      "offset": "0x9D",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_P9_LSB",
+      "offset": "0x9E",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_P9_MSB",
+      "offset": "0x9F",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_H1",
+      "offset": "0xA1",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "low",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_H2_LSB",
+      "offset": "0xE1",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_H2_MSB",
+      "offset": "0xE2",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "medium",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "dig_H3",
+      "offset": "0xE3",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "low",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "hum_lsb",
+      "offset": "0xFE",
+      "reset_value": "0x00",
+      "access": null,
+      "fields": [
+       {
+        "name": "hum_lsb",
+        "bits": "[7:0]",
+        "description": ""
+       }
+      ],
+      "confidence": "high",
+      "source_pages": [
+       27
+      ]
+     },
+     {
+      "name": "hum_msb",
+      "offset": "0xFD",
+      "reset_value": "0x80",
+      "access": null,
+      "fields": [
+       {
+        "name": "hum_msb",
+        "bits": "[7:0]",
+        "description": ""
+       }
+      ],
+      "confidence": "high",
+      "source_pages": [
+       27
+      ]
+     },
+     {
+      "name": "temp_xlsb",
+      "offset": "0xFC",
+      "reset_value": "0x00",
+      "access": null,
+      "fields": [
+       {
+        "name": "temp_xlsb",
+        "bits": "[7:4]",
+        "description": ""
+       }
+      ],
+      "confidence": "high",
+      "source_pages": [
+       27
+      ]
+     },
+     {
+      "name": "temp_lsb",
+      "offset": "0xFB",
+      "reset_value": "0x00",
+      "access": null,
+      "fields": [
+       {
+        "name": "temp_lsb",
+        "bits": "[7:0]",
+        "description": ""
+       }
+      ],
+      "confidence": "high",
+      "source_pages": [
+       27
+      ]
+     },
+     {
+      "name": "temp_msb",
+      "offset": "0xFA",
+      "reset_value": "0x80",
+      "access": null,
+      "fields": [
+       {
+        "name": "temp_msb",
+        "bits": "[7:0]",
+        "description": ""
+       }
+      ],
+      "confidence": "high",
+      "source_pages": [
+       27
+      ]
+     },
+     {
+      "name": "press_xlsb",
+      "offset": "0xF9",
+      "reset_value": "0x00",
+      "access": null,
+      "fields": [
+       {
+        "name": "press_xlsb",
+        "bits": "[7:4]",
+        "description": ""
+       }
+      ],
+      "confidence": "high",
+      "source_pages": [
+       27
+      ]
+     },
+     {
+      "name": "press_lsb",
+      "offset": "0xF8",
+      "reset_value": "0x00",
+      "access": null,
+      "fields": [
+       {
+        "name": "press_lsb",
+        "bits": "[7:0]",
+        "description": ""
+       }
+      ],
+      "confidence": "high",
+      "source_pages": [
+       27
+      ]
+     },
+     {
+      "name": "press_msb",
+      "offset": "0xF7",
+      "reset_value": "0x80",
+      "access": null,
+      "fields": [
+       {
+        "name": "press_msb",
+        "bits": "[7:0]",
+        "description": ""
+       }
+      ],
+      "confidence": "high",
+      "source_pages": [
+       27
+      ]
+     },
+     {
+      "name": "config",
+      "offset": "0xF5",
+      "reset_value": "0x00",
+      "access": null,
+      "fields": [
+       {
+        "name": "t_sb",
+        "bits": "[7:5]",
+        "description": ""
+       },
+       {
+        "name": "filter",
+        "bits": "[4:2]",
+        "description": ""
+       },
+       {
+        "name": "spi3w_en",
+        "bits": "[0:0]",
+        "description": ""
+       }
+      ],
+      "confidence": "high",
+      "source_pages": [
+       27
+      ]
+     },
+     {
+      "name": "ctrl_meas",
+      "offset": "0xF4",
+      "reset_value": "0x00",
+      "access": null,
+      "fields": [
+       {
+        "name": "osrs_t",
+        "bits": "[7:5]",
+        "description": ""
+       },
+       {
+        "name": "osrs_p",
+        "bits": "[4:2]",
+        "description": ""
+       },
+       {
+        "name": "mode",
+        "bits": "[1:0]",
+        "description": ""
+       }
+      ],
+      "confidence": "high",
+      "source_pages": [
+       27
+      ]
+     },
+     {
+      "name": "status",
+      "offset": "0xF3",
+      "reset_value": "0x00",
+      "access": null,
+      "fields": [
+       {
+        "name": "measuring",
+        "bits": "[3:3]",
+        "description": ""
+       },
+       {
+        "name": "im_update",
+        "bits": "[0:0]",
+        "description": ""
+       }
+      ],
+      "confidence": "high",
+      "source_pages": [
+       27
+      ]
+     },
+     {
+      "name": "ctrl_hum",
+      "offset": "0xF2",
+      "reset_value": "0x00",
+      "access": null,
+      "fields": [
+       {
+        "name": "osrs_h",
+        "bits": "[2:0]",
+        "description": ""
+       }
+      ],
+      "confidence": "high",
+      "source_pages": [
+       27
+      ]
+     },
+     {
+      "name": "reset",
+      "offset": "0xE0",
+      "reset_value": "0x00",
+      "access": null,
+      "fields": [
+       {
+        "name": "reset",
+        "bits": "[7:0]",
+        "description": ""
+       }
+      ],
+      "confidence": "high",
+      "source_pages": [
+       27
+      ]
+     },
+     {
+      "name": "id",
+      "offset": "0xD0",
+      "reset_value": "0x60",
+      "access": null,
+      "fields": [
+       {
+        "name": "chip_id",
+        "bits": "[7:0]",
+        "description": ""
+       }
+      ],
+      "confidence": "high",
+      "source_pages": [
+       27
+      ]
+     }
+    ],
+    "extraction_confidence": "medium",
+    "source_pages": [
+     24,
+     27
+    ],
+    "warnings": [],
+    "low_confidence_pages": [
+     24
+    ],
+    "provenance": {
+     "chip": "user",
+     "peripheral": "user"
+    }
+   },
+   "result": {
+    "status": "validated",
+    "decision": {
+     "path": "llm",
+     "framing": "register",
+     "template_id": null,
+     "reason": "no template for chip 'BME280' on 'esp32'; 42 registers -> memory-mapped register framing",
+     "user_label": "Generated via AI with validation"
+    },
+    "files": {
+     "bme280_driver.c": "#include \"bme280_driver.h\"\n#include <stddef.h>\n\nint bme280_init(bme280_t *dev, bme280_reg_read_t read_cb, bme280_reg_write_t write_cb)\n{\n    if (!dev || !read_cb || !write_cb) {\n        return -1;\n    }\n    dev->read = read_cb;\n    dev->write = write_cb;\n    return 0;\n}\n\nstatic int bme280_write_reg(bme280_t *dev, uint8_t reg, uint8_t val)\n{\n    return dev->write(reg, &val, 1U);\n}\n\nstatic int bme280_read_regs(bme280_t *dev, uint8_t start_reg, uint8_t *buf, uint32_t len)\n{\n    return dev->read(start_reg, buf, len);\n}\n\nint bme280_set_mode(bme280_t *dev, bme280_mode_t mode)\n{\n    uint8_t ctrl_meas;\n    if (bme280_read_regs(dev, BME280_REG_CTRL_MEAS, &ctrl_meas, 1U) != 0) {\n        return -1;\n    }\n    ctrl_meas = (ctrl_meas & 0xFC) | (uint8_t)mode;\n    return bme280_write_reg(dev, BME280_REG_CTRL_MEAS, ctrl_meas);\n}\n\nint bme280_set_oversampling(bme280_t *dev, bme280_osrs_t osrs_t, bme280_osrs_t osrs_p, bme280_osrs_t osrs_h)\n{\n    uint8_t ctrl_meas, ctrl_hum;\n    /* humidity oversampling */\n    ctrl_hum = (uint8_t)osrs_h & 0x07U;\n    if (bme280_write_reg(dev, BME280_REG_CTRL_HUM, ctrl_hum) != 0) {\n        return -1;\n    }\n    /* temperature and pressure oversampling */\n    if (bme280_read_regs(dev, BME280_REG_CTRL_MEAS, &ctrl_meas, 1U) != 0) {\n        return -1;\n    }\n    ctrl_meas = ((uint8_t)osrs_t << 5) | ((uint8_t)osrs_p << 2) | (ctrl_meas & 0x03U);\n    return bme280_write_reg(dev, BME280_REG_CTRL_MEAS, ctrl_meas);\n}\n\nint bme280_read_raw(bme280_t *dev, uint32_t *press_raw, uint32_t *temp_raw, uint16_t *hum_raw)\n{\n    uint8_t buf[8];\n    if (bme280_read_regs(dev, BME280_REG_PRESS_MSB, buf, 8U) != 0) {\n        return -1;\n    }\n    *press_raw = ((uint32_t)buf[0] << 12) | ((uint32_t)buf[1] << 4) | ((uint32_t)buf[2] >> 4);\n    *temp_raw  = ((uint32_t)buf[3] << 12) | ((uint32_t)buf[4] << 4) | ((uint32_t)buf[5] >> 4);\n    *hum_raw   = ((uint16_t)buf[6] << 8) | (uint16_t)buf[7];\n    return 0;\n}\n",
+     "bme280_driver.h": "#ifndef BME280_DRIVER_H\n#define BME280_DRIVER_H\n\n#include <stdint.h>\n\n/* Callback type definitions */\ntypedef int (*bme280_reg_read_t)(uint8_t reg, uint8_t *buf, uint32_t len);\ntypedef int (*bme280_reg_write_t)(uint8_t reg, const uint8_t *buf, uint32_t len);\n\n/* Driver context */\ntypedef struct {\n    bme280_reg_read_t  read;\n    bme280_reg_write_t write;\n} bme280_t;\n\n/* Register addresses (bus offsets) */\n#define BME280_REG_ID          0xD0U\n#define BME280_REG_RESET       0xE0U\n#define BME280_REG_CTRL_HUM    0xF2U\n#define BME280_REG_CTRL_MEAS   0xF4U\n#define BME280_REG_CONFIG      0xF5U\n#define BME280_REG_PRESS_MSB   0xF7U\n#define BME280_REG_PRESS_LSB   0xF8U\n#define BME280_REG_PRESS_XLSB  0xF9U\n#define BME280_REG_TEMP_MSB    0xFAU\n#define BME280_REG_TEMP_LSB    0xFBU\n#define BME280_REG_TEMP_XLSB   0xFCU\n#define BME280_REG_HUM_MSB     0xFDU\n#define BME280_REG_HUM_LSB     0xFEU\n\n/* Configuration enums */\ntypedef enum {\n    BME280_MODE_SLEEP = 0x00,\n    BME280_MODE_FORCED = 0x01,\n    BME280_MODE_NORMAL = 0x03\n} bme280_mode_t;\n\ntypedef enum {\n    BME280_OSRS_SKIP = 0x00,\n    BME280_OSRS_1    = 0x01,\n    BME280_OSRS_2    = 0x02,\n    BME280_OSRS_4    = 0x03,\n    BME280_OSRS_8    = 0x04,\n    BME280_OSRS_16   = 0x05\n} bme280_osrs_t;\n\n/* Public API */\nint bme280_init(bme280_t *dev, bme280_reg_read_t read_cb, bme280_reg_write_t write_cb);\nint bme280_set_mode(bme280_t *dev, bme280_mode_t mode);\nint bme280_set_oversampling(bme280_t *dev, bme280_osrs_t osrs_t, bme280_osrs_t osrs_p, bme280_osrs_t osrs_h);\nint bme280_read_raw(bme280_t *dev, uint32_t *press_raw, uint32_t *temp_raw, uint16_t *hum_raw);\n\n#endif /* BME280_DRIVER_H */\n",
+     "bme280_example.c": "#include <stdio.h>\n#include \"bme280_driver.h\"\n\n/* Mock I2C read/write functions for demonstration */\nstatic int mock_read(uint8_t reg, uint8_t *buf, uint32_t len)\n{\n    (void)reg; /* suppress unused parameter warning */\n    /* In a real implementation, fill buf with data from the device */\n    for (uint32_t i = 0; i < len; ++i) {\n        buf[i] = 0x00U;\n    }\n    return 0;\n}\n\nstatic int mock_write(uint8_t reg, const uint8_t *buf, uint32_t len)\n{\n    (void)reg; (void)buf; (void)len; /* suppress unused warnings */\n    return 0;\n}\n\nint main(void)\n{\n    bme280_t dev;\n    if (bme280_init(&dev, mock_read, mock_write) != 0) {\n        printf(\"Failed to init driver\\n\");\n        return -1;\n    }\n    if (bme280_set_oversampling(&dev, BME280_OSRS_1, BME280_OSRS_1, BME280_OSRS_1) != 0) {\n        printf(\"Failed to set oversampling\\n\");\n        return -1;\n    }\n    if (bme280_set_mode(&dev, BME280_MODE_FORCED) != 0) {\n        printf(\"Failed to set mode\\n\");\n        return -1;\n    }\n    uint32_t press_raw = 0, temp_raw = 0;\n    uint16_t hum_raw = 0;\n    if (bme280_read_raw(&dev, &press_raw, &temp_raw, &hum_raw) != 0) {\n        printf(\"Failed to read raw data\\n\");\n        return -1;\n    }\n    printf(\"Raw pressure: %u, temperature: %u, humidity: %u\\n\", press_raw, temp_raw, hum_raw);\n    return 0;\n}\n"
+    },
+    "attempts": 3,
+    "reports": [
+     {
+      "status": "failed",
+      "checks": {
+       "register_crosscheck": "pass",
+       "compile": "fail",
+       "static_analysis": "skipped"
+      },
+      "failures": [
+       {
+        "check": "compile",
+        "file": "bme280_example.c",
+        "line": null,
+        "message": "[xtensa-esp32-elf-gcc -Wall -Wextra -Werror]\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/bme280\\attempt_1\\bme280_example.c: In function 'main':\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/bme280\\attempt_1\\bme280_example.c:32:32: error: format '%lu' expects argument of type 'long unsigned int', but argument 2 has type 'uint32_t' {aka 'unsigned int'} [-Werror=format=]\n         printf(\"Raw pressure=%lu, temp=%lu, hum=%u\\n\", press, temp, hum);\n                              ~~^                       ~~~~~\n                              %u\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/bme280\\attempt_1\\bme280_example.c:32:42: error: format '%lu' expects argument of type 'long unsigned int', but argument 3 has type 'uint32_t' {aka 'unsigned int'} [-Werror=format=]\n         printf(\"Raw pressure=%lu, temp=%lu, hum=%u\\n\", press, temp, hum);\n                                        ~~^                    ~~~~\n                                        %u\ncc1.exe: all warnings being treated as errors"
+       }
+      ],
+      "unverified_fields": [],
+      "notes": [
+       "compiler: xtensa-esp32-elf-gcc",
+       "static analysis skipped (cppcheck unavailable) — install cppcheck for full coverage"
+      ]
+     },
+     {
+      "status": "failed",
+      "checks": {
+       "register_crosscheck": "pass",
+       "compile": "fail",
+       "static_analysis": "skipped"
+      },
+      "failures": [
+       {
+        "check": "compile",
+        "file": "bme280_example.c",
+        "line": null,
+        "message": "[xtensa-esp32-elf-gcc -Wall -Wextra -Werror]\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/bme280\\attempt_2\\bme280_example.c: In function 'mock_read':\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/bme280\\attempt_2\\bme280_example.c:5:30: error: unused parameter 'reg' [-Werror=unused-parameter]\n static int mock_read(uint8_t reg, uint8_t *buf, uint32_t len)\n                      ~~~~~~~~^~~\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/bme280\\attempt_2\\bme280_example.c: In function 'main':\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/bme280\\attempt_2\\bme280_example.c:40:33: error: format '%lu' expects argument of type 'long unsigned int', but argument 2 has type 'uint32_t' {aka 'unsigned int'} [-Werror=format=]\n         printf(\"Raw pressure: %lu, temperature: %lu, humidity: %u\\n\", press_raw, temp_raw, hum_raw);\n                               ~~^                                     ~~~~~~~~~\n                               %u\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/bme280\\attempt_2\\bme280_example.c:40:51: error: format '%lu' expects argument of type 'long unsigned int', but argument 3 has type 'uint32_t' {aka 'unsigned int'} [-Werror=format=]\n         printf(\"Raw pressure: %lu, temperature: %lu, humidity: %u\\n\", press_raw, temp_raw, hum_raw);\n                                                 ~~^                              ~~~~~~~~\n                                                 %u\ncc1.exe: all warnings being treated as errors"
+       }
+      ],
+      "unverified_fields": [],
+      "notes": [
+       "compiler: xtensa-esp32-elf-gcc",
+       "static analysis skipped (cppcheck unavailable) — install cppcheck for full coverage"
+      ]
+     },
+     {
+      "status": "validated",
+      "checks": {
+       "register_crosscheck": "pass",
+       "compile": "pass",
+       "static_analysis": "skipped"
+      },
+      "failures": [],
+      "unverified_fields": [],
+      "notes": [
+       "compiler: xtensa-esp32-elf-gcc",
+       "static analysis skipped (cppcheck unavailable) — install cppcheck for full coverage"
+      ]
+     }
+    ],
+    "unverified_fields": [],
+    "provider": "groq/openai/gpt-oss-120b (recorded 2026-07-17)"
+   }
+  },
+  "w25q64": {
+   "platform": "esp32",
+   "register_map": {
+    "peripheral": "spi-flash",
+    "chip": "W25Q64JV",
+    "registers": [
+     {
+      "name": "Security",
+      "offset": "0x00",
+      "reset_value": null,
+      "access": null,
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       52,
+       53,
+       54
+      ]
+     }
+    ],
+    "commands": [
+     {
+      "name": "Write Enable",
+      "opcode": "0x06",
+      "description": "",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "none",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Volatile SR Write Enable",
+      "opcode": "0x50",
+      "description": "",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "none",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Write Disable",
+      "opcode": "0x04",
+      "description": "",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "none",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Release Power-down / ID",
+      "opcode": "0xAB",
+      "description": "3 dummy byte(s); sequence: (ID7-ID0)(2)",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "read",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Manufacturer/Device ID",
+      "opcode": "0x90",
+      "description": "2 dummy byte(s); sequence: 00h, (MF7-MF0), (ID7-ID0)",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "read",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "JEDEC ID",
+      "opcode": "0x9F",
+      "description": "sequence: (MF7-MF0), (ID15-ID8), (ID7-ID0)",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "read",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Read Unique ID",
+      "opcode": "0x4B",
+      "description": "4 dummy byte(s); sequence: (UID63-0)",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "read",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Read Data",
+      "opcode": "0x03",
+      "description": "sequence: A23-A16, A15-A8, A7-A0, (D7-D0)",
+      "address_bytes": 3,
+      "dummy_cycles": null,
+      "data_direction": "read",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Fast Read",
+      "opcode": "0x0B",
+      "description": "1 dummy byte(s); sequence: A23-A16, A15-A8, A7-A0, (D7-D0)",
+      "address_bytes": 3,
+      "dummy_cycles": null,
+      "data_direction": "read",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Page Program",
+      "opcode": "0x02",
+      "description": "sequence: A23-A16, A15-A8, A7-A0, D7-D0, D7-D0(3)",
+      "address_bytes": 3,
+      "dummy_cycles": null,
+      "data_direction": "write",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Sector Erase (4KB)",
+      "opcode": "0x20",
+      "description": "sequence: A23-A16, A15-A8, A7-A0",
+      "address_bytes": 3,
+      "dummy_cycles": null,
+      "data_direction": "none",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Block Erase (32KB)",
+      "opcode": "0x52",
+      "description": "sequence: A23-A16, A15-A8, A7-A0",
+      "address_bytes": 3,
+      "dummy_cycles": null,
+      "data_direction": "none",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Block Erase (64KB)",
+      "opcode": "0xD8",
+      "description": "sequence: A23-A16, A15-A8, A7-A0",
+      "address_bytes": 3,
+      "dummy_cycles": null,
+      "data_direction": "none",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Read Status Register-1",
+      "opcode": "0x05",
+      "description": "sequence: (S7-S0)(2)",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "read",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Write Status Register-1(4)",
+      "opcode": "0x01",
+      "description": "sequence: (S7-S0)(4)",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "read",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Read Status Register-2",
+      "opcode": "0x35",
+      "description": "sequence: (S15-S8)(2)",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "read",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Write Status Register-2",
+      "opcode": "0x31",
+      "description": "sequence: (S15-S8)",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "read",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Read Status Register-3",
+      "opcode": "0x15",
+      "description": "sequence: (S23-S16)(2)",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "read",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Write Status Register-3",
+      "opcode": "0x11",
+      "description": "sequence: (S23-S16)",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "read",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Read SFDP Register",
+      "opcode": "0x5A",
+      "description": "1 dummy byte(s); sequence: 00h, 00h, A7–A0, (D7-0)",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "read",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Erase Security Register(5)",
+      "opcode": "0x44",
+      "description": "sequence: A23-A16, A15-A8, A7-A0",
+      "address_bytes": 3,
+      "dummy_cycles": null,
+      "data_direction": "none",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Program Security Register(5)",
+      "opcode": "0x42",
+      "description": "sequence: A23-A16, A15-A8, A7-A0, D7-D0, D7-D0(3)",
+      "address_bytes": 3,
+      "dummy_cycles": null,
+      "data_direction": "write",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Read Security Register(5)",
+      "opcode": "0x48",
+      "description": "1 dummy byte(s); sequence: A23-A16, A15-A8, A7-A0, (D7-D0)",
+      "address_bytes": 3,
+      "dummy_cycles": null,
+      "data_direction": "read",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Global Block Lock",
+      "opcode": "0x7E",
+      "description": "",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "none",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Global Block Unlock",
+      "opcode": "0x98",
+      "description": "",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "none",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Read Block Lock",
+      "opcode": "0x3D",
+      "description": "sequence: A23-A16, A15-A8, A7-A0, (L7-L0)",
+      "address_bytes": 3,
+      "dummy_cycles": null,
+      "data_direction": "read",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Individual Block Lock",
+      "opcode": "0x36",
+      "description": "sequence: A23-A16, A15-A8, A7-A0",
+      "address_bytes": 3,
+      "dummy_cycles": null,
+      "data_direction": "none",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Individual Block Unlock",
+      "opcode": "0x39",
+      "description": "sequence: A23-A16, A15-A8, A7-A0",
+      "address_bytes": 3,
+      "dummy_cycles": null,
+      "data_direction": "none",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Erase / Program Suspend",
+      "opcode": "0x75",
+      "description": "",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "none",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Erase / Program Resume",
+      "opcode": "0x7A",
+      "description": "",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "none",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Power-down",
+      "opcode": "0xB9",
+      "description": "",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "none",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Enable Reset",
+      "opcode": "0x66",
+      "description": "",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "none",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Reset Device",
+      "opcode": "0x99",
+      "description": "",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "none",
+      "source_pages": [
+       23
+      ]
+     },
+     {
+      "name": "Fast Read Dual Output",
+      "opcode": "0x3B",
+      "description": "2 dummy byte(s); sequence: A23-A16, A15-A8, A7-A0, (D7-D0)(7)",
+      "address_bytes": 3,
+      "dummy_cycles": null,
+      "data_direction": "read",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "Fast Read Dual I/O",
+      "opcode": "0xBB",
+      "description": "1 dummy byte(s); sequence: A23-A16(6), A15-A8(6), A7-A0(6), (D7-D0)(7)",
+      "address_bytes": 3,
+      "dummy_cycles": null,
+      "data_direction": "read",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "Mftr./Device ID Dual I/O",
+      "opcode": "0x92",
+      "description": "1 dummy byte(s); sequence: A23-A16(6), A15-A8(6), 00(6), (MF7-MF0), (ID7-ID0)(7)",
+      "address_bytes": 2,
+      "dummy_cycles": null,
+      "data_direction": "read",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "Quad Input Page Program",
+      "opcode": "0x32",
+      "description": "sequence: A23-A16, A15-A8, A7-A0, (D7-D0)(9), (D7-D0)(3), …",
+      "address_bytes": 3,
+      "dummy_cycles": null,
+      "data_direction": "read",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "Fast Read Quad Output",
+      "opcode": "0x6B",
+      "description": "4 dummy byte(s); sequence: A23-A16, A15-A8, A7-A0, (D7-D0)(10)",
+      "address_bytes": 3,
+      "dummy_cycles": null,
+      "data_direction": "read",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "Mftr./Device ID Quad I/O",
+      "opcode": "0x94",
+      "description": "3 dummy byte(s); sequence: A23-A16, A15-A8, 00, (MF7-MF0), (ID7-ID0)",
+      "address_bytes": 2,
+      "dummy_cycles": null,
+      "data_direction": "read",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "Fast Read Quad I/O",
+      "opcode": "0xEB",
+      "description": "3 dummy byte(s); sequence: A23-A16, A15-A8, A7-A0, (D7-D0)",
+      "address_bytes": 3,
+      "dummy_cycles": null,
+      "data_direction": "read",
+      "source_pages": [
+       24
+      ]
+     },
+     {
+      "name": "Set Burst with Wrap",
+      "opcode": "0x77",
+      "description": "3 dummy byte(s); sequence: W8-W0",
+      "address_bytes": null,
+      "dummy_cycles": null,
+      "data_direction": "none",
+      "source_pages": [
+       24
+      ]
+     }
+    ],
+    "extraction_confidence": "high",
+    "source_pages": [
+     23,
+     24,
+     52,
+     53,
+     54
+    ],
+    "warnings": [],
+    "low_confidence_pages": [],
+    "provenance": {
+     "chip": "user",
+     "peripheral": "user"
+    }
+   },
+   "result": {
+    "status": "validated",
+    "decision": {
+     "path": "llm",
+     "framing": "command",
+     "template_id": null,
+     "reason": "no template for chip 'W25Q64JV' on 'esp32'; 41 commands vs 1 registers -> command-driver framing",
+     "user_label": "Generated via AI with validation"
+    },
+    "files": {
+     "w25q64jv_driver.c": "#include \"w25q64jv_driver.h\"\n\n/* Helper: send a command with optional address and dummy bytes */\nstatic int w25q64jv_tx_rx(w25q64jv_t *dev, const uint8_t *tx_buf, uint8_t *rx_buf, size_t len)\n{\n    if (!dev || !dev->transfer) {\n        return -1;\n    }\n    return dev->transfer(tx_buf, rx_buf, len);\n}\n\nint w25q64jv_init(w25q64jv_t *dev, w25q64jv_spi_transfer_t transfer_cb)\n{\n    if (!dev || !transfer_cb) {\n        return -1;\n    }\n    dev->transfer = transfer_cb;\n    return 0;\n}\n\nint w25q64jv_write_enable(w25q64jv_t *dev)\n{\n    uint8_t cmd = W25Q64JV_CMD_WRITE_ENABLE;\n    return w25q64jv_tx_rx(dev, &cmd, NULL, 1);\n}\n\nint w25q64jv_write_disable(w25q64jv_t *dev)\n{\n    uint8_t cmd = W25Q64JV_CMD_WRITE_DISABLE;\n    return w25q64jv_tx_rx(dev, &cmd, NULL, 1);\n}\n\nint w25q64jv_read_status1(w25q64jv_t *dev, uint8_t *status)\n{\n    uint8_t tx[2] = { W25Q64JV_CMD_READ_STATUS1, 0x00 };\n    uint8_t rx[2] = {0};\n    int ret = w25q64jv_tx_rx(dev, tx, rx, 2);\n    if (ret == 0 && status) {\n        *status = rx[1];\n    }\n    return ret;\n}\n\nint w25q64jv_read_jedec_id(w25q64jv_t *dev, uint8_t *buf)\n{\n    uint8_t tx[4] = { W25Q64JV_CMD_JEDEC_ID, 0x00, 0x00, 0x00 };\n    uint8_t rx[4] = {0};\n    int ret = w25q64jv_tx_rx(dev, tx, rx, 4);\n    if (ret == 0 && buf) {\n        buf[0] = rx[1]; // Manufacturer ID\n        buf[1] = rx[2]; // Memory Type\n        buf[2] = rx[3]; // Capacity\n    }\n    return ret;\n}\n\nint w25q64jv_read_data(w25q64jv_t *dev, uint32_t addr, uint8_t *buf, size_t len)\n{\n    if (!buf || len == 0) {\n        return -1;\n    }\n    uint8_t tx[4];\n    tx[0] = W25Q64JV_CMD_READ_DATA;\n    tx[1] = (addr >> 16) & 0xFFu;\n    tx[2] = (addr >> 8) & 0xFFu;\n    tx[3] = addr & 0xFFu;\n    /* Send command+address, then read data */\n    int ret = w25q64jv_tx_rx(dev, tx, NULL, 4);\n    if (ret) return ret;\n    return w25q64jv_tx_rx(dev, NULL, buf, len);\n}\n\nint w25q64jv_page_program(w25q64jv_t *dev, uint32_t addr, const uint8_t *buf, size_t len)\n{\n    if (!buf || len == 0 || len > W25Q64JV_PAGE_SIZE) {\n        return -1;\n    }\n    uint8_t header[4];\n    header[0] = W25Q64JV_CMD_PAGE_PROGRAM;\n    header[1] = (addr >> 16) & 0xFFu;\n    header[2] = (addr >> 8) & 0xFFu;\n    header[3] = addr & 0xFFu;\n    int ret = w25q64jv_tx_rx(dev, header, NULL, 4);\n    if (ret) return ret;\n    return w25q64jv_tx_rx(dev, buf, NULL, len);\n}\n\nint w25q64jv_sector_erase(w25q64jv_t *dev, uint32_t addr)\n{\n    uint8_t tx[4];\n    tx[0] = W25Q64JV_CMD_SECTOR_ERASE;\n    tx[1] = (addr >> 16) & 0xFFu;\n    tx[2] = (addr >> 8) & 0xFFu;\n    tx[3] = addr & 0xFFu;\n    return w25q64jv_tx_rx(dev, tx, NULL, 4);\n}\n\nint w25q64jv_chip_erase(w25q64jv_t *dev)\n{\n    /* Chip erase is not listed explicitly; use block erase 64KB covering whole memory */\n    /* For simplicity, perform a sequence of 64KB block erases covering 8 MB (max address 0x7FFFFF) */\n    uint32_t addr;\n    int ret = 0;\n    for (addr = 0; addr < 0x800000u; addr += W25Q64JV_BLOCK64K_SIZE) {\n        ret = w25q64jv_tx_rx(dev, (uint8_t[]){W25Q64JV_CMD_BLOCK_ERASE_64K,\n                                            (addr >> 16) & 0xFFu,\n                                            (addr >> 8) & 0xFFu,\n                                            addr & 0xFFu}, NULL, 4);\n        if (ret) break;\n    }\n    return ret;\n}\n",
+     "w25q64jv_driver.h": "#ifndef W25Q64JV_DRIVER_H\n#define W25Q64JV_DRIVER_H\n\n#include <stdint.h>\n#include <stddef.h>\n\n/* Callback type that the user must implement. It must perform a full SPI transaction.\n *   tx  – pointer to data to transmit (may be NULL if only receiving)\n *   rx  – pointer to buffer for received data (may be NULL if only transmitting)\n *   len – number of bytes in the transaction\n * Return 0 on success, non‑zero on error.\n */\ntypedef int (*w25q64jv_spi_transfer_t)(const uint8_t *tx, uint8_t *rx, size_t len);\n\n/* Driver context – holds the user supplied transfer callback. */\ntypedef struct {\n    w25q64jv_spi_transfer_t transfer;\n} w25q64jv_t;\n\n/* Command opcodes */\n#define W25Q64JV_CMD_WRITE_ENABLE               0x06u\n#define W25Q64JV_CMD_VOLATILE_SR_WRITE_ENABLE    0x50u\n#define W25Q64JV_CMD_WRITE_DISABLE               0x04u\n#define W25Q64JV_CMD_RELEASE_POWER_DOWN_ID       0xABu\n#define W25Q64JV_CMD_MANUFACTURER_DEVICE_ID      0x90u\n#define W25Q64JV_CMD_JEDEC_ID                    0x9Fu\n#define W25Q64JV_CMD_READ_UNIQUE_ID              0x4Bu\n#define W25Q64JV_CMD_READ_DATA                   0x03u\n#define W25Q64JV_CMD_FAST_READ                   0x0Bu\n#define W25Q64JV_CMD_PAGE_PROGRAM                0x02u\n#define W25Q64JV_CMD_SECTOR_ERASE                0x20u\n#define W25Q64JV_CMD_BLOCK_ERASE_32K             0x52u\n#define W25Q64JV_CMD_BLOCK_ERASE_64K             0xD8u\n#define W25Q64JV_CMD_READ_STATUS1                0x05u\n#define W25Q64JV_CMD_WRITE_STATUS1               0x01u\n#define W25Q64JV_CMD_READ_STATUS2                0x35u\n#define W25Q64JV_CMD_WRITE_STATUS2               0x31u\n#define W25Q64JV_CMD_READ_STATUS3                0x15u\n#define W25Q64JV_CMD_WRITE_STATUS3               0x11u\n#define W25Q64JV_CMD_READ_SFDP                   0x5Au\n#define W25Q64JV_CMD_ERASE_SECURITY_REG          0x44u\n#define W25Q64JV_CMD_PROGRAM_SECURITY_REG        0x42u\n#define W25Q64JV_CMD_READ_SECURITY_REG           0x48u\n#define W25Q64JV_CMD_GLOBAL_BLOCK_LOCK           0x7Eu\n#define W25Q64JV_CMD_GLOBAL_BLOCK_UNLOCK         0x98u\n#define W25Q64JV_CMD_READ_BLOCK_LOCK             0x3Du\n#define W25Q64JV_CMD_INDIVIDUAL_BLOCK_LOCK       0x36u\n#define W25Q64JV_CMD_INDIVIDUAL_BLOCK_UNLOCK     0x39u\n#define W25Q64JV_CMD_ERASE_PROGRAM_SUSPEND       0x75u\n#define W25Q64JV_CMD_ERASE_PROGRAM_RESUME        0x7Au\n#define W25Q64JV_CMD_POWER_DOWN                  0xB9u\n#define W25Q64JV_CMD_ENABLE_RESET                0x66u\n#define W25Q64JV_CMD_RESET_DEVICE                0x99u\n#define W25Q64JV_CMD_FAST_READ_DUAL_OUTPUT       0x3Bu\n#define W25Q64JV_CMD_FAST_READ_DUAL_IO           0xBBu\n#define W25Q64JV_CMD_MFTR_DEVICE_ID_DUAL_IO      0x92u\n#define W25Q64JV_CMD_QUAD_INPUT_PAGE_PROGRAM     0x32u\n#define W25Q64JV_CMD_FAST_READ_QUAD_OUTPUT       0x6Bu\n#define W25Q64JV_CMD_MFTR_DEVICE_ID_QUAD_IO      0x94u\n#define W25Q64JV_CMD_FAST_READ_QUAD_IO           0xEBu\n#define W25Q64JV_CMD_SET_BURST_WITH_WRAP         0x77u\n\n/* Size definitions */\n#define W25Q64JV_PAGE_SIZE       256u   /* bytes per page */\n#define W25Q64JV_SECTOR_SIZE     4096u  /* 4 KiB */\n#define W25Q64JV_BLOCK32K_SIZE   32768u /* 32 KiB */\n#define W25Q64JV_BLOCK64K_SIZE   65536u /* 64 KiB */\n\n/* UNVERIFIED: bit positions not confirmed against datasheet — verify manually (see p.52,53,54) */\n#define W25Q64JV_SECURITY_REG    0x00u  /* placeholder offset for Security register */\n\n/* Driver API */\nint w25q64jv_init(w25q64jv_t *dev, w25q64jv_spi_transfer_t transfer_cb);\nint w25q64jv_write_enable(w25q64jv_t *dev);\nint w25q64jv_write_disable(w25q64jv_t *dev);\nint w25q64jv_read_status1(w25q64jv_t *dev, uint8_t *status);\nint w25q64jv_read_data(w25q64jv_t *dev, uint32_t addr, uint8_t *buf, size_t len);\nint w25q64jv_page_program(w25q64jv_t *dev, uint32_t addr, const uint8_t *buf, size_t len);\nint w25q64jv_sector_erase(w25q64jv_t *dev, uint32_t addr);\nint w25q64jv_chip_erase(w25q64jv_t *dev);\nint w25q64jv_read_jedec_id(w25q64jv_t *dev, uint8_t *buf);\n\n#endif /* W25Q64JV_DRIVER_H */\n",
+     "w25q64jv_example.c": "#include <stdio.h>\n#include \"w25q64jv_driver.h\"\n\n/* Simple SPI transfer stub for demonstration – replace with real ESP32 SPI driver. */\nstatic int spi_transfer_stub(const uint8_t *tx, uint8_t *rx, size_t len)\n{\n    /* In a real implementation you would assert CS, send tx, read rx, deassert CS. */\n    (void)tx; (void)rx; (void)len;\n    return 0; /* pretend success */\n}\n\nint main(void)\n{\n    w25q64jv_t flash;\n    if (w25q64jv_init(&flash, spi_transfer_stub) != 0) {\n        printf(\"Failed to init driver\\n\");\n        return -1;\n    }\n\n    if (w25q64jv_write_enable(&flash) != 0) {\n        printf(\"Write Enable failed\\n\");\n        return -1;\n    }\n\n    uint8_t jedec[3];\n    if (w25q64jv_read_jedec_id(&flash, jedec) == 0) {\n        printf(\"JEDEC ID: %02X %02X %02X\\n\", jedec[0], jedec[1], jedec[2]);\n    }\n\n    /* Example: read first 16 bytes */\n    uint8_t data[16];\n    if (w25q64jv_read_data(&flash, 0x000000, data, sizeof(data)) == 0) {\n        printf(\"Data at 0x000000: \");\n        for (size_t i = 0; i < sizeof(data); ++i) {\n            printf(\"%02X \", data[i]);\n        }\n        printf(\"\\n\");\n    }\n\n    return 0;\n}\n"
+    },
+    "attempts": 1,
+    "reports": [
+     {
+      "status": "validated",
+      "checks": {
+       "register_crosscheck": "pass",
+       "compile": "pass",
+       "static_analysis": "skipped"
+      },
+      "failures": [],
+      "unverified_fields": [],
+      "notes": [
+       "compiler: xtensa-esp32-elf-gcc",
+       "static analysis skipped (cppcheck unavailable) — install cppcheck for full coverage"
+      ]
+     }
+    ],
+    "unverified_fields": [],
+    "provider": "groq/openai/gpt-oss-120b (recorded 2026-07-17)"
+   }
+  },
+  "esp32-i2c": {
+   "platform": "esp32",
+   "register_map": {
+    "peripheral": "I2C0",
+    "chip": "ESP32",
+    "base_address": "0x3FF53000",
+    "registers": [
+     {
+      "name": "I2C_CTR_REG",
+      "offset": "0x0004",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402,
+       403
+      ]
+     },
+     {
+      "name": "I2C_TO_REG",
+      "offset": "0x000C",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402,
+       404
+      ]
+     },
+     {
+      "name": "I2C_SLAVE_ADDR_REG",
+      "offset": "0x0010",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402,
+       405
+      ]
+     },
+     {
+      "name": "I2C_RXFIFO_ST_REG",
+      "offset": "0x0014",
+      "reset_value": null,
+      "access": "RO",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402,
+       405
+      ]
+     },
+     {
+      "name": "I2C_FIFO_CONF_REG",
+      "offset": "0x0018",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402,
+       406
+      ]
+     },
+     {
+      "name": "I2C_SR_REG",
+      "offset": "0x0008",
+      "reset_value": null,
+      "access": "RO",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402,
+       404
+      ]
+     },
+     {
+      "name": "I2C_SDA_HOLD_REG",
+      "offset": "0x0030",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402,
+       411
+      ]
+     },
+     {
+      "name": "I2C_SDA_SAMPLE_REG",
+      "offset": "0x0034",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402,
+       411
+      ]
+     },
+     {
+      "name": "I2C_SCL_LOW_PERIOD_REG",
+      "offset": "0x0000",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402,
+       403
+      ]
+     },
+     {
+      "name": "I2C_SCL_HIGH_PERIOD_REG",
+      "offset": "0x0038",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402,
+       411
+      ]
+     },
+     {
+      "name": "I2C_SCL_START_HOLD_REG",
+      "offset": "0x0040",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402,
+       412
+      ]
+     },
+     {
+      "name": "I2C_SCL_RSTART_SETUP_REG",
+      "offset": "0x0044",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402,
+       412
+      ]
+     },
+     {
+      "name": "I2C_SCL_STOP_HOLD_REG",
+      "offset": "0x0048",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402,
+       412
+      ]
+     },
+     {
+      "name": "I2C_SCL_STOP_SETUP_REG",
+      "offset": "0x004C",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402,
+       413
+      ]
+     },
+     {
+      "name": "I2C_SCL_FILTER_CFG_REG",
+      "offset": "0x0050",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402,
+       413
+      ]
+     },
+     {
+      "name": "I2C_SDA_FILTER_CFG_REG",
+      "offset": "0x0054",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402,
+       413
+      ]
+     },
+     {
+      "name": "I2C_INT_RAW_REG",
+      "offset": "0x0020",
+      "reset_value": null,
+      "access": "RO",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402,
+       407
+      ]
+     },
+     {
+      "name": "I2C_INT_CLR_REG",
+      "offset": "0x0024",
+      "reset_value": null,
+      "access": "WO",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402,
+       408
+      ]
+     },
+     {
+      "name": "I2C_INT_ENA_REG",
+      "offset": "0x0028",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402,
+       409
+      ]
+     },
+     {
+      "name": "I2C_INT_STATUS_REG",
+      "offset": "0x002C",
+      "reset_value": null,
+      "access": "RO",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402,
+       410
+      ]
+     },
+     {
+      "name": "I2C_COMD0_REG",
+      "offset": "0x0058",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402
+      ]
+     },
+     {
+      "name": "I2C_COMD1_REG",
+      "offset": "0x005C",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402
+      ]
+     },
+     {
+      "name": "I2C_COMD2_REG",
+      "offset": "0x0060",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402
+      ]
+     },
+     {
+      "name": "I2C_COMD3_REG",
+      "offset": "0x0064",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402
+      ]
+     },
+     {
+      "name": "I2C_COMD4_REG",
+      "offset": "0x0068",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402
+      ]
+     },
+     {
+      "name": "I2C_COMD5_REG",
+      "offset": "0x006C",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402
+      ]
+     },
+     {
+      "name": "I2C_COMD6_REG",
+      "offset": "0x0070",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402
+      ]
+     },
+     {
+      "name": "I2C_COMD7_REG",
+      "offset": "0x0074",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402
+      ]
+     },
+     {
+      "name": "I2C_COMD8_REG",
+      "offset": "0x0078",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402
+      ]
+     },
+     {
+      "name": "I2C_COMD9_REG",
+      "offset": "0x007C",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402
+      ]
+     },
+     {
+      "name": "I2C_COMD10_REG",
+      "offset": "0x0080",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402
+      ]
+     },
+     {
+      "name": "I2C_COMD11_REG",
+      "offset": "0x0084",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402
+      ]
+     },
+     {
+      "name": "I2C_COMD12_REG",
+      "offset": "0x0088",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402
+      ]
+     },
+     {
+      "name": "I2C_COMD13_REG",
+      "offset": "0x008C",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402
+      ]
+     },
+     {
+      "name": "I2C_COMD14_REG",
+      "offset": "0x0090",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402
+      ]
+     },
+     {
+      "name": "I2C_COMD15_REG",
+      "offset": "0x0094",
+      "reset_value": null,
+      "access": "RW",
+      "fields": [],
+      "confidence": "high",
+      "source_pages": [
+       401,
+       402
+      ]
+     }
+    ],
+    "commands": [],
+    "extraction_confidence": "high",
+    "source_pages": [
+     401,
+     402,
+     403,
+     404,
+     405,
+     406,
+     407,
+     408,
+     409,
+     410,
+     411,
+     412,
+     413
+    ],
+    "warnings": [
+     "rebased 16 absolute addresses using inferred base 0x3FF53000 (confirmed by 17 register(s) seen both ways)"
+    ],
+    "low_confidence_pages": [],
+    "provenance": {
+     "chip": "user",
+     "peripheral": "user"
+    }
+   },
+   "result": {
+    "status": "validated",
+    "decision": {
+     "path": "llm",
+     "framing": "register",
+     "template_id": null,
+     "reason": "no template for chip 'ESP32' on 'esp32'; 36 registers -> memory-mapped register framing",
+     "user_label": "Generated via AI with validation"
+    },
+    "files": {
+     "esp32_driver.c": "#include \"esp32_driver.h\"\n\n/* Helper macro to access a register */\n#define REG32(offset) (*(volatile uint32_t *)(ESP32_BASE + (offset)))\n\nbool i2c_init(void)\n{\n    /* Minimal initialization: enable I2C controller in master mode.\n       The exact bit definitions are unknown, so we write a placeholder value.\n       Users must verify the bits against the datasheet. */\n    REG32(I2C_CTR_REG) = 0x00000001U; /* enable */\n    return true;\n}\n\nbool i2c_write(uint8_t slave_addr, const uint8_t *data, size_t len)\n{\n    if (data == NULL || len == 0)\n        return false;\n\n    /* Simple polling stub – actual command sequence is device‑specific and\n       requires proper configuration of command registers, which are unknown.\n       This function returns false to indicate that a real implementation is\n       needed. */\n    (void)slave_addr;\n    (void)data;\n    (void)len;\n    return false;\n}\n\nbool i2c_read(uint8_t slave_addr, uint8_t *data, size_t len)\n{\n    if (data == NULL || len == 0)\n        return false;\n\n    /* Simple polling stub – see i2c_write for details. */\n    (void)slave_addr;\n    (void)data;\n    (void)len;\n    return false;\n}\n",
+     "esp32_driver.h": "#ifndef ESP32_DRIVER_H_\n#define ESP32_DRIVER_H_\n\n#include <stdint.h>\n#include <stddef.h>\n#include <stdbool.h>\n\n/* Base address for I2C0 */\n#define ESP32_BASE 0x3FF53000U\n\n/* Register offsets */\n#define I2C_SCL_LOW_PERIOD_REG      (0x0000U)\n#define I2C_CTR_REG                 (0x0004U)\n#define I2C_SR_REG                  (0x0008U)\n#define I2C_TO_REG                  (0x000CU)\n#define I2C_SLAVE_ADDR_REG          (0x0010U)\n#define I2C_RXFIFO_ST_REG           (0x0014U)\n#define I2C_FIFO_CONF_REG           (0x0018U)\n#define I2C_INT_RAW_REG             (0x0020U)\n#define I2C_INT_CLR_REG             (0x0024U)\n#define I2C_INT_ENA_REG             (0x0028U)\n#define I2C_INT_STATUS_REG          (0x002CU)\n#define I2C_SDA_HOLD_REG            (0x0030U)\n#define I2C_SDA_SAMPLE_REG          (0x0034U)\n#define I2C_SCL_HIGH_PERIOD_REG     (0x0038U)\n#define I2C_SCL_START_HOLD_REG      (0x0040U)\n#define I2C_SCL_RSTART_SETUP_REG    (0x0044U)\n#define I2C_SCL_STOP_HOLD_REG       (0x0048U)\n#define I2C_SCL_STOP_SETUP_REG      (0x004CU)\n#define I2C_SCL_FILTER_CFG_REG      (0x0050U)\n#define I2C_SDA_FILTER_CFG_REG      (0x0054U)\n#define I2C_COMD0_REG               (0x0058U)\n#define I2C_COMD1_REG               (0x005CU)\n#define I2C_COMD2_REG               (0x0060U)\n#define I2C_COMD3_REG               (0x0064U)\n#define I2C_COMD4_REG               (0x0068U)\n#define I2C_COMD5_REG               (0x006CU)\n#define I2C_COMD6_REG               (0x0070U)\n#define I2C_COMD7_REG               (0x0074U)\n#define I2C_COMD8_REG               (0x0078U)\n#define I2C_COMD9_REG               (0x007CU)\n#define I2C_COMD10_REG              (0x0080U)\n#define I2C_COMD11_REG              (0x0084U)\n#define I2C_COMD12_REG              (0x0088U)\n#define I2C_COMD13_REG              (0x008CU)\n#define I2C_COMD14_REG              (0x0090U)\n#define I2C_COMD15_REG              (0x0094U)\n\n/* Public API */\nbool i2c_init(void);\nbool i2c_write(uint8_t slave_addr, const uint8_t *data, size_t len);\nbool i2c_read(uint8_t slave_addr, uint8_t *data, size_t len);\n\n#endif /* ESP32_DRIVER_H_ */\n",
+     "esp32_example.c": "#include \"esp32_driver.h\"\n\nint main(void)\n{\n    uint8_t tx_data[2] = {0x00, 0xFF};\n    uint8_t rx_data[2] = {0};\n\n    if (!i2c_init()) {\n        return -1;\n    }\n\n    /* Attempt a write – the stub returns false, but the call demonstrates API usage */\n    i2c_write(0x50, tx_data, sizeof(tx_data));\n\n    /* Attempt a read */\n    i2c_read(0x50, rx_data, sizeof(rx_data));\n\n    return 0;\n}\n"
+    },
+    "attempts": 2,
+    "reports": [
+     {
+      "status": "failed",
+      "checks": {
+       "register_crosscheck": "pass",
+       "compile": "fail",
+       "static_analysis": "skipped"
+      },
+      "failures": [
+       {
+        "check": "compile",
+        "file": "esp32_driver.c",
+        "line": null,
+        "message": "[xtensa-esp32-elf-gcc -Wall -Wextra -Werror]\nIn file included from C:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.c:1:\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.h:75:57: error: unknown type name 'size_t'\n bool i2c_write(uint8_t slave_addr, const uint8_t *data, size_t len);\n                                                         ^~~~~~\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.h:75:57: note: 'size_t' is defined in header '<stddef.h>'; did you forget to '#include <stddef.h>'?\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.h:6:1:\n+#include <stddef.h>\n \nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.h:75:57:\n bool i2c_write(uint8_t slave_addr, const uint8_t *data, size_t len);\n                                                         ^~~~~~\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.h:85:50: error: unknown type name 'size_t'\n bool i2c_read(uint8_t slave_addr, uint8_t *data, size_t len);\n                                                  ^~~~~~\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.h:85:50: note: 'size_t' is defined in header '<stddef.h>'; did you forget to '#include <stddef.h>'?\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.c:112:57: error: unknown type name 'size_t'\n bool i2c_write(uint8_t slave_addr, const uint8_t *data, size_t len)\n                                                         ^~~~~~\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.c:112:57: note: 'size_t' is defined in header '<stddef.h>'; did you forget to '#include <stddef.h>'?\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.c:2:1:\n+#include <stddef.h>\n \nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.c:112:57:\n bool i2c_write(uint8_t slave_addr, const uint8_t *data, size_t len)\n                                                         ^~~~~~\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.c:136:50: error: unknown type name 'size_t'\n bool i2c_read(uint8_t slave_addr, uint8_t *data, size_t len)\n                                                  ^~~~~~\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.c:136:50: note: 'size_t' is defined in header '<stddef.h>'; did you forget to '#include <stddef.h>'?\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.c:106:13: error: 'i2c_clear_int' defined but not used [-Werror=unused-function]"
+       },
+       {
+        "check": "compile",
+        "file": "esp32_example.c",
+        "line": null,
+        "message": "[xtensa-esp32-elf-gcc -Wall -Wextra -Werror]\nIn file included from C:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_example.c:1:\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.h:75:57: error: unknown type name 'size_t'\n bool i2c_write(uint8_t slave_addr, const uint8_t *data, size_t len);\n                                                         ^~~~~~\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.h:75:57: note: 'size_t' is defined in header '<stddef.h>'; did you forget to '#include <stddef.h>'?\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.h:6:1:\n+#include <stddef.h>\n \nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.h:75:57:\n bool i2c_write(uint8_t slave_addr, const uint8_t *data, size_t len);\n                                                         ^~~~~~\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.h:85:50: error: unknown type name 'size_t'\n bool i2c_read(uint8_t slave_addr, uint8_t *data, size_t len);\n                                                  ^~~~~~\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_driver.h:85:50: note: 'size_t' is defined in header '<stddef.h>'; did you forget to '#include <stddef.h>'?\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_example.c: In function 'main':\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_example.c:13:9: error: implicit declaration of function 'i2c_write'; did you mean 'i2c_init'? [-Werror=implicit-function-declaration]\n     if (i2c_write(0x50, tx_data, sizeof(tx_data))) {\n         ^~~~~~~~~\n         i2c_init\nC:\\Users\\perimilla charani\\Desktop\\project-embeddpilot\\build/llm_gen/esp32\\attempt_1\\esp32_example.c:20:9: error: implicit declaration of function 'i2c_read'; did you mean 'fread'? [-Werror=implicit-function-declaration]\n     if (i2c_read(0x50, rx_data, sizeof(rx_data))) {\n         ^~~~~~~~\n         fread\ncc1.exe: all warnings being treated as errors"
+       }
+      ],
+      "unverified_fields": [],
+      "notes": [
+       "compiler: xtensa-esp32-elf-gcc",
+       "static analysis skipped (cppcheck unavailable) — install cppcheck for full coverage"
+      ]
+     },
+     {
+      "status": "validated",
+      "checks": {
+       "register_crosscheck": "pass",
+       "compile": "pass",
+       "static_analysis": "skipped"
+      },
+      "failures": [],
+      "unverified_fields": [],
+      "notes": [
+       "compiler: xtensa-esp32-elf-gcc",
+       "static analysis skipped (cppcheck unavailable) — install cppcheck for full coverage"
+      ]
+     }
+    ],
+    "unverified_fields": [],
+    "provider": "groq/openai/gpt-oss-120b (recorded 2026-07-17)"
+   }
+  }
+ }
+}

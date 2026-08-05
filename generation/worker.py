@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 
+from generation.inputs import assert_input_provenance, platform_profile
 from generation.provider import LLMProvider, ProviderError
 from generation.router import RouteDecision
 
@@ -72,7 +73,7 @@ def generate_driver(
     conventions: str = "",
     feedback: str | None = None,
 ) -> WorkerResult:
-    chip = _c_ident(register_map.get("chip", "device")).lower()
+    chip = _c_ident(register_map["chip"]).lower()
     user_prompt = build_worker_prompt(
         register_map, decision, platform, conventions, feedback
     )
@@ -102,8 +103,12 @@ def build_worker_prompt(
     conventions: str = "",
     feedback: str | None = None,
 ) -> str:
-    chip = register_map.get("chip", "device")
-    peripheral = register_map.get("peripheral", "")
+    # Fail loudly if any input reached here without a legitimate origin. The
+    # worker must NEVER be framed on an invented chip/interface/platform value.
+    assert_input_provenance(register_map, platform)
+
+    chip = register_map["chip"]
+    peripheral = register_map["peripheral"]
     base = register_map.get("base_address")
     registers = register_map.get("registers", [])
     commands = register_map.get("commands", [])
@@ -111,8 +116,15 @@ def build_worker_prompt(
 
     header_name = f"{_c_ident(chip).lower()}_driver.h"
     lines: list[str] = []
-    lines.append(f"Target device: {chip} ({peripheral or 'peripheral'})")
-    lines.append(f"Target platform: {platform}")
+    lines.append(f"Target device: {chip} ({peripheral})")
+    profile = platform_profile(platform)
+    if profile:
+        lines.append(
+            f"Target platform: {profile['label']} — use {profile['hal']} idioms "
+            f"(toolchain: {profile['toolchain']})"
+        )
+    else:
+        lines.append(f"Target platform: {platform}")
     lines.append(f"Driver framing: {decision.framing}-based")
     lines.append(
         f'FILE NAMES: the header will be saved as "{header_name}" — source_c and '

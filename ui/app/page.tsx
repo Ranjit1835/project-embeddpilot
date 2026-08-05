@@ -32,7 +32,8 @@ const STEPS: [Step, string][] = [
 export default function Home() {
   const [step, setStep] = useState<Step>("input");
   const [map, setMap] = useState<RegisterMap | null>(null);
-  const [platform, setPlatform] = useState("esp32");
+  // no silent platform default — it is an explicit choice on the review screen
+  const [platform, setPlatform] = useState("");
   const [decision, setDecision] = useState<RouteDecision | null>(null);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [genRunning, setGenRunning] = useState(false);
@@ -105,7 +106,7 @@ export default function Home() {
           <span className="font-mono text-[15px] tracking-tight text-ink">
             embedd<span className="text-accent">pilot</span>
           </span>
-          <span className="font-mono text-[10px] text-ink-faint">v1.5</span>
+          <span className="font-mono text-[10px] text-ink-faint">v1.6</span>
         </div>
         <nav aria-label="pipeline steps" className="flex gap-0.5">
           {STEPS.map(([key, label], i) => {

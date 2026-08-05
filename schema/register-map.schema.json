@@ -57,6 +57,35 @@
     "extraction_confidence": { "type": "string", "enum": ["high", "medium", "low"] },
     "source_pages": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
     "warnings": { "type": "array", "items": { "type": "string" } },
-    "low_confidence_pages": { "type": "array", "items": { "type": "integer" } }
+    "low_confidence_pages": { "type": "array", "items": { "type": "integer" } },
+    "detected": {
+      "description": "V1.6: metadata detected from the datasheet front matter. Suggestions only — each carries confidence + source_pages evidence.",
+      "type": "object",
+      "properties": {
+        "chip": { "$ref": "#/definitions/detectedValue" },
+        "vendor": { "$ref": "#/definitions/detectedValue" },
+        "shape_hint": { "$ref": "#/definitions/detectedValue" },
+        "interfaces": { "type": "array", "items": { "$ref": "#/definitions/detectedValue" } }
+      }
+    },
+    "provenance": {
+      "description": "V1.6: origin of each input field. 'user' or 'detected' are generatable; 'detected_unconfirmed' or null are blocked.",
+      "type": "object",
+      "properties": {
+        "chip": { "type": ["string", "null"], "enum": ["user", "detected", "detected_unconfirmed", null] },
+        "peripheral": { "type": ["string", "null"], "enum": ["user", "detected", "detected_unconfirmed", null] }
+      }
+    }
+  },
+  "definitions": {
+    "detectedValue": {
+      "type": "object",
+      "required": ["value", "confidence", "source_pages"],
+      "properties": {
+        "value": { "type": "string" },
+        "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+        "source_pages": { "type": "array", "items": { "type": "integer", "minimum": 1 } }
+      }
+    }
   }
 }

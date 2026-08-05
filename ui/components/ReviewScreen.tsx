@@ -1,15 +1,36 @@
 "use client";
 
 /* Screen 2: register map review — dense, sortable, editable before generation.
-   Edits are tracked verbatim and travel into provenance. The ONE Generate
-   button in the product lives here. */
+   V1.6: the top "Confirm device inputs" panel is the gate. Chip and interface
+   arrive detected-from-the-document and must be confirmed or corrected; the
+   platform is an explicit dropdown. The ONE Generate button stays disabled
+   until every input carries a user/detected provenance — no silent defaults,
+   no invented values reach the worker. Edits travel into provenance. */
 
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
-import type { Command, Register, RegisterMap } from "../lib/types";
-import { Button, Confidence, EASE, Field, Panel, inputCls } from "./ui";
+import type {
+  Command,
+  DetectedValue,
+  Provenance,
+  Register,
+  RegisterMap,
+} from "../lib/types";
+import { PLATFORMS } from "../lib/types";
+import {
+  Button,
+  Confidence,
+  EASE,
+  Field,
+  Panel,
+  ProvenanceTag,
+  Select,
+  inputCls,
+} from "./ui";
 
 type SortKey = "name" | "offset";
+
+const KNOWN_PLATFORMS = new Set(PLATFORMS.map((p) => p.value).filter((v) => v !== "other"));
 
 export function ReviewScreen({
   map: initialMap,
@@ -21,12 +42,79 @@ export function ReviewScreen({
   onGenerate: (map: RegisterMap, platform: string, edits: string[]) => void;
 }) {
   const [map, setMap] = useState<RegisterMap>(initialMap);
-  const [platform, setPlatform] = useState(initialPlatform);
   const [edits, setEdits] = useState<string[]>([]);
   const [sort, setSort] = useState<SortKey>("offset");
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
+  // --- confirmable device inputs (Priority 1 gate) ---
+  const [chip, setChip] = useState(initialMap.chip ?? "");
+  const [chipProv, setChipProv] = useState<Provenance>(
+    initialMap.provenance?.chip ?? null,
+  );
+  const [iface, setIface] = useState(initialMap.peripheral ?? "");
+  const [ifaceProv, setIfaceProv] = useState<Provenance>(
+    initialMap.provenance?.peripheral ?? null,
+  );
+  // platform: prefill the dropdown if it maps to a known token, else "Other"
+  const [platformSel, setPlatformSel] = useState(
+    initialPlatform && KNOWN_PLATFORMS.has(initialPlatform) ? initialPlatform
+      : initialPlatform ? "other" : "",
+  );
+  const [platformOther, setPlatformOther] = useState(
+    initialPlatform && !KNOWN_PLATFORMS.has(initialPlatform) ? initialPlatform : "",
+  );
+
+  const detectedChip = initialMap.detected?.chip;
+  const detectedIfaces = initialMap.detected?.interfaces ?? [];
+  const detectedVendor = initialMap.detected?.vendor;
+
   const track = (msg: string) => setEdits((e) => [...e, msg]);
+
+  const platform =
+    platformSel === "other" ? platformOther.trim() : platformSel;
+
+  const resolved = (v: string, p: Provenance) =>
+    v.trim() !== "" && (p === "user" || p === "detected");
+  const chipOk = resolved(chip, chipProv);
+  const ifaceOk = resolved(iface, ifaceProv);
+  const platformOk = platform.trim() !== "";
+  const canGenerate = chipOk && ifaceOk && platformOk;
+
+  const missing = [
+    !chipOk && "chip / part number",
+    !ifaceOk && "interface",
+    !platformOk && "target platform",
+  ].filter(Boolean) as string[];
+
+  const editChip = (v: string) => {
+    setChip(v);
+    setChipProv("user");
+    track(`chip: "${chip}" -> "${v}" (user)`);
+  };
+  const confirmChip = () => {
+    setChipProv("detected");
+    track(`chip confirmed as detected: "${chip}"`);
+  };
+  const pickIface = (v: string) => {
+    setIface(v);
+    setIfaceProv("detected");
+    track(`interface confirmed as detected: "${v}"`);
+  };
+  const editIface = (v: string) => {
+    setIface(v);
+    setIfaceProv("user");
+    track(`interface: "${iface}" -> "${v}" (user)`);
+  };
+
+  const submit = () => {
+    const finalMap: RegisterMap = {
+      ...map,
+      chip: chip.trim(),
+      peripheral: iface.trim(),
+      provenance: { chip: chipProv, peripheral: ifaceProv },
+    };
+    onGenerate(finalMap, platform, edits);
+  };
 
   const registers = useMemo(() => {
     const rows = map.registers.map((r, i) => ({ r, i }));
@@ -51,10 +139,7 @@ export function ReviewScreen({
 
   const deleteRegister = (i: number) => {
     track(`deleted register ${map.registers[i].name} (${map.registers[i].offset})`);
-    setMap((m) => ({
-      ...m,
-      registers: m.registers.filter((_, k) => k !== i),
-    }));
+    setMap((m) => ({ ...m, registers: m.registers.filter((_, k) => k !== i) }));
   };
 
   const deleteCommand = (i: number) => {
@@ -79,6 +164,7 @@ export function ReviewScreen({
   const th =
     "text-left px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-ink-dim font-medium select-none";
   const td = "px-2 py-0.5 font-mono text-[13px] whitespace-nowrap";
+  const shapeHint = initialMap.detected?.shape_hint?.value?.replace(/_/g, " ");
 
   return (
     <motion.div
@@ -87,35 +173,156 @@ export function ReviewScreen({
       transition={EASE}
       className="grid gap-4 w-full"
     >
-      <div className="flex items-end justify-between gap-4 flex-wrap">
-        <div className="font-mono text-[13px] text-ink-dim">
-          <span className="text-ink">{map.chip}</span>
-          {map.peripheral && <> · {map.peripheral}</>}
-          {map.base_address && (
-            <>
-              {" "}
-              · base <span className="text-accent">{map.base_address}</span>
-            </>
-          )}
-          {!map.base_address && <> · bus-attached device (no memory base)</>}
-          {" · confidence "}
-          <Confidence level={map.extraction_confidence} />
-        </div>
-        <div className="flex items-end gap-3">
-          <div className="w-40">
-            <Field label="Target platform">
-              <input
-                className={inputCls}
-                value={platform}
-                onChange={(e) => setPlatform(e.target.value)}
-              />
-            </Field>
+      {/* --- the input gate: confirm what the datasheet says, pick a platform --- */}
+      <Panel title="Confirm device inputs">
+        <div className="p-4 grid gap-4">
+          <p className="text-[12px] text-ink-dim">
+            Values below were <span className="text-amber">detected from the datasheet</span>.
+            Confirm or correct them — generation is blocked until each is set. Nothing is
+            auto-filled with a guess.
+          </p>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            {/* chip */}
+            <div className="grid gap-1.5">
+              <Field label="Chip / part number">
+                <input
+                  className={inputCls}
+                  placeholder="e.g. BME280"
+                  value={chip}
+                  onChange={(e) => editChip(e.target.value)}
+                />
+              </Field>
+              <div className="flex items-center gap-2 min-h-6">
+                <ProvenanceTag
+                  state={chip.trim() === "" ? "empty" : (chipProv ?? "detected_unconfirmed")}
+                  pages={detectedChip?.source_pages}
+                />
+                {chipProv === "detected_unconfirmed" && chip.trim() !== "" && (
+                  <button
+                    onClick={confirmChip}
+                    className="text-[11px] text-accent hover:underline underline-offset-2"
+                  >
+                    confirm
+                  </button>
+                )}
+                {detectedVendor && (
+                  <span className="text-[10px] text-ink-faint font-mono">
+                    {detectedVendor.value}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* interface */}
+            <div className="grid gap-1.5">
+              <Field label="Interface">
+                <input
+                  className={inputCls}
+                  placeholder="e.g. I2C"
+                  value={iface}
+                  onChange={(e) => editIface(e.target.value)}
+                />
+              </Field>
+              <div className="flex flex-wrap items-center gap-2 min-h-6">
+                {detectedIfaces.length >= 2 ? (
+                  <>
+                    <span className="text-[10px] text-amber uppercase tracking-wide">
+                      choose:
+                    </span>
+                    {detectedIfaces.map((d: DetectedValue) => (
+                      <button
+                        key={d.value}
+                        onClick={() => pickIface(d.value)}
+                        className={`border rounded-sm px-1.5 py-0.5 font-mono text-[11px] ${
+                          iface === d.value && ifaceProv === "detected"
+                            ? "text-accent border-accent-dim bg-accent/10"
+                            : "text-ink-dim border-line-2 hover:border-ink-faint"
+                        }`}
+                      >
+                        {d.value}
+                        <span className="text-ink-faint">
+                          {d.source_pages.length ? ` p.${d.source_pages.join(",")}` : ""}
+                        </span>
+                      </button>
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    <ProvenanceTag
+                      state={iface.trim() === "" ? "empty" : (ifaceProv ?? "detected_unconfirmed")}
+                      pages={detectedIfaces[0]?.source_pages}
+                    />
+                    {ifaceProv === "detected_unconfirmed" && iface.trim() !== "" && (
+                      <button
+                        onClick={() => pickIface(iface)}
+                        className="text-[11px] text-accent hover:underline underline-offset-2"
+                      >
+                        confirm
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* platform */}
+            <div className="grid gap-1.5">
+              <Field label="Target platform">
+                <Select
+                  ariaLabel="Target platform"
+                  value={platformSel}
+                  placeholder="Select platform…"
+                  onChange={(v) => {
+                    setPlatformSel(v);
+                    track(`platform: "${platform}" -> "${v}"`);
+                  }}
+                  options={PLATFORMS}
+                />
+              </Field>
+              {platformSel === "other" && (
+                <input
+                  className={inputCls}
+                  placeholder="toolchain / MCU, e.g. RP2040"
+                  value={platformOther}
+                  onChange={(e) => setPlatformOther(e.target.value)}
+                />
+              )}
+              {shapeHint && (
+                <span className="text-[10px] text-ink-faint font-mono">
+                  shape: {shapeHint}
+                </span>
+              )}
+            </div>
           </div>
-          {/* the single Generate button in the entire product */}
-          <Button kind="primary" onClick={() => onGenerate(map, platform, edits)}>
-            Generate driver
-          </Button>
+
+          <div className="flex items-center gap-3 border-t border-line pt-3">
+            {/* the single Generate button in the entire product */}
+            <Button kind="primary" onClick={submit} disabled={!canGenerate}>
+              Generate driver
+            </Button>
+            {!canGenerate && (
+              <span role="alert" className="text-[12px] text-amber">
+                Confirm {missing.join(", ")} before generating.
+              </span>
+            )}
+          </div>
         </div>
+      </Panel>
+
+      <div className="font-mono text-[13px] text-ink-dim">
+        <span className="text-ink">{chip || "—"}</span>
+        {iface && <> · {iface}</>}
+        {map.base_address ? (
+          <>
+            {" "}
+            · base <span className="text-accent">{map.base_address}</span>
+          </>
+        ) : (
+          <> · bus-attached device (no memory base)</>
+        )}
+        {" · confidence "}
+        <Confidence level={map.extraction_confidence} />
       </div>
 
       {warnings.length > 0 && (

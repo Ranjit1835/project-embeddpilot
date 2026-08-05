@@ -103,9 +103,25 @@ def ingest_datasheet(
         )
 
     commands = _dedupe_commands(commands)
+
+    # V1.6 Priority 2: detect chip/vendor/interface from the front matter, and
+    # V1.6 Priority 1: NEVER silently invent chip/interface. A value is either
+    # user-supplied ("user"), pre-filled from a confident detection but pending
+    # human confirmation ("detected_unconfirmed"), or left empty (blocked at
+    # generate time). The old `chip or basename(path)` filename fallback — which
+    # invented a chip name — is gone.
+    from ingestion.detect import detect_metadata, shape_hint
+
+    detected = detect_metadata(doc)
+    detected["shape_hint"] = shape_hint(base_address, len(registers), len(commands))
+    chip_value, chip_prov = _resolve_field(chip, detected.get("chip"))
+    periph_value, periph_prov = _resolve_interface(peripheral, detected.get("interfaces"))
+
     result = {
-        "peripheral": peripheral,
-        "chip": chip or os.path.splitext(os.path.basename(path))[0],
+        "peripheral": periph_value,
+        "chip": chip_value,
+        "detected": detected,
+        "provenance": {"chip": chip_prov, "peripheral": periph_prov},
         # inferred memory-mapped base; null = bus-attached device (I2C/SPI),
         # which switches the WS2 worker to the transfer-callback contract
         "base_address": base_address,
@@ -126,6 +142,35 @@ def ingest_datasheet(
     }
     _validate(result)
     return result
+
+
+def _resolve_field(
+    user_value: str, detected: dict | None
+) -> tuple[str, str | None]:
+    """Provenance policy for a single field (Priority 1). User input wins and is
+    already confirmed ('user'). Otherwise a HIGH-confidence detection pre-fills
+    the value but stays 'detected_unconfirmed' until the human confirms it on the
+    review screen. No value -> empty + no provenance -> blocked at generate time.
+    """
+    if user_value and user_value.strip():
+        return user_value.strip(), "user"
+    if detected and detected.get("confidence") == "high" and detected.get("value"):
+        return detected["value"], "detected_unconfirmed"
+    return "", None
+
+
+def _resolve_interface(
+    user_value: str, detected_list: list[dict] | None
+) -> tuple[str, str | None]:
+    """Interface resolution. A single high-confidence interface pre-fills;
+    MULTIPLE detected interfaces are never auto-picked (BME280 is I2C *and* SPI)
+    — the field is left empty so the review screen forces an explicit choice."""
+    if user_value and user_value.strip():
+        return user_value.strip(), "user"
+    highs = [d for d in (detected_list or []) if d.get("confidence") == "high"]
+    if len(highs) == 1:
+        return highs[0]["value"], "detected_unconfirmed"
+    return "", None
 
 
 def _dedupe_commands(commands):

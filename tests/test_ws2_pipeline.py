@@ -24,6 +24,7 @@ from validator.report import ValidationReport
 REGISTER_MAP = {
     "peripheral": "I2C0",
     "chip": "ESP32",
+    "provenance": {"chip": "user", "peripheral": "user"},
     "base_address": "0x3FF53000",
     "registers": [
         {"name": "I2C_CTR_REG", "offset": "0x0004", "reset_value": "0x00",
@@ -41,6 +42,7 @@ REGISTER_MAP = {
 COMMAND_MAP = {
     "peripheral": "spi-flash",
     "chip": "W25Q64JV",
+    "provenance": {"chip": "user", "peripheral": "user"},
     "base_address": None,
     "registers": [],
     "commands": [
@@ -55,6 +57,7 @@ COMMAND_MAP = {
 }
 
 BMP180_MAP = {"peripheral": "pressure-sensor", "chip": "BMP180",
+              "provenance": {"chip": "user", "peripheral": "user"},
               "registers": [{"name": "CHIP_ID", "offset": "0xD0",
                              "fields": [], "source_pages": [18]}],
               "commands": [], "warnings": []}

@@ -26,6 +26,16 @@ export interface Command {
   source_pages: number[];
 }
 
+export interface DetectedValue {
+  value: string;
+  confidence: "high" | "medium" | "low";
+  source_pages: number[];
+}
+
+/** Origin of an input field. 'user' or 'detected' generate; 'detected_unconfirmed'
+    or null are blocked until the user confirms/corrects on the review screen. */
+export type Provenance = "user" | "detected" | "detected_unconfirmed" | null;
+
 export interface RegisterMap {
   peripheral: string;
   chip: string;
@@ -36,7 +46,27 @@ export interface RegisterMap {
   source_pages: number[];
   warnings?: string[];
   low_confidence_pages?: number[];
+  detected?: {
+    chip?: DetectedValue;
+    vendor?: DetectedValue;
+    shape_hint?: DetectedValue;
+    interfaces?: DetectedValue[];
+  };
+  provenance?: { chip?: Provenance; peripheral?: Provenance };
 }
+
+/** Canonical target platforms (Priority 3). Value is the token sent to the
+    backend; the validator maps each to a toolchain + HAL convention. */
+export const PLATFORMS: { value: string; label: string }[] = [
+  { value: "stm32", label: "STM32" },
+  { value: "esp32", label: "ESP32" },
+  { value: "nxp", label: "NXP" },
+  { value: "ti", label: "TI" },
+  { value: "raspberry-pi", label: "Raspberry Pi" },
+  { value: "avr", label: "AVR / Arduino" },
+  { value: "cortex-m", label: "Generic ARM Cortex-M" },
+  { value: "other", label: "Other (specify)" },
+];
 
 export interface RouteDecision {
   path: "template" | "llm";

@@ -1,480 +1,484 @@
 {
-  "peripheral": "I2C0",
-  "chip": "ESP32",
-  "base_address": "0x3FF53000",
-  "registers": [
-    {
-      "name": "I2C_CTR_REG",
-      "offset": "0x0004",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402,
-        403
-      ]
-    },
-    {
-      "name": "I2C_TO_REG",
-      "offset": "0x000C",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402,
-        404
-      ]
-    },
-    {
-      "name": "I2C_SLAVE_ADDR_REG",
-      "offset": "0x0010",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402,
-        405
-      ]
-    },
-    {
-      "name": "I2C_RXFIFO_ST_REG",
-      "offset": "0x0014",
-      "reset_value": null,
-      "access": "RO",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402,
-        405
-      ]
-    },
-    {
-      "name": "I2C_FIFO_CONF_REG",
-      "offset": "0x0018",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402,
-        406
-      ]
-    },
-    {
-      "name": "I2C_SR_REG",
-      "offset": "0x0008",
-      "reset_value": null,
-      "access": "RO",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402,
-        404
-      ]
-    },
-    {
-      "name": "I2C_SDA_HOLD_REG",
-      "offset": "0x0030",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402,
-        411
-      ]
-    },
-    {
-      "name": "I2C_SDA_SAMPLE_REG",
-      "offset": "0x0034",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402,
-        411
-      ]
-    },
-    {
-      "name": "I2C_SCL_LOW_PERIOD_REG",
-      "offset": "0x0000",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402,
-        403
-      ]
-    },
-    {
-      "name": "I2C_SCL_HIGH_PERIOD_REG",
-      "offset": "0x0038",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402,
-        411
-      ]
-    },
-    {
-      "name": "I2C_SCL_START_HOLD_REG",
-      "offset": "0x0040",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402,
-        412
-      ]
-    },
-    {
-      "name": "I2C_SCL_RSTART_SETUP_REG",
-      "offset": "0x0044",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402,
-        412
-      ]
-    },
-    {
-      "name": "I2C_SCL_STOP_HOLD_REG",
-      "offset": "0x0048",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402,
-        412
-      ]
-    },
-    {
-      "name": "I2C_SCL_STOP_SETUP_REG",
-      "offset": "0x004C",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402,
-        413
-      ]
-    },
-    {
-      "name": "I2C_SCL_FILTER_CFG_REG",
-      "offset": "0x0050",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402,
-        413
-      ]
-    },
-    {
-      "name": "I2C_SDA_FILTER_CFG_REG",
-      "offset": "0x0054",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402,
-        413
-      ]
-    },
-    {
-      "name": "I2C_INT_RAW_REG",
-      "offset": "0x0020",
-      "reset_value": null,
-      "access": "RO",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402,
-        407
-      ]
-    },
-    {
-      "name": "I2C_INT_CLR_REG",
-      "offset": "0x0024",
-      "reset_value": null,
-      "access": "WO",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402,
-        408
-      ]
-    },
-    {
-      "name": "I2C_INT_ENA_REG",
-      "offset": "0x0028",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402,
-        409
-      ]
-    },
-    {
-      "name": "I2C_INT_STATUS_REG",
-      "offset": "0x002C",
-      "reset_value": null,
-      "access": "RO",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402,
-        410
-      ]
-    },
-    {
-      "name": "I2C_COMD0_REG",
-      "offset": "0x0058",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402
-      ]
-    },
-    {
-      "name": "I2C_COMD1_REG",
-      "offset": "0x005C",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402
-      ]
-    },
-    {
-      "name": "I2C_COMD2_REG",
-      "offset": "0x0060",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402
-      ]
-    },
-    {
-      "name": "I2C_COMD3_REG",
-      "offset": "0x0064",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402
-      ]
-    },
-    {
-      "name": "I2C_COMD4_REG",
-      "offset": "0x0068",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402
-      ]
-    },
-    {
-      "name": "I2C_COMD5_REG",
-      "offset": "0x006C",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402
-      ]
-    },
-    {
-      "name": "I2C_COMD6_REG",
-      "offset": "0x0070",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402
-      ]
-    },
-    {
-      "name": "I2C_COMD7_REG",
-      "offset": "0x0074",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402
-      ]
-    },
-    {
-      "name": "I2C_COMD8_REG",
-      "offset": "0x0078",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402
-      ]
-    },
-    {
-      "name": "I2C_COMD9_REG",
-      "offset": "0x007C",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402
-      ]
-    },
-    {
-      "name": "I2C_COMD10_REG",
-      "offset": "0x0080",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402
-      ]
-    },
-    {
-      "name": "I2C_COMD11_REG",
-      "offset": "0x0084",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402
-      ]
-    },
-    {
-      "name": "I2C_COMD12_REG",
-      "offset": "0x0088",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402
-      ]
-    },
-    {
-      "name": "I2C_COMD13_REG",
-      "offset": "0x008C",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402
-      ]
-    },
-    {
-      "name": "I2C_COMD14_REG",
-      "offset": "0x0090",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402
-      ]
-    },
-    {
-      "name": "I2C_COMD15_REG",
-      "offset": "0x0094",
-      "reset_value": null,
-      "access": "RW",
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        401,
-        402
-      ]
-    }
-  ],
-  "commands": [],
-  "extraction_confidence": "high",
-  "source_pages": [
+ "peripheral": "I2C0",
+ "chip": "ESP32",
+ "base_address": "0x3FF53000",
+ "registers": [
+  {
+   "name": "I2C_CTR_REG",
+   "offset": "0x0004",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
     401,
     402,
-    403,
-    404,
-    405,
-    406,
-    407,
-    408,
-    409,
-    410,
-    411,
-    412,
+    403
+   ]
+  },
+  {
+   "name": "I2C_TO_REG",
+   "offset": "0x000C",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402,
+    404
+   ]
+  },
+  {
+   "name": "I2C_SLAVE_ADDR_REG",
+   "offset": "0x0010",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402,
+    405
+   ]
+  },
+  {
+   "name": "I2C_RXFIFO_ST_REG",
+   "offset": "0x0014",
+   "reset_value": null,
+   "access": "RO",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402,
+    405
+   ]
+  },
+  {
+   "name": "I2C_FIFO_CONF_REG",
+   "offset": "0x0018",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402,
+    406
+   ]
+  },
+  {
+   "name": "I2C_SR_REG",
+   "offset": "0x0008",
+   "reset_value": null,
+   "access": "RO",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402,
+    404
+   ]
+  },
+  {
+   "name": "I2C_SDA_HOLD_REG",
+   "offset": "0x0030",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402,
+    411
+   ]
+  },
+  {
+   "name": "I2C_SDA_SAMPLE_REG",
+   "offset": "0x0034",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402,
+    411
+   ]
+  },
+  {
+   "name": "I2C_SCL_LOW_PERIOD_REG",
+   "offset": "0x0000",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402,
+    403
+   ]
+  },
+  {
+   "name": "I2C_SCL_HIGH_PERIOD_REG",
+   "offset": "0x0038",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402,
+    411
+   ]
+  },
+  {
+   "name": "I2C_SCL_START_HOLD_REG",
+   "offset": "0x0040",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402,
+    412
+   ]
+  },
+  {
+   "name": "I2C_SCL_RSTART_SETUP_REG",
+   "offset": "0x0044",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402,
+    412
+   ]
+  },
+  {
+   "name": "I2C_SCL_STOP_HOLD_REG",
+   "offset": "0x0048",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402,
+    412
+   ]
+  },
+  {
+   "name": "I2C_SCL_STOP_SETUP_REG",
+   "offset": "0x004C",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402,
     413
-  ],
-  "warnings": [
-    "rebased 16 absolute addresses using inferred base 0x3FF53000 (confirmed by 17 register(s) seen both ways)"
-  ],
-  "low_confidence_pages": []
+   ]
+  },
+  {
+   "name": "I2C_SCL_FILTER_CFG_REG",
+   "offset": "0x0050",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402,
+    413
+   ]
+  },
+  {
+   "name": "I2C_SDA_FILTER_CFG_REG",
+   "offset": "0x0054",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402,
+    413
+   ]
+  },
+  {
+   "name": "I2C_INT_RAW_REG",
+   "offset": "0x0020",
+   "reset_value": null,
+   "access": "RO",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402,
+    407
+   ]
+  },
+  {
+   "name": "I2C_INT_CLR_REG",
+   "offset": "0x0024",
+   "reset_value": null,
+   "access": "WO",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402,
+    408
+   ]
+  },
+  {
+   "name": "I2C_INT_ENA_REG",
+   "offset": "0x0028",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402,
+    409
+   ]
+  },
+  {
+   "name": "I2C_INT_STATUS_REG",
+   "offset": "0x002C",
+   "reset_value": null,
+   "access": "RO",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402,
+    410
+   ]
+  },
+  {
+   "name": "I2C_COMD0_REG",
+   "offset": "0x0058",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402
+   ]
+  },
+  {
+   "name": "I2C_COMD1_REG",
+   "offset": "0x005C",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402
+   ]
+  },
+  {
+   "name": "I2C_COMD2_REG",
+   "offset": "0x0060",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402
+   ]
+  },
+  {
+   "name": "I2C_COMD3_REG",
+   "offset": "0x0064",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402
+   ]
+  },
+  {
+   "name": "I2C_COMD4_REG",
+   "offset": "0x0068",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402
+   ]
+  },
+  {
+   "name": "I2C_COMD5_REG",
+   "offset": "0x006C",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402
+   ]
+  },
+  {
+   "name": "I2C_COMD6_REG",
+   "offset": "0x0070",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402
+   ]
+  },
+  {
+   "name": "I2C_COMD7_REG",
+   "offset": "0x0074",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402
+   ]
+  },
+  {
+   "name": "I2C_COMD8_REG",
+   "offset": "0x0078",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402
+   ]
+  },
+  {
+   "name": "I2C_COMD9_REG",
+   "offset": "0x007C",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402
+   ]
+  },
+  {
+   "name": "I2C_COMD10_REG",
+   "offset": "0x0080",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402
+   ]
+  },
+  {
+   "name": "I2C_COMD11_REG",
+   "offset": "0x0084",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402
+   ]
+  },
+  {
+   "name": "I2C_COMD12_REG",
+   "offset": "0x0088",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402
+   ]
+  },
+  {
+   "name": "I2C_COMD13_REG",
+   "offset": "0x008C",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402
+   ]
+  },
+  {
+   "name": "I2C_COMD14_REG",
+   "offset": "0x0090",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402
+   ]
+  },
+  {
+   "name": "I2C_COMD15_REG",
+   "offset": "0x0094",
+   "reset_value": null,
+   "access": "RW",
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
+    401,
+    402
+   ]
+  }
+ ],
+ "commands": [],
+ "extraction_confidence": "high",
+ "source_pages": [
+  401,
+  402,
+  403,
+  404,
+  405,
+  406,
+  407,
+  408,
+  409,
+  410,
+  411,
+  412,
+  413
+ ],
+ "warnings": [
+  "rebased 16 absolute addresses using inferred base 0x3FF53000 (confirmed by 17 register(s) seen both ways)"
+ ],
+ "low_confidence_pages": [],
+ "provenance": {
+  "chip": "user",
+  "peripheral": "user"
+ }
 }

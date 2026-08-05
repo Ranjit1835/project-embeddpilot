@@ -1,482 +1,486 @@
 {
-  "peripheral": "spi-flash",
-  "chip": "W25Q64JV",
-  "registers": [
-    {
-      "name": "Security",
-      "offset": "0x00",
-      "reset_value": null,
-      "access": null,
-      "fields": [],
-      "confidence": "high",
-      "source_pages": [
-        52,
-        53,
-        54
-      ]
-    }
-  ],
-  "commands": [
-    {
-      "name": "Write Enable",
-      "opcode": "0x06",
-      "description": "",
-      "address_bytes": null,
-      "dummy_cycles": null,
-      "data_direction": "none",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Volatile SR Write Enable",
-      "opcode": "0x50",
-      "description": "",
-      "address_bytes": null,
-      "dummy_cycles": null,
-      "data_direction": "none",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Write Disable",
-      "opcode": "0x04",
-      "description": "",
-      "address_bytes": null,
-      "dummy_cycles": null,
-      "data_direction": "none",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Release Power-down / ID",
-      "opcode": "0xAB",
-      "description": "3 dummy byte(s); sequence: (ID7-ID0)(2)",
-      "address_bytes": null,
-      "dummy_cycles": null,
-      "data_direction": "read",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Manufacturer/Device ID",
-      "opcode": "0x90",
-      "description": "2 dummy byte(s); sequence: 00h, (MF7-MF0), (ID7-ID0)",
-      "address_bytes": null,
-      "dummy_cycles": null,
-      "data_direction": "read",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "JEDEC ID",
-      "opcode": "0x9F",
-      "description": "sequence: (MF7-MF0), (ID15-ID8), (ID7-ID0)",
-      "address_bytes": null,
-      "dummy_cycles": null,
-      "data_direction": "read",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Read Unique ID",
-      "opcode": "0x4B",
-      "description": "4 dummy byte(s); sequence: (UID63-0)",
-      "address_bytes": null,
-      "dummy_cycles": null,
-      "data_direction": "read",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Read Data",
-      "opcode": "0x03",
-      "description": "sequence: A23-A16, A15-A8, A7-A0, (D7-D0)",
-      "address_bytes": 3,
-      "dummy_cycles": null,
-      "data_direction": "read",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Fast Read",
-      "opcode": "0x0B",
-      "description": "1 dummy byte(s); sequence: A23-A16, A15-A8, A7-A0, (D7-D0)",
-      "address_bytes": 3,
-      "dummy_cycles": null,
-      "data_direction": "read",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Page Program",
-      "opcode": "0x02",
-      "description": "sequence: A23-A16, A15-A8, A7-A0, D7-D0, D7-D0(3)",
-      "address_bytes": 3,
-      "dummy_cycles": null,
-      "data_direction": "write",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Sector Erase (4KB)",
-      "opcode": "0x20",
-      "description": "sequence: A23-A16, A15-A8, A7-A0",
-      "address_bytes": 3,
-      "dummy_cycles": null,
-      "data_direction": "none",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Block Erase (32KB)",
-      "opcode": "0x52",
-      "description": "sequence: A23-A16, A15-A8, A7-A0",
-      "address_bytes": 3,
-      "dummy_cycles": null,
-      "data_direction": "none",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Block Erase (64KB)",
-      "opcode": "0xD8",
-      "description": "sequence: A23-A16, A15-A8, A7-A0",
-      "address_bytes": 3,
-      "dummy_cycles": null,
-      "data_direction": "none",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Read Status Register-1",
-      "opcode": "0x05",
-      "description": "sequence: (S7-S0)(2)",
-      "address_bytes": null,
-      "dummy_cycles": null,
-      "data_direction": "read",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Write Status Register-1(4)",
-      "opcode": "0x01",
-      "description": "sequence: (S7-S0)(4)",
-      "address_bytes": null,
-      "dummy_cycles": null,
-      "data_direction": "read",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Read Status Register-2",
-      "opcode": "0x35",
-      "description": "sequence: (S15-S8)(2)",
-      "address_bytes": null,
-      "dummy_cycles": null,
-      "data_direction": "read",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Write Status Register-2",
-      "opcode": "0x31",
-      "description": "sequence: (S15-S8)",
-      "address_bytes": null,
-      "dummy_cycles": null,
-      "data_direction": "read",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Read Status Register-3",
-      "opcode": "0x15",
-      "description": "sequence: (S23-S16)(2)",
-      "address_bytes": null,
-      "dummy_cycles": null,
-      "data_direction": "read",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Write Status Register-3",
-      "opcode": "0x11",
-      "description": "sequence: (S23-S16)",
-      "address_bytes": null,
-      "dummy_cycles": null,
-      "data_direction": "read",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Read SFDP Register",
-      "opcode": "0x5A",
-      "description": "1 dummy byte(s); sequence: 00h, 00h, A7\u2013A0, (D7-0)",
-      "address_bytes": null,
-      "dummy_cycles": null,
-      "data_direction": "read",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Erase Security Register(5)",
-      "opcode": "0x44",
-      "description": "sequence: A23-A16, A15-A8, A7-A0",
-      "address_bytes": 3,
-      "dummy_cycles": null,
-      "data_direction": "none",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Program Security Register(5)",
-      "opcode": "0x42",
-      "description": "sequence: A23-A16, A15-A8, A7-A0, D7-D0, D7-D0(3)",
-      "address_bytes": 3,
-      "dummy_cycles": null,
-      "data_direction": "write",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Read Security Register(5)",
-      "opcode": "0x48",
-      "description": "1 dummy byte(s); sequence: A23-A16, A15-A8, A7-A0, (D7-D0)",
-      "address_bytes": 3,
-      "dummy_cycles": null,
-      "data_direction": "read",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Global Block Lock",
-      "opcode": "0x7E",
-      "description": "",
-      "address_bytes": null,
-      "dummy_cycles": null,
-      "data_direction": "none",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Global Block Unlock",
-      "opcode": "0x98",
-      "description": "",
-      "address_bytes": null,
-      "dummy_cycles": null,
-      "data_direction": "none",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Read Block Lock",
-      "opcode": "0x3D",
-      "description": "sequence: A23-A16, A15-A8, A7-A0, (L7-L0)",
-      "address_bytes": 3,
-      "dummy_cycles": null,
-      "data_direction": "read",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Individual Block Lock",
-      "opcode": "0x36",
-      "description": "sequence: A23-A16, A15-A8, A7-A0",
-      "address_bytes": 3,
-      "dummy_cycles": null,
-      "data_direction": "none",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Individual Block Unlock",
-      "opcode": "0x39",
-      "description": "sequence: A23-A16, A15-A8, A7-A0",
-      "address_bytes": 3,
-      "dummy_cycles": null,
-      "data_direction": "none",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Erase / Program Suspend",
-      "opcode": "0x75",
-      "description": "",
-      "address_bytes": null,
-      "dummy_cycles": null,
-      "data_direction": "none",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Erase / Program Resume",
-      "opcode": "0x7A",
-      "description": "",
-      "address_bytes": null,
-      "dummy_cycles": null,
-      "data_direction": "none",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Power-down",
-      "opcode": "0xB9",
-      "description": "",
-      "address_bytes": null,
-      "dummy_cycles": null,
-      "data_direction": "none",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Enable Reset",
-      "opcode": "0x66",
-      "description": "",
-      "address_bytes": null,
-      "dummy_cycles": null,
-      "data_direction": "none",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Reset Device",
-      "opcode": "0x99",
-      "description": "",
-      "address_bytes": null,
-      "dummy_cycles": null,
-      "data_direction": "none",
-      "source_pages": [
-        23
-      ]
-    },
-    {
-      "name": "Fast Read Dual Output",
-      "opcode": "0x3B",
-      "description": "2 dummy byte(s); sequence: A23-A16, A15-A8, A7-A0, (D7-D0)(7)",
-      "address_bytes": 3,
-      "dummy_cycles": null,
-      "data_direction": "read",
-      "source_pages": [
-        24
-      ]
-    },
-    {
-      "name": "Fast Read Dual I/O",
-      "opcode": "0xBB",
-      "description": "1 dummy byte(s); sequence: A23-A16(6), A15-A8(6), A7-A0(6), (D7-D0)(7)",
-      "address_bytes": 3,
-      "dummy_cycles": null,
-      "data_direction": "read",
-      "source_pages": [
-        24
-      ]
-    },
-    {
-      "name": "Mftr./Device ID Dual I/O",
-      "opcode": "0x92",
-      "description": "1 dummy byte(s); sequence: A23-A16(6), A15-A8(6), 00(6), (MF7-MF0), (ID7-ID0)(7)",
-      "address_bytes": 2,
-      "dummy_cycles": null,
-      "data_direction": "read",
-      "source_pages": [
-        24
-      ]
-    },
-    {
-      "name": "Quad Input Page Program",
-      "opcode": "0x32",
-      "description": "sequence: A23-A16, A15-A8, A7-A0, (D7-D0)(9), (D7-D0)(3), \u2026",
-      "address_bytes": 3,
-      "dummy_cycles": null,
-      "data_direction": "read",
-      "source_pages": [
-        24
-      ]
-    },
-    {
-      "name": "Fast Read Quad Output",
-      "opcode": "0x6B",
-      "description": "4 dummy byte(s); sequence: A23-A16, A15-A8, A7-A0, (D7-D0)(10)",
-      "address_bytes": 3,
-      "dummy_cycles": null,
-      "data_direction": "read",
-      "source_pages": [
-        24
-      ]
-    },
-    {
-      "name": "Mftr./Device ID Quad I/O",
-      "opcode": "0x94",
-      "description": "3 dummy byte(s); sequence: A23-A16, A15-A8, 00, (MF7-MF0), (ID7-ID0)",
-      "address_bytes": 2,
-      "dummy_cycles": null,
-      "data_direction": "read",
-      "source_pages": [
-        24
-      ]
-    },
-    {
-      "name": "Fast Read Quad I/O",
-      "opcode": "0xEB",
-      "description": "3 dummy byte(s); sequence: A23-A16, A15-A8, A7-A0, (D7-D0)",
-      "address_bytes": 3,
-      "dummy_cycles": null,
-      "data_direction": "read",
-      "source_pages": [
-        24
-      ]
-    },
-    {
-      "name": "Set Burst with Wrap",
-      "opcode": "0x77",
-      "description": "3 dummy byte(s); sequence: W8-W0",
-      "address_bytes": null,
-      "dummy_cycles": null,
-      "data_direction": "none",
-      "source_pages": [
-        24
-      ]
-    }
-  ],
-  "extraction_confidence": "high",
-  "source_pages": [
-    23,
-    24,
+ "peripheral": "spi-flash",
+ "chip": "W25Q64JV",
+ "registers": [
+  {
+   "name": "Security",
+   "offset": "0x00",
+   "reset_value": null,
+   "access": null,
+   "fields": [],
+   "confidence": "high",
+   "source_pages": [
     52,
     53,
     54
-  ],
-  "warnings": [],
-  "low_confidence_pages": []
+   ]
+  }
+ ],
+ "commands": [
+  {
+   "name": "Write Enable",
+   "opcode": "0x06",
+   "description": "",
+   "address_bytes": null,
+   "dummy_cycles": null,
+   "data_direction": "none",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Volatile SR Write Enable",
+   "opcode": "0x50",
+   "description": "",
+   "address_bytes": null,
+   "dummy_cycles": null,
+   "data_direction": "none",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Write Disable",
+   "opcode": "0x04",
+   "description": "",
+   "address_bytes": null,
+   "dummy_cycles": null,
+   "data_direction": "none",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Release Power-down / ID",
+   "opcode": "0xAB",
+   "description": "3 dummy byte(s); sequence: (ID7-ID0)(2)",
+   "address_bytes": null,
+   "dummy_cycles": null,
+   "data_direction": "read",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Manufacturer/Device ID",
+   "opcode": "0x90",
+   "description": "2 dummy byte(s); sequence: 00h, (MF7-MF0), (ID7-ID0)",
+   "address_bytes": null,
+   "dummy_cycles": null,
+   "data_direction": "read",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "JEDEC ID",
+   "opcode": "0x9F",
+   "description": "sequence: (MF7-MF0), (ID15-ID8), (ID7-ID0)",
+   "address_bytes": null,
+   "dummy_cycles": null,
+   "data_direction": "read",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Read Unique ID",
+   "opcode": "0x4B",
+   "description": "4 dummy byte(s); sequence: (UID63-0)",
+   "address_bytes": null,
+   "dummy_cycles": null,
+   "data_direction": "read",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Read Data",
+   "opcode": "0x03",
+   "description": "sequence: A23-A16, A15-A8, A7-A0, (D7-D0)",
+   "address_bytes": 3,
+   "dummy_cycles": null,
+   "data_direction": "read",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Fast Read",
+   "opcode": "0x0B",
+   "description": "1 dummy byte(s); sequence: A23-A16, A15-A8, A7-A0, (D7-D0)",
+   "address_bytes": 3,
+   "dummy_cycles": null,
+   "data_direction": "read",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Page Program",
+   "opcode": "0x02",
+   "description": "sequence: A23-A16, A15-A8, A7-A0, D7-D0, D7-D0(3)",
+   "address_bytes": 3,
+   "dummy_cycles": null,
+   "data_direction": "write",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Sector Erase (4KB)",
+   "opcode": "0x20",
+   "description": "sequence: A23-A16, A15-A8, A7-A0",
+   "address_bytes": 3,
+   "dummy_cycles": null,
+   "data_direction": "none",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Block Erase (32KB)",
+   "opcode": "0x52",
+   "description": "sequence: A23-A16, A15-A8, A7-A0",
+   "address_bytes": 3,
+   "dummy_cycles": null,
+   "data_direction": "none",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Block Erase (64KB)",
+   "opcode": "0xD8",
+   "description": "sequence: A23-A16, A15-A8, A7-A0",
+   "address_bytes": 3,
+   "dummy_cycles": null,
+   "data_direction": "none",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Read Status Register-1",
+   "opcode": "0x05",
+   "description": "sequence: (S7-S0)(2)",
+   "address_bytes": null,
+   "dummy_cycles": null,
+   "data_direction": "read",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Write Status Register-1(4)",
+   "opcode": "0x01",
+   "description": "sequence: (S7-S0)(4)",
+   "address_bytes": null,
+   "dummy_cycles": null,
+   "data_direction": "read",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Read Status Register-2",
+   "opcode": "0x35",
+   "description": "sequence: (S15-S8)(2)",
+   "address_bytes": null,
+   "dummy_cycles": null,
+   "data_direction": "read",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Write Status Register-2",
+   "opcode": "0x31",
+   "description": "sequence: (S15-S8)",
+   "address_bytes": null,
+   "dummy_cycles": null,
+   "data_direction": "read",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Read Status Register-3",
+   "opcode": "0x15",
+   "description": "sequence: (S23-S16)(2)",
+   "address_bytes": null,
+   "dummy_cycles": null,
+   "data_direction": "read",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Write Status Register-3",
+   "opcode": "0x11",
+   "description": "sequence: (S23-S16)",
+   "address_bytes": null,
+   "dummy_cycles": null,
+   "data_direction": "read",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Read SFDP Register",
+   "opcode": "0x5A",
+   "description": "1 dummy byte(s); sequence: 00h, 00h, A7\u2013A0, (D7-0)",
+   "address_bytes": null,
+   "dummy_cycles": null,
+   "data_direction": "read",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Erase Security Register(5)",
+   "opcode": "0x44",
+   "description": "sequence: A23-A16, A15-A8, A7-A0",
+   "address_bytes": 3,
+   "dummy_cycles": null,
+   "data_direction": "none",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Program Security Register(5)",
+   "opcode": "0x42",
+   "description": "sequence: A23-A16, A15-A8, A7-A0, D7-D0, D7-D0(3)",
+   "address_bytes": 3,
+   "dummy_cycles": null,
+   "data_direction": "write",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Read Security Register(5)",
+   "opcode": "0x48",
+   "description": "1 dummy byte(s); sequence: A23-A16, A15-A8, A7-A0, (D7-D0)",
+   "address_bytes": 3,
+   "dummy_cycles": null,
+   "data_direction": "read",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Global Block Lock",
+   "opcode": "0x7E",
+   "description": "",
+   "address_bytes": null,
+   "dummy_cycles": null,
+   "data_direction": "none",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Global Block Unlock",
+   "opcode": "0x98",
+   "description": "",
+   "address_bytes": null,
+   "dummy_cycles": null,
+   "data_direction": "none",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Read Block Lock",
+   "opcode": "0x3D",
+   "description": "sequence: A23-A16, A15-A8, A7-A0, (L7-L0)",
+   "address_bytes": 3,
+   "dummy_cycles": null,
+   "data_direction": "read",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Individual Block Lock",
+   "opcode": "0x36",
+   "description": "sequence: A23-A16, A15-A8, A7-A0",
+   "address_bytes": 3,
+   "dummy_cycles": null,
+   "data_direction": "none",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Individual Block Unlock",
+   "opcode": "0x39",
+   "description": "sequence: A23-A16, A15-A8, A7-A0",
+   "address_bytes": 3,
+   "dummy_cycles": null,
+   "data_direction": "none",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Erase / Program Suspend",
+   "opcode": "0x75",
+   "description": "",
+   "address_bytes": null,
+   "dummy_cycles": null,
+   "data_direction": "none",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Erase / Program Resume",
+   "opcode": "0x7A",
+   "description": "",
+   "address_bytes": null,
+   "dummy_cycles": null,
+   "data_direction": "none",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Power-down",
+   "opcode": "0xB9",
+   "description": "",
+   "address_bytes": null,
+   "dummy_cycles": null,
+   "data_direction": "none",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Enable Reset",
+   "opcode": "0x66",
+   "description": "",
+   "address_bytes": null,
+   "dummy_cycles": null,
+   "data_direction": "none",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Reset Device",
+   "opcode": "0x99",
+   "description": "",
+   "address_bytes": null,
+   "dummy_cycles": null,
+   "data_direction": "none",
+   "source_pages": [
+    23
+   ]
+  },
+  {
+   "name": "Fast Read Dual Output",
+   "opcode": "0x3B",
+   "description": "2 dummy byte(s); sequence: A23-A16, A15-A8, A7-A0, (D7-D0)(7)",
+   "address_bytes": 3,
+   "dummy_cycles": null,
+   "data_direction": "read",
+   "source_pages": [
+    24
+   ]
+  },
+  {
+   "name": "Fast Read Dual I/O",
+   "opcode": "0xBB",
+   "description": "1 dummy byte(s); sequence: A23-A16(6), A15-A8(6), A7-A0(6), (D7-D0)(7)",
+   "address_bytes": 3,
+   "dummy_cycles": null,
+   "data_direction": "read",
+   "source_pages": [
+    24
+   ]
+  },
+  {
+   "name": "Mftr./Device ID Dual I/O",
+   "opcode": "0x92",
+   "description": "1 dummy byte(s); sequence: A23-A16(6), A15-A8(6), 00(6), (MF7-MF0), (ID7-ID0)(7)",
+   "address_bytes": 2,
+   "dummy_cycles": null,
+   "data_direction": "read",
+   "source_pages": [
+    24
+   ]
+  },
+  {
+   "name": "Quad Input Page Program",
+   "opcode": "0x32",
+   "description": "sequence: A23-A16, A15-A8, A7-A0, (D7-D0)(9), (D7-D0)(3), \u2026",
+   "address_bytes": 3,
+   "dummy_cycles": null,
+   "data_direction": "read",
+   "source_pages": [
+    24
+   ]
+  },
+  {
+   "name": "Fast Read Quad Output",
+   "opcode": "0x6B",
+   "description": "4 dummy byte(s); sequence: A23-A16, A15-A8, A7-A0, (D7-D0)(10)",
+   "address_bytes": 3,
+   "dummy_cycles": null,
+   "data_direction": "read",
+   "source_pages": [
+    24
+   ]
+  },
+  {
+   "name": "Mftr./Device ID Quad I/O",
+   "opcode": "0x94",
+   "description": "3 dummy byte(s); sequence: A23-A16, A15-A8, 00, (MF7-MF0), (ID7-ID0)",
+   "address_bytes": 2,
+   "dummy_cycles": null,
+   "data_direction": "read",
+   "source_pages": [
+    24
+   ]
+  },
+  {
+   "name": "Fast Read Quad I/O",
+   "opcode": "0xEB",
+   "description": "3 dummy byte(s); sequence: A23-A16, A15-A8, A7-A0, (D7-D0)",
+   "address_bytes": 3,
+   "dummy_cycles": null,
+   "data_direction": "read",
+   "source_pages": [
+    24
+   ]
+  },
+  {
+   "name": "Set Burst with Wrap",
+   "opcode": "0x77",
+   "description": "3 dummy byte(s); sequence: W8-W0",
+   "address_bytes": null,
+   "dummy_cycles": null,
+   "data_direction": "none",
+   "source_pages": [
+    24
+   ]
+  }
+ ],
+ "extraction_confidence": "high",
+ "source_pages": [
+  23,
+  24,
+  52,
+  53,
+  54
+ ],
+ "warnings": [],
+ "low_confidence_pages": [],
+ "provenance": {
+  "chip": "user",
+  "peripheral": "user"
+ }
 }

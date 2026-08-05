@@ -10,6 +10,8 @@ import io
 import json
 import os
 import threading
+import urllib.error
+import urllib.parse
 import urllib.request
 import zipfile
 
@@ -22,6 +24,66 @@ from api.jobs import STORE, Job
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UPLOAD_DIR = os.path.join(PROJECT_ROOT, "build", "uploads")
 MAX_UPLOAD = 50 * 1024 * 1024  # mirror the ingestion cap so the UI can say why
+
+# content types we accept for a datasheet link. Servers often mislabel PDFs as
+# octet-stream, so a matching file extension is also accepted; only a clearly
+# non-document type (html/text/json) with no document extension is rejected.
+DOC_CONTENT_TYPES = ("application/pdf", "application/vnd.openxmlformats-"
+                     "officedocument.wordprocessingml.document",
+                     "application/octet-stream", "binary/octet-stream")
+
+
+class UrlValidationError(Exception):
+    """A datasheet URL failed a preflight check; message names the problem."""
+
+
+def preflight_url(url: str, timeout: int = 20) -> None:
+    """Validate a datasheet URL BEFORE ingestion (Priority 4): reachable, is a
+    PDF/DOCX, within the 50MB cap. Any failure raises UrlValidationError with a
+    specific message — never a silent fallback to a partial/empty extraction."""
+    scheme = urllib.parse.urlparse(url).scheme.lower()
+    if scheme not in ("http", "https"):
+        raise UrlValidationError(
+            f"URL must be http(s), got '{scheme or 'no scheme'}'"
+        )
+    req = urllib.request.Request(url, method="HEAD",
+                                 headers={"User-Agent": "Mozilla/5.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            headers = resp.headers
+            status = resp.status
+    except urllib.error.HTTPError as e:
+        # some servers reject HEAD; fall back to a ranged GET before giving up
+        if e.code in (403, 405, 501):
+            headers, status = _probe_get(url, timeout)
+        else:
+            raise UrlValidationError(f"URL unreachable: HTTP {e.code} {e.reason}")
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        raise UrlValidationError(f"URL unreachable: {getattr(e, 'reason', e)}")
+
+    if status and status >= 400:
+        raise UrlValidationError(f"URL unreachable: HTTP {status}")
+
+    ctype = (headers.get("Content-Type") or "").split(";")[0].strip().lower()
+    path_lower = urllib.parse.urlparse(url).path.lower()
+    looks_like_doc = path_lower.endswith((".pdf", ".docx"))
+    if ctype and ctype not in DOC_CONTENT_TYPES and not looks_like_doc:
+        raise UrlValidationError(
+            f"URL is not a PDF/DOCX (server reports content-type '{ctype}')"
+        )
+
+    clen = headers.get("Content-Length")
+    if clen and clen.isdigit() and int(clen) > MAX_UPLOAD:
+        raise UrlValidationError(
+            f"URL file is {int(clen) / 1024 / 1024:.1f}MB, over the 50MB limit"
+        )
+
+
+def _probe_get(url: str, timeout: int):
+    req = urllib.request.Request(
+        url, headers={"User-Agent": "Mozilla/5.0", "Range": "bytes=0-0"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return resp.headers, resp.status
 
 app = FastAPI(title="EmbeddPilot API", version="1.5")
 app.add_middleware(
@@ -42,6 +104,14 @@ async def start_ingest(
 ):
     if file is None and not url:
         raise HTTPException(422, "provide a datasheet file or a URL")
+    # Priority 4: validate a URL before we start a job, so a broken/oversize/
+    # non-document link fails fast with a specific reason instead of degrading
+    # into a partial extraction. File uploads skip this (already local bytes).
+    if file is None and url:
+        try:
+            preflight_url(url)
+        except UrlValidationError as e:
+            raise HTTPException(422, str(e))
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
     job = STORE.create("ingest")
@@ -100,10 +170,18 @@ def _run_ingest(job: Job, path: str, url: str, chip: str, peripheral: str, page_
 
 @app.post("/api/generate")
 async def start_generate(payload: dict):
+    from generation.inputs import InputProvenanceError, assert_input_provenance
+
     register_map = payload.get("register_map")
     platform = payload.get("platform", "")
-    if not register_map or not platform:
-        raise HTTPException(422, "register_map and platform are required")
+    if not register_map:
+        raise HTTPException(422, "register_map is required")
+    # Priority 1: block missing/unconfirmed/invented inputs with a specific,
+    # field-naming error — never let a silent default reach generation.
+    try:
+        assert_input_provenance(register_map, platform)
+    except InputProvenanceError as e:
+        raise HTTPException(422, str(e))
 
     job = STORE.create("generate")
     conventions = payload.get("conventions") or (

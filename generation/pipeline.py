@@ -15,6 +15,7 @@ import subprocess
 import sys
 from typing import Callable
 
+from generation.inputs import InputProvenanceError, assert_input_provenance
 from generation.provider import LLMProvider, ProviderError
 from generation.router import RouteDecision, route
 from generation.worker import generate_driver
@@ -60,6 +61,10 @@ def generate_validated_driver(
     router decisions and validator REPORTS (post-judgment artifacts) —
     never worker reasoning."""
     emit = on_event or (lambda e: None)
+    # Priority 1: refuse to route or generate on missing/unconfirmed/invented
+    # inputs. This runs before the router so a wrong interface never even frames
+    # a route decision.
+    assert_input_provenance(register_map, platform)
     decision: RouteDecision = route(register_map, platform)
     emit({"type": "route", "decision": decision.to_json()})
     if decision.path == "template":

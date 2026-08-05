@@ -1,7 +1,10 @@
 "use client";
 
 /* Screen 1: datasheet input + live ingestion stages.
-   Stages animate to done in order; scanned-page warnings surface immediately. */
+   V1.6: file upload is the primary path; the URL is a demoted secondary option
+   (engineers found uploads extract better). Chip / interface / platform are no
+   longer typed here — they are detected from the document and confirmed on the
+   review screen, so this screen asks for as little as possible. */
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -24,9 +27,7 @@ export function InputScreen({
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [url, setUrl] = useState("");
-  const [chip, setChip] = useState("");
-  const [peripheral, setPeripheral] = useState("");
-  const [platform, setPlatform] = useState("esp32");
+  const [useUrl, setUseUrl] = useState(false);
   const [pages, setPages] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [samples, setSamples] = useState<Sample[]>([]);
@@ -49,7 +50,7 @@ export function InputScreen({
       return;
     }
     if (!file && !url) {
-      setError("Choose a datasheet file or provide a URL.");
+      setError("Upload a datasheet file (or provide a URL below).");
       return;
     }
     if (file && file.size > 50 * 1024 * 1024) {
@@ -58,9 +59,7 @@ export function InputScreen({
     }
     const form = new FormData();
     if (file) form.append("file", file);
-    if (url) form.append("url", url);
-    form.append("chip", chip);
-    form.append("peripheral", peripheral);
+    else if (url) form.append("url", url);
     form.append("pages", pages);
     setRunning(true);
     setStageIdx(0);
@@ -78,7 +77,8 @@ export function InputScreen({
             setStageIdx(STAGES.length);
             fetch(`/api/jobs/${jobId}`)
               .then((r) => r.json())
-              .then((snap) => onMapReady(snap.result.register_map, platform));
+              // platform is chosen on the review screen (not detectable)
+              .then((snap) => onMapReady(snap.result.register_map, ""));
           }
         }
       });
@@ -86,7 +86,7 @@ export function InputScreen({
       setError(String(e));
       setRunning(false);
     }
-  }, [file, url, chip, peripheral, pages, platform, onMapReady]);
+  }, [file, url, pages, onMapReady]);
 
   const loadSample = async (id: string) => {
     setError("");
@@ -140,7 +140,10 @@ export function InputScreen({
             ) : (
               <span className="text-ink-dim text-[13px]">
                 Drop a PDF / DOCX datasheet here or click to browse
-                <span className="block text-[11px] text-ink-faint mt-1">
+                <span className="block text-[11px] text-accent/80 mt-1">
+                  recommended — uploading the file extracts more reliably than a link
+                </span>
+                <span className="block text-[11px] text-ink-faint mt-0.5">
                   max 50MB · vendor datasheets over 1,000 pages supported
                 </span>
               </span>
@@ -154,47 +157,39 @@ export function InputScreen({
             />
           </div>
 
-          <Field label="or datasheet URL">
+          <Field label="Page range (optional)">
             <input
-              className={inputCls}
-              placeholder="https://vendor.com/datasheet.pdf"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              className={`${inputCls} sm:max-w-40`}
+              placeholder="401-429"
+              value={pages}
+              onChange={(e) => setPages(e.target.value)}
             />
           </Field>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Field label="Chip">
-              <input
-                className={inputCls}
-                placeholder="BME280"
-                value={chip}
-                onChange={(e) => setChip(e.target.value)}
-              />
-            </Field>
-            <Field label="Peripheral">
-              <input
-                className={inputCls}
-                placeholder="I2C0"
-                value={peripheral}
-                onChange={(e) => setPeripheral(e.target.value)}
-              />
-            </Field>
-            <Field label="Target platform">
-              <input
-                className={inputCls}
-                value={platform}
-                onChange={(e) => setPlatform(e.target.value)}
-              />
-            </Field>
-            <Field label="Page range (optional)">
-              <input
-                className={inputCls}
-                placeholder="401-429"
-                value={pages}
-                onChange={(e) => setPages(e.target.value)}
-              />
-            </Field>
+          {/* URL: demoted secondary option (Priority 4) */}
+          <div className="border-t border-line pt-3">
+            {!useUrl ? (
+              <button
+                onClick={() => setUseUrl(true)}
+                className="text-[12px] text-ink-faint hover:text-ink-dim underline underline-offset-2"
+              >
+                or extract from a datasheet URL instead
+              </button>
+            ) : (
+              <Field label="Datasheet URL (secondary)">
+                <input
+                  className={inputCls}
+                  placeholder="https://vendor.com/datasheet.pdf"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                />
+                <span className="text-[11px] text-ink-faint mt-1">
+                  Links can be broken or blocked and extract less reliably —
+                  prefer uploading the file above. The URL is checked (reachable,
+                  a PDF/DOCX, under 50MB) before extraction.
+                </span>
+              </Field>
+            )}
           </div>
 
           <div className="flex items-center gap-3">

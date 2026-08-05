@@ -158,3 +158,72 @@ export function Field({
 export const inputCls =
   "bg-panel-2 border border-line-2 rounded-sm px-2.5 py-1.5 text-[13px] text-ink " +
   "placeholder:text-ink-faint focus:border-accent-dim focus:outline-none w-full";
+
+export const selectCls = inputCls + " appearance-none cursor-pointer";
+
+/** Native select styled to match inputs. Options are {value,label}. An empty
+    `value` renders the placeholder as a disabled first option. */
+export function Select({
+  value,
+  onChange,
+  options,
+  placeholder,
+  ariaLabel,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  placeholder?: string;
+  ariaLabel?: string;
+}) {
+  return (
+    <select
+      aria-label={ariaLabel}
+      className={selectCls}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      {placeholder && (
+        <option value="" disabled>
+          {placeholder}
+        </option>
+      )}
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+/** Provenance badge. 'detected' shows its evidence pages in amber (needs a
+    confirm); 'user'/'confirmed' show a quiet accent tick; empty shows nothing. */
+export function ProvenanceTag({
+  state,
+  pages,
+}: {
+  state: "detected_unconfirmed" | "detected" | "user" | "empty";
+  pages?: number[];
+}) {
+  if (state === "empty") return null;
+  const evidence = pages && pages.length ? ` · p.${pages.join(",")}` : "";
+  const spec = {
+    detected_unconfirmed: {
+      text: `detected${evidence} — confirm or edit`,
+      cls: "text-amber border-amber/40 bg-amber/10",
+    },
+    detected: {
+      text: `detected${evidence} ✓`,
+      cls: "text-accent border-accent-dim bg-accent/10",
+    },
+    user: { text: "you entered", cls: "text-ink-dim border-line-2" },
+  }[state];
+  return (
+    <span
+      className={`inline-block border rounded-sm px-1.5 py-0.5 font-mono text-[10px] tracking-wide ${spec.cls}`}
+    >
+      {spec.text}
+    </span>
+  );
+}
