@@ -97,7 +97,22 @@ class GroqProvider:
                 raise ProviderError(f"groq API error {e.status_code}: {e.message}") from e
             except groq.APIConnectionError as e:
                 raise ProviderError(f"groq connection error: {e}") from e
-        text = resp.choices[0].message.content or ""
+        choice = resp.choices[0]
+        text = choice.message.content or ""
+        if getattr(choice, "finish_reason", None) == "length":
+            # Output hit the token ceiling before the JSON object closed. On the
+            # free tier prompt + max_tokens share one ~8000 TPM budget, and
+            # gpt-oss reasoning tokens spend from max_tokens too, so a large
+            # three-file driver can truncate mid-string. Report that plainly with
+            # the actual levers instead of letting _parse_json surface a
+            # confusing "Unterminated string" further down.
+            raise ProviderError(
+                f"response truncated at the {max_tokens}-token output ceiling "
+                "(finish_reason=length): the JSON was cut off before it closed. "
+                "Reduce the prompt (fewer/slimmer registers) or, if your Groq tier "
+                "allows a larger per-minute budget, raise GROQ_MAX_TOKENS / "
+                "GROQ_TPM_BUDGET."
+            )
         return _parse_json(text)
 
 

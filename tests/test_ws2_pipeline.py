@@ -156,6 +156,15 @@ def test_offset_not_in_map_is_hard_failure():
     assert r.status == "failed"
 
 
+def test_device_bus_address_is_not_a_register_offset():
+    # BME280_I2C_ADDR = 0x76 is the I2C device (bus) address, not a register
+    # offset — the _ADDR suffix must not get it cross-checked against the
+    # register-offset table (regression: this false-failed a valid BME280 run).
+    for name in ("BME280_I2C_ADDR", "BME280_DEV_ADDR", "BME280_SLAVE_ADDR"):
+        r = run_crosscheck(f"#define {name} 0x76\n", REGISTER_MAP)
+        assert r.status == "validated", (name, [f.message for f in r.failures])
+
+
 def test_opcode_not_in_commands_is_hard_failure():
     src = "#define W25Q_CHIP_ERASE_CMD 0xC8\n"  # not in the commands array
     r = run_crosscheck(src, COMMAND_MAP)

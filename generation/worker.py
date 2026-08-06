@@ -118,7 +118,19 @@ def build_worker_prompt(
     lines: list[str] = []
     lines.append(f"Target device: {chip} ({peripheral})")
     profile = platform_profile(platform)
-    if profile:
+    is_bus = not base  # bus-attached device (I2C/SPI): base_address is null
+    if profile and is_bus:
+        # A bus device driver must be portable standalone C routed through
+        # user callbacks — the platform matters for the TOOLCHAIN only, not the
+        # code. Telling the model to "use ESP-IDF idioms" here makes it emit
+        # i2c_cmd_link_create / vTaskDelay etc., which is exactly wrong (and
+        # won't compile standalone). Keep the toolchain, drop the HAL idiom.
+        lines.append(
+            f"Target toolchain: {profile['toolchain']} (compile target only). "
+            f"The driver must be PLATFORM-AGNOSTIC standalone C — do NOT write "
+            f"{profile['hal']}-specific code; see the bus-attached contract below."
+        )
+    elif profile:
         lines.append(
             f"Target platform: {profile['label']} — use {profile['hal']} idioms "
             f"(toolchain: {profile['toolchain']})"
@@ -152,9 +164,24 @@ def build_worker_prompt(
             "read/write transactions — there is NO memory-mapped base"
         )
         lines.append(
-            "- generate a user-implemented transfer-callback interface "
-            "(e.g. int (*reg_read)(uint8_t reg, uint8_t *buf, uint32_t len)) and "
-            "route all register access through it"
+            "- define a user-implemented transfer-callback interface (e.g. typedef "
+            "int (*reg_read_fn)(uint8_t reg, uint8_t *buf, uint32_t len); and a "
+            "matching reg_write_fn) and route ALL register access through those "
+            "callbacks — the caller wires them to their own bus"
+        )
+        lines.append(
+            "- STANDALONE & PORTABLE: every file must compile using ONLY the C "
+            "standard library (<stdint.h>, <stddef.h>, <string.h>). Do NOT #include "
+            "any SDK/vendor HAL header — NO <driver/i2c.h>, <driver/spi_master.h>, "
+            "<freertos/*.h>, <esp_*.h>, <Arduino.h>, or CMSIS — and do NOT call any "
+            "SDK/HAL function (i2c_master_*, i2c_cmd_link_*, spi_*, vTaskDelay, "
+            "HAL_*, digitalWrite, delay, ...). If a delay is needed, take a "
+            "user-provided delay callback; never call a platform delay."
+        )
+        lines.append(
+            "- example_c must demonstrate usage by IMPLEMENTING the callbacks as "
+            "trivial self-contained stubs (return 0, fill a static buffer) and "
+            "calling the driver API — it must NOT touch real hardware or any SDK"
         )
         lines.append(
             "- do NOT require a *_BASE define and do NOT use #error guards — the "

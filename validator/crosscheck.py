@@ -28,6 +28,16 @@ SHIFT_EXPR_RE = re.compile(
 )
 
 OFFSET_NAME_RE = re.compile(r"(_OFFSET|_OFS|_ADDR|_REG)$", re.IGNORECASE)
+# A BUS-ATTACHED device (I2C/SPI) names its OWN bus address — BME280_I2C_ADDR,
+# *_DEV_ADDR, *_SLAVE_ADDR, etc. That is a device address, NOT a register
+# offset, so it must not be cross-checked against the register-offset table
+# (a 0x76 chip address is legitimately absent from the register map). Checked
+# before OFFSET_NAME_RE, whose _ADDR suffix would otherwise misclassify it.
+DEVICE_ADDR_NAME_RE = re.compile(
+    r"(_I2C_ADDR|_I2C_ADDRESS|_DEV_ADDR|_DEVICE_ADDR|_SLAVE_ADDR"
+    r"|_CHIP_ADDR|_BUS_ADDR|_7BIT_ADDR|_ADDR7)$",
+    re.IGNORECASE,
+)
 # _CMD_ anywhere marks an opcode: W25Q64JV_CMD_READ_SECURITY_REG is a command
 # named after a register, not a register offset — opcode wins over the _REG suffix
 OPCODE_NAME_RE = re.compile(
@@ -67,6 +77,11 @@ def crosscheck(files: dict[str, list[str]], register_map: dict, report: Validati
                         "register_crosscheck", fname, idx + 1,
                         f"{name} = 0x{value:X} does not match extracted base {base}",
                     ))
+                continue
+
+            if DEVICE_ADDR_NAME_RE.search(name):
+                # bus device address (e.g. BME280_I2C_ADDR = 0x76) — a legitimate
+                # constant, not a register offset. Do not cross-check it.
                 continue
 
             if OPCODE_NAME_RE.search(name):
