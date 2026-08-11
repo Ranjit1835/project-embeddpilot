@@ -1,0 +1,84 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "embeddpilot/mcu-map.schema.json",
+  "title": "MCU peripheral map (V1.7 reference-manual ingestion output)",
+  "description": "Clock/GPIO/peripheral register knowledge extracted from an MCU reference manual, cached per MCU variant. Distinct from the device register map (register-map.schema.json).",
+  "type": "object",
+  "required": ["mcu_family", "variant", "reference_manual", "peripheral", "clock_enables", "clock_registers", "gpio_registers", "peripheral_registers", "extraction_confidence"],
+  "properties": {
+    "mcu_family": { "type": "string", "minLength": 1 },
+    "variant": { "type": ["string", "null"] },
+    "reference_manual": { "type": "string" },
+    "rm_revision": { "type": ["string", "null"] },
+    "peripheral": { "type": "string", "minLength": 1 },
+    "sections": {
+      "description": "Located page ranges [start, end] per section; null if not found.",
+      "type": "object",
+      "properties": {
+        "clock": { "$ref": "#/definitions/pageRange" },
+        "gpio": { "$ref": "#/definitions/pageRange" },
+        "peripheral": { "$ref": "#/definitions/pageRange" }
+      }
+    },
+    "clock_enables": {
+      "description": "Item 4: which register+bit enables a peripheral's clock, and on which bus. Derived from RCC *ENR registers; cross-checkable against generated clock-enable code.",
+      "type": "array",
+      "items": { "$ref": "#/definitions/clockControl" }
+    },
+    "reset_controls": {
+      "description": "Peripheral reset register+bit, derived from RCC *RSTR registers.",
+      "type": "array",
+      "items": { "$ref": "#/definitions/clockControl" }
+    },
+    "clock_registers": { "type": "array", "items": { "$ref": "#/definitions/register" } },
+    "gpio_registers": { "type": "array", "items": { "$ref": "#/definitions/register" } },
+    "peripheral_registers": { "type": "array", "items": { "$ref": "#/definitions/register" } },
+    "extraction_confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+    "extraction_seconds": { "type": "number" },
+    "warnings": { "type": "array", "items": { "type": "string" } }
+  },
+  "definitions": {
+    "pageRange": {
+      "type": ["array", "null"],
+      "items": { "type": "integer", "minimum": 1 },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "clockControl": {
+      "type": "object",
+      "required": ["peripheral", "bus", "register", "bit", "source_pages"],
+      "properties": {
+        "peripheral": { "type": "string", "minLength": 1 },
+        "bus": { "type": "string", "minLength": 1 },
+        "register": { "type": "string", "minLength": 1 },
+        "bit": { "type": "integer", "minimum": 0, "maximum": 31 },
+        "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+        "source_pages": { "type": "array", "items": { "type": "integer", "minimum": 1 } }
+      }
+    },
+    "register": {
+      "type": "object",
+      "required": ["name", "source_pages"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "offset": { "type": ["string", "null"], "pattern": "^0x[0-9A-Fa-f]+$" },
+        "reset_value": { "type": ["string", "null"], "pattern": "^0x[0-9A-Fa-f]+$" },
+        "access": { "type": ["string", "null"], "enum": ["RW", "RO", "WO", null] },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "bits"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "bits": { "type": "string", "pattern": "^\\[\\d+:\\d+\\]$" },
+              "description": { "type": "string" }
+            }
+          }
+        },
+        "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+        "source_pages": { "type": "array", "items": { "type": "integer", "minimum": 1 } }
+      }
+    }
+  }
+}

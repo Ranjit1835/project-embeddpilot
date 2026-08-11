@@ -102,8 +102,11 @@ def _stub_include_dir(platform: str) -> str | None:
     Declarations only — the judge compiles (-c), never links — giving real
     syntax and -Wall/-Wextra coverage for platform-idiomatic code."""
     plat = platform.lower()
-    key = "esp32" if ("esp32" in plat or "xtensa" in plat) else None
-    if not key:
+    if "esp32" in plat or "xtensa" in plat:
+        key = "esp32"
+    elif "stm32" in plat:  # V1.7: CMSIS-style RCC/GPIO/I2C register definitions
+        key = "stm32"
+    else:
         return None
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stubs", key)
     return path if os.path.isdir(path) else None

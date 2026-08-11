@@ -1,6 +1,11 @@
 __pycache__/
 *.pyc
 .env
+.env.*
+*.key
+secrets.*
+# API keys are passed via environment only (GROQ_API_KEY / NVIDIA_API_KEY) —
+# never committed to a file.
 *.egg-info/
 dist/
 build/

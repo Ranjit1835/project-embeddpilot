@@ -25,12 +25,17 @@ def main() -> int:
     ap = argparse.ArgumentParser(prog="validator")
     ap.add_argument("workdir")
     ap.add_argument("--map", required=True, help="register map JSON path")
+    ap.add_argument("--mcu-map", help="MCU map JSON path (V1.7 clock/GPIO cross-check)")
     ap.add_argument("--platform", default="portable")
     ap.add_argument("--out")
     args = ap.parse_args()
 
     with open(args.map, encoding="utf-8") as f:
         register_map = json.load(f)
+    mcu_map = None
+    if args.mcu_map:
+        with open(args.mcu_map, encoding="utf-8") as f:
+            mcu_map = json.load(f)
 
     files: dict[str, list[str]] = {}
     for path in sorted(
@@ -46,7 +51,10 @@ def main() -> int:
         report.checks["compile"] = "skipped"
         report.notes.append("no generated sources found")
     else:
-        crosscheck(files, register_map, report)
+        crosscheck(files, register_map, report, mcu_map)
+        if mcu_map is not None:
+            from validator.mcu_crosscheck import mcu_crosscheck
+            mcu_crosscheck(files, mcu_map, report)
         scan_unverified_computations(files, report)
         compile_check(args.workdir, args.platform, report)
         static_check(args.workdir, report)

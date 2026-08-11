@@ -35,6 +35,7 @@ class GroqProvider:
     def __init__(self, model: str | None = None):
         self.model = model or os.environ.get("GROQ_MODEL", DEFAULT_GROQ_MODEL)
         self.name = f"groq/{self.model}"
+        self.large_window = False  # ~8000 TPM free tier — no room to echo prior code
         if not os.environ.get("GROQ_API_KEY"):
             raise ProviderError(
                 "GROQ_API_KEY is not set — set it in the environment to enable "
@@ -116,11 +117,87 @@ class GroqProvider:
         return _parse_json(text)
 
 
+DEFAULT_NVIDIA_MODEL = "openai/gpt-oss-120b"
+NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
+
+
+class NVIDIAProvider:
+    """NVIDIA API (build.nvidia.com) via its OpenAI-compatible endpoint. Hosts
+    the same openai/gpt-oss-120b model as Groq but with a large context/output
+    window, so the both-maps V1.7 prompt (device map + MCU map + complete-driver
+    output) fits where Groq's ~8000 TPM free tier 413s."""
+
+    def __init__(self, model: str | None = None):
+        self.model = model or os.environ.get("NVIDIA_MODEL", DEFAULT_NVIDIA_MODEL)
+        self.name = f"nvidia/{self.model}"
+        self.large_window = True  # big context/output — targeted-edit retry fits
+        key = os.environ.get("NVIDIA_API_KEY")
+        if not key:
+            raise ProviderError("NVIDIA_API_KEY is not set")
+        from openai import OpenAI
+
+        self._client = OpenAI(
+            base_url=os.environ.get("NVIDIA_BASE_URL", NVIDIA_BASE_URL), api_key=key
+        )
+
+    def complete_json(self, system: str, user: str) -> dict:
+        import openai
+
+        max_tokens = int(os.environ.get("NVIDIA_MAX_TOKENS", "8000"))
+        effort = os.environ.get("NVIDIA_REASONING_EFFORT", "low")
+        base_kwargs = dict(
+            model=self.model,
+            messages=[{"role": "system", "content": system},
+                      {"role": "user", "content": user}],
+            temperature=0.2,
+            max_tokens=max_tokens,
+        )
+        # gpt-oss takes reasoning_effort; if this deployment rejects the param,
+        # retry once without it rather than failing the whole generation.
+        attempt_kwargs = dict(base_kwargs, reasoning_effort=effort) if effort else dict(base_kwargs)
+        delay = float(os.environ.get("NVIDIA_RETRY_DELAY", "10"))
+        resp = None
+        for attempt in range(4):
+            try:
+                resp = self._client.chat.completions.create(**attempt_kwargs)
+                break
+            except openai.BadRequestError as e:
+                if "reasoning_effort" in attempt_kwargs and "reasoning" in str(e).lower():
+                    attempt_kwargs = dict(base_kwargs)  # drop the unsupported param
+                    continue
+                raise ProviderError(f"nvidia API error 400: {e}") from e
+            except openai.APIStatusError as e:
+                if e.status_code in (429, 503) and attempt < 3:
+                    time.sleep(delay)
+                    delay = min(delay * 2, 60)
+                    continue
+                raise ProviderError(f"nvidia API error {e.status_code}: {e.message}") from e
+            except openai.APIConnectionError as e:
+                raise ProviderError(f"nvidia connection error: {e}") from e
+        choice = resp.choices[0]
+        text = choice.message.content or ""
+        if getattr(choice, "finish_reason", None) == "length":
+            raise ProviderError(
+                f"response truncated at the {max_tokens}-token output ceiling "
+                "(finish_reason=length) — raise NVIDIA_MAX_TOKENS."
+            )
+        return _parse_json(text)
+
+
+def make_provider() -> "LLMProvider":
+    """Pick the live provider from the environment: NVIDIA if NVIDIA_API_KEY is
+    set (larger window — needed for V1.7 both-maps generation), else Groq."""
+    if os.environ.get("NVIDIA_API_KEY"):
+        return NVIDIAProvider()
+    return GroqProvider()
+
+
 class MockProvider:
     """Deterministic provider for tests: pops canned responses in order."""
 
     def __init__(self, responses: list[dict]):
         self.name = "mock"
+        self.large_window = True  # exercise the echo path in tests
         self._responses = list(responses)
         self.calls: list[tuple[str, str]] = []  # (system, user) per call
 

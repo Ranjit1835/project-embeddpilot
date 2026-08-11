@@ -25,10 +25,15 @@ MAX_RETRIES = 3  # retries after the first attempt
 
 
 def run_validator_subprocess(workdir: str, map_path: str, platform: str) -> dict:
+    cmd = [sys.executable, "-m", "validator", workdir, "--map", map_path,
+           "--platform", platform]
+    # V1.7: if an MCU map was written alongside the sources, cross-check the
+    # generated RCC/GPIO/peripheral bring-up against it too.
+    mcu_map_path = os.path.join(workdir, "mcu-map.json")
+    if os.path.exists(mcu_map_path):
+        cmd += ["--mcu-map", mcu_map_path]
     proc = subprocess.run(
-        [sys.executable, "-m", "validator", workdir, "--map", map_path,
-         "--platform", platform],
-        capture_output=True, text=True, cwd=PROJECT_ROOT, timeout=600,
+        cmd, capture_output=True, text=True, cwd=PROJECT_ROOT, timeout=600,
     )
     try:
         return json.loads(proc.stdout)
@@ -51,6 +56,7 @@ def generate_validated_driver(
     max_retries: int = MAX_RETRIES,
     validate_fn: Callable[[str, str, str], dict] | None = None,
     on_event: Callable[[dict], None] | None = None,
+    mcu_map: dict | None = None,
 ) -> dict:
     """Full LLM-path pipeline. Returns a result payload with provenance:
     decision, per-attempt validation reports, and a status that is one of
@@ -81,11 +87,13 @@ def generate_validated_driver(
     feedback: str | None = None
     reports: list[dict] = []
     files: dict[str, str] = {}
+    prior_files: dict[str, str] | None = None
     for attempt in range(1, max_retries + 2):  # first attempt + max_retries
         emit({"type": "attempt_start", "attempt": attempt})
         try:
             result = generate_driver(
-                provider, register_map, decision, platform, conventions, feedback
+                provider, register_map, decision, platform, conventions, feedback,
+                mcu_map, prior_files,
             )
         except ProviderError as e:
             report = {"status": "failed", "failures": [
@@ -97,6 +105,7 @@ def generate_validated_driver(
             continue
 
         files = result.files
+        prior_files = files  # feed this attempt's code into the next retry
         workdir = os.path.join(workdir_root, chip, f"attempt_{attempt}")
         os.makedirs(workdir, exist_ok=True)
         for fname, content in files.items():
@@ -105,6 +114,9 @@ def generate_validated_driver(
         map_path = os.path.join(workdir, "register-map.json")
         with open(map_path, "w", encoding="utf-8") as f:
             json.dump(register_map, f, indent=1)
+        if mcu_map:  # V1.7: hand the MCU map to the validator for cross-check
+            with open(os.path.join(workdir, "mcu-map.json"), "w", encoding="utf-8") as f:
+                json.dump(mcu_map, f, indent=1)
 
         report = validate(workdir, map_path, platform)
         reports.append(report)

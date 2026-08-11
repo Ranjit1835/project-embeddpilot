@@ -18,6 +18,7 @@ never imports from validator/.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 
 from generation.inputs import assert_input_provenance, platform_profile
@@ -37,6 +38,14 @@ UNVERIFIED_COMMENT = (
 COMPUTATION_UNVERIFIED_COMMENT = (
     "/* UNVERIFIED: computation transcribed from datasheet prose — not "
     "cross-checked against the register map */"
+)
+
+# V1.7: an ordered init/config SEQUENCE derived from reference-manual prose is
+# not cross-checkable (only the registers/bits it touches are). Keep the leading
+# text in sync with validator/crosscheck.py::SEQUENCE_MARKER.
+SEQUENCE_UNVERIFIED_COMMENT = (
+    "/* UNVERIFIED: sequence transcribed from reference manual prose — not "
+    "cross-checked */"
 )
 
 SYSTEM_PROMPT = """You are an embedded systems driver generator. You write \
@@ -60,7 +69,9 @@ every function (stubs included) must consume every parameter it declares — add
 #include every header you use (e.g. <string.h> for memcpy/memset, <stdint.h> \
 for fixed-width types). Match every printf/sprintf conversion to its argument \
 type — an int32_t needs %ld or a cast to (int)/(long), never a bare %d, or it \
-fails -Werror=format. No implicit conversions losing precision, no missing \
+fails -Werror=format. Do NOT define a static function or variable you never \
+call/use — either use it or remove it, or it fails -Werror=unused-function / \
+-Werror=unused-variable. No implicit conversions losing precision, no missing \
 prototypes. Register pointers are volatile. Prefer static or caller-provided \
 buffers; do NOT use malloc/free unless the conventions explicitly allow it.
 5. If the map lacks data a device feature needs (e.g. some calibration \
@@ -95,10 +106,18 @@ def generate_driver(
     platform: str,
     conventions: str = "",
     feedback: str | None = None,
+    mcu_map: dict | None = None,
+    prior_files: dict[str, str] | None = None,
 ) -> WorkerResult:
     chip = _c_ident(register_map["chip"]).lower()
+    # Targeted-edit retry: echo the prior failing code back so the model fixes
+    # only the named error instead of cold re-rolling the whole driver (the
+    # V1.6.1 finding). Only for large-window providers — on Groq's ~8000 TPM
+    # free tier the echo does not fit (413 / output truncation), so fall back to
+    # the cold re-roll there.
+    echo = prior_files if getattr(provider, "large_window", False) else None
     user_prompt = build_worker_prompt(
-        register_map, decision, platform, conventions, feedback
+        register_map, decision, platform, conventions, feedback, mcu_map, echo
     )
     raw = provider.complete_json(SYSTEM_PROMPT, user_prompt)
 
@@ -125,6 +144,8 @@ def build_worker_prompt(
     platform: str,
     conventions: str = "",
     feedback: str | None = None,
+    mcu_map: dict | None = None,
+    prior_files: dict[str, str] | None = None,
 ) -> str:
     # Fail loudly if any input reached here without a legitimate origin. The
     # worker must NEVER be framed on an invented chip/interface/platform value.
@@ -187,32 +208,50 @@ def build_worker_prompt(
             "read/write transactions — there is NO memory-mapped base"
         )
         lines.append(
-            "- define a user-implemented transfer-callback interface (e.g. typedef "
+            "- define a transfer-callback interface (e.g. typedef "
             "int (*reg_read_fn)(uint8_t reg, uint8_t *buf, uint32_t len); and a "
-            "matching reg_write_fn) and route ALL register access through those "
-            "callbacks — the caller wires them to their own bus"
+            "matching reg_write_fn) and route ALL device register access through "
+            "those callbacks"
         )
-        lines.append(
-            "- STANDALONE & PORTABLE: every file must compile using ONLY the C "
-            "standard library (<stdint.h>, <stddef.h>, <string.h>). Do NOT #include "
-            "any SDK/vendor HAL header — NO <driver/i2c.h>, <driver/spi_master.h>, "
-            "<freertos/*.h>, <esp_*.h>, <Arduino.h>, or CMSIS — and do NOT call any "
-            "SDK/HAL function (i2c_master_*, i2c_cmd_link_*, spi_*, vTaskDelay, "
-            "HAL_*, digitalWrite, delay, ...). If a delay is needed, take a "
-            "user-provided delay callback; never call a platform delay."
-        )
-        lines.append(
-            "- example_c must demonstrate usage by IMPLEMENTING the callbacks as "
-            "trivial self-contained stubs (return 0, fill a static buffer) and "
-            "calling the driver API — it must NOT touch real hardware or any SDK. "
-            "Each stub MUST consume every parameter it declares (add `(void)reg;` "
-            "etc. for unused ones) so it compiles clean under -Werror="
-            "unused-parameter"
-        )
-        lines.append(
-            "- do NOT require a *_BASE define and do NOT use #error guards — the "
-            "files must compile standalone exactly as generated"
-        )
+        if mcu_map:
+            # A complete driver ON a target MCU: the callbacks are IMPLEMENTED
+            # against that MCU's peripheral (see MCU CONFIGURATION below), not
+            # left as user stubs. This overrides the platform-agnostic bus
+            # contract used when no MCU map is present.
+            lines.append(
+                "- IMPLEMENT those callbacks using the target MCU's peripheral as "
+                "described in the MCU CONFIGURATION section below — this IS the "
+                "complete driver for this device on that MCU, not a portable stub. "
+                "Include the MCU header and drive the peripheral registers there."
+            )
+            lines.append(
+                "- example_c must show the REAL bring-up: call the MCU init "
+                "(clock enable, GPIO/AF, peripheral init) and then read the device "
+                "through the driver. Every function still compiles clean under "
+                "-Wall -Wextra -Werror (consume unused params with `(void)x;`)."
+            )
+        else:
+            lines.append(
+                "- STANDALONE & PORTABLE: every file must compile using ONLY the C "
+                "standard library (<stdint.h>, <stddef.h>, <string.h>). Do NOT "
+                "#include any SDK/vendor HAL header — NO <driver/i2c.h>, "
+                "<driver/spi_master.h>, <freertos/*.h>, <esp_*.h>, <Arduino.h>, or "
+                "CMSIS — and do NOT call any SDK/HAL function (i2c_master_*, "
+                "i2c_cmd_link_*, spi_*, vTaskDelay, HAL_*, digitalWrite, delay, "
+                "...). If a delay is needed, take a user-provided delay callback."
+            )
+            lines.append(
+                "- example_c must demonstrate usage by IMPLEMENTING the callbacks "
+                "as trivial self-contained stubs (return 0, fill a static buffer) "
+                "and calling the driver API — it must NOT touch real hardware or "
+                "any SDK. Each stub MUST consume every parameter it declares (add "
+                "`(void)reg;` for unused ones) so it compiles clean under "
+                "-Werror=unused-parameter"
+            )
+            lines.append(
+                "- do NOT require a *_BASE define and do NOT use #error guards — "
+                "the files must compile standalone exactly as generated"
+            )
     for w in warnings:
         if "rebased" in w or "base" in w:
             lines.append(f"- ingestion warning (surface in notes): {w}")
@@ -249,29 +288,136 @@ def build_worker_prompt(
             "their platform. Do not invent a memory-mapped register interface."
         )
 
+    if mcu_map:
+        lines.extend(_mcu_config_section(mcu_map, peripheral))
+
     if feedback:
         lines.append("")
-        # NOTE (V1.6.1 finding, deferred to V2): this retry is a COLD re-roll —
-        # the validator says "line 114: unbalanced paren" but the model never
-        # sees its own line 114, so it regenerates the whole (hard) algorithm and
-        # can break it somewhere new. Echoing the prior failing file back for a
-        # TARGETED edit converges far better, but it does not fit the free Groq
-        # tier: measured, all three prior files -> 413, and even the single
-        # failing file starves the output reservation into truncation on the
-        # 8000-TPM ceiling. Revisit with a larger token budget (paid tier / model
-        # with a bigger context+output window). See V1.6.1 report.
-        lines.append(
-            "PREVIOUS ATTEMPT FAILED VALIDATION. Fix exactly these issues and "
-            "regenerate all three files. Pay special attention to balanced "
-            "parentheses and shifts in any compensation math:"
-        )
-        lines.append(feedback)
+        if prior_files:
+            # Targeted-edit retry (V1.7, enabled by a large-window provider): give
+            # the model its OWN previous code back so it fixes only the named
+            # errors instead of cold re-rolling and reintroducing new -Werror
+            # slips each attempt (the V1.6.1 cold-reroll finding). Echo the files
+            # the failures name (the edit is there); fall back to all if none.
+            named = [f for f in prior_files if f in feedback] or list(prior_files)
+            shown = ", ".join(named)
+            lines.append(
+                "PREVIOUS ATTEMPT FAILED VALIDATION. Below is the EXACT code you "
+                f"produced last time for: {shown}. Return ALL three files again; "
+                f"for {shown}, keep every line byte-for-byte identical EXCEPT the "
+                "minimal edits that fix the errors listed after the code. Do NOT "
+                "rewrite functions the errors do not name — a full rewrite "
+                "reintroduces bugs you already fixed."
+            )
+            for fname in named:
+                lines.append("")
+                lines.append(f"--- PREVIOUS {fname} ---")
+                lines.append(prior_files[fname].rstrip("\n"))
+            lines.append("")
+            lines.append("ERRORS TO FIX (change only what these name):")
+            lines.append(feedback)
+        else:
+            lines.append(
+                "PREVIOUS ATTEMPT FAILED VALIDATION. Fix exactly these issues and "
+                "regenerate all three files. Pay special attention to balanced "
+                "parentheses and shifts in any compensation math:"
+            )
+            lines.append(feedback)
 
     lines.append("")
     lines.append(
         'Respond with JSON: {"header_c": ..., "source_c": ..., "example_c": ..., "notes": ...}'
     )
     return "\n".join(lines)
+
+
+def _mcu_config_section(mcu_map: dict, device_peripheral: str) -> list[str]:
+    """Prompt lines that turn the MCU map into the host-side bring-up the driver
+    needs (items 4-7). The worker must use ONLY registers/bits present here, so
+    the validator can cross-check clock/GPIO/peripheral usage against the map.
+    Slimmed for tokens: the peripheral's clock-enable rows, GPIO register
+    names+offsets, and the peripheral registers with their bit fields."""
+    fam = mcu_map.get("mcu_family", "the MCU")
+    variant = mcu_map.get("variant") or ""
+    # the instance(s) of the target peripheral, e.g. I2C1/I2C2/I2C3
+    pfx = re.match(r"[A-Za-z]+", device_peripheral or "")
+    ptoken = (pfx.group(0) if pfx else device_peripheral or "").upper()
+    clk = [c for c in mcu_map.get("clock_enables", [])
+           if c["peripheral"].upper().startswith(ptoken)]
+    gpio_clk = [c for c in mcu_map.get("clock_enables", [])
+                if c["peripheral"].upper().startswith("GPIO")]
+
+    def reg_brief(regs, with_fields):
+        out = []
+        for r in regs:
+            entry = {"name": r["name"], "offset": r.get("offset")}
+            if with_fields:
+                entry["fields"] = [{"name": f["name"], "bits": f["bits"]}
+                                   for f in r.get("fields", [])]
+            out.append(entry)
+        return out
+
+    L = ["", f"MCU CONFIGURATION — target: {fam} {variant} "
+             "(compile target: arm-none-eabi-gcc).",
+         "You are producing a COMPLETE driver for this device ON this MCU. Beyond "
+         "device register access, generate the MCU bring-up using ONLY the "
+         "registers and bit positions in the MCU map below — never an RCC/GPIO/"
+         f"{ptoken} register or bit that is not listed."]
+
+    L.append("")
+    L.append(f"1. CLOCK ENABLE (item 4): before using {ptoken}, set its clock-"
+             "enable bit, and the GPIO port clock-enable bit for the pins used. "
+             "Use exactly these register+bit entries:")
+    L.append(json.dumps({"peripheral_clock": clk, "gpio_clock": gpio_clk},
+                        separators=(",", ":")))
+
+    L.append("")
+    L.append("2. GPIO / PIN CONFIG (item 5): configure the SDA/SCL pins via these "
+             "GPIO registers (set alternate-function mode in MODER, open-drain in "
+             "OTYPER for I2C, pull-ups in PUPDR, and the AF number in AFRL/AFRH):")
+    # only the pin-config registers matter here — drop IDR/ODR/BSRR/LCKR to keep
+    # the prompt inside the admission window when both maps are present.
+    gpio_cfg = [r for r in mcu_map.get("gpio_registers", [])
+                if any(k in r["name"].upper()
+                       for k in ("MODER", "OTYPER", "OSPEEDR", "PUPDR", "AFR"))]
+    L.append(json.dumps(reg_brief(gpio_cfg, False), separators=(",", ":")))
+    L.append("The specific PIN NUMBERS and AF NUMBER are USER INPUT — they are "
+             "NOT in this map (the pin->AF table lives in the device datasheet). "
+             "Expose them as #define parameters with a CONCRETE placeholder value "
+             "the user edits — e.g. `#define SCL_PIN 6`, `#define SDA_PIN 7`, "
+             "`#define I2C_AF 4` — NEVER `#define SCL_PIN SCL_PIN` or a reference "
+             "to an undefined symbol (that fails to compile). Add a comment that "
+             "the value is user-configurable.")
+
+    L.append("")
+    L.append(f"3. PERIPHERAL INIT + I/O (item 6) and 4. ERROR HANDLING (item 7): "
+             f"initialize {ptoken} and program read/write transactions using these "
+             "control registers; after operations, check the status/error flags "
+             "(e.g. BERR, ARLO, AF/NACK, OVR) in the status registers:")
+    L.append(json.dumps(reg_brief(mcu_map.get("peripheral_registers", []), True),
+                        separators=(",", ":")))
+
+    L.append("")
+    L.append("REGISTER ACCESS: #include <stm32f4xx.h> for the peripheral register "
+             "definitions (the RCC, GPIOx and I2Cx pointers and their struct "
+             "members like RCC->APB1ENR, I2C1->CR1, GPIOB->AFR[0]). Do NOT "
+             "redefine those structs or base addresses — they come from that "
+             "header. Access registers through those pointers.")
+
+    L.append("")
+    L.append("CROSS-CHECKABLE CONSTANTS: define every RCC/GPIO/peripheral bit "
+             "position and register offset you use as a NAMED #define built from "
+             "the map's own name — e.g. `#define RCC_APB1ENR_I2C1EN_Pos 21` and "
+             "`#define I2C_CR1_OFFSET 0x00` — then use those names. This lets the "
+             "validator confirm every bit/offset against the MCU map; an unnamed "
+             "inline `(1<<21)` cannot be checked.")
+
+    L.append("")
+    L.append("Any ordered init/config SEQUENCE you write is derived from "
+             "reference-manual prose and is NOT cross-checkable — immediately "
+             "precede each such function definition with exactly this comment: "
+             + SEQUENCE_UNVERIFIED_COMMENT)
+    return L
 
 
 def _slim(entry: dict) -> dict:

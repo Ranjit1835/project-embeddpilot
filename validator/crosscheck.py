@@ -31,6 +31,10 @@ from validator.report import (
 # too — the contamination guard forbids validator<->generation imports, so the
 # two sides agree by this stable substring, not a shared symbol.
 COMPUTATION_MARKER = "UNVERIFIED: computation transcribed from datasheet prose"
+# V1.7: ordered init/config sequences transcribed from an MCU reference manual —
+# the registers/bits they touch are cross-checked, their ORDERING is not.
+SEQUENCE_MARKER = "UNVERIFIED: sequence transcribed from reference manual prose"
+PROSE_MARKERS = (COMPUTATION_MARKER, SEQUENCE_MARKER)
 
 DEFINE_RE = re.compile(r"^\s*#\s*define\s+(\w+)\s+(.+?)\s*(?:/\*.*)?$")
 HEX_RE = re.compile(r"0[xX][0-9A-Fa-f]+")
@@ -61,12 +65,23 @@ BASE_NAME_RE = re.compile(r"_BASE$", re.IGNORECASE)
 ABS_ADDR_THRESHOLD = 0x10000
 
 
-def crosscheck(files: dict[str, list[str]], register_map: dict, report: ValidationReport) -> None:
-    """files: filename -> list of source lines."""
+def crosscheck(
+    files: dict[str, list[str]],
+    register_map: dict,
+    report: ValidationReport,
+    mcu_map: dict | None = None,
+) -> None:
+    """files: filename -> list of source lines.
+
+    When an MCU map is present (V1.7), defines that belong to it (RCC/GPIO/
+    peripheral registers and their bits) are skipped here — they are verified by
+    mcu_crosscheck against the MCU map, and would otherwise false-fail as
+    'invented' device fields since they are absent from the DEVICE map."""
     regs = {int(r["offset"], 16): r for r in register_map.get("registers", [])}
     opcodes = {int(c["opcode"], 16) for c in register_map.get("commands", [])}
     base = register_map.get("base_address")
     base_val = int(base, 16) if base else None
+    mcu_names = _mcu_name_set(mcu_map) if mcu_map else set()
 
     ran = False
     for fname, lines in files.items():
@@ -78,6 +93,8 @@ def crosscheck(files: dict[str, list[str]], register_map: dict, report: Validati
             value = _eval_value(expr)
             if value is None:
                 continue
+            if mcu_names and _owned_by_mcu(name, mcu_names):
+                continue  # MCU-side define — mcu_crosscheck owns it
             ran = True
             prev = lines[idx - 1] if idx > 0 else ""
             has_marker = "UNVERIFIED" in line or "UNVERIFIED" in prev
@@ -147,6 +164,42 @@ def crosscheck(files: dict[str, list[str]], register_map: dict, report: Validati
     )
 
 
+def _mcu_name_set(mcu_map: dict) -> set[str]:
+    """Normalized names owned by the MCU map: register names, their field names,
+    and clock-enable/reset names (<peripheral>EN / <peripheral>RST)."""
+    names: set[str] = set()
+    norm = lambda s: re.sub(r"[^A-Za-z0-9]", "", s).upper()
+    for c in mcu_map.get("clock_enables", []):
+        names.add(norm(c["peripheral"] + "EN"))
+    for c in mcu_map.get("reset_controls", []):
+        names.add(norm(c["peripheral"] + "RST"))
+    for group in ("clock_registers", "gpio_registers", "peripheral_registers"):
+        for r in mcu_map.get(group, []):
+            names.add(norm(r["name"]))
+            for f in r.get("fields", []):
+                names.add(norm(f["name"]))
+    # RCC/GPIO are unambiguous MCU domains (a sensor device map never names a
+    # define RCC_* or GPIO*), so any such define — incl. generic config values
+    # the model invents like GPIO_MODER_ALT_FUNC_Pos, and names using the map's
+    # 'x' port placeholder (GPIOx_MODER) — is MCU-owned, not an invented DEVICE
+    # field. This is what stops the device cross-check false-failing them.
+    if mcu_map.get("clock_registers") or mcu_map.get("clock_enables"):
+        names.add("RCC")
+    if mcu_map.get("gpio_registers"):
+        names.add("GPIO")
+    # >=3 so 'RCC'/'GPIO' survive; short device field names can't match those.
+    return {n for n in names if len(n) >= 3}
+
+
+def _owned_by_mcu(define_name: str, mcu_names: set[str]) -> bool:
+    """A define belongs to the MCU map when its name CONTAINS a known MCU
+    register/enable name — 'I2C_CR1_PE_Pos' contains 'I2CCR1', 'RCC_APB1ENR_
+    I2C1EN' contains both 'RCCAPB1ENR' and 'I2C1EN'. Contains (not just suffix)
+    so a register prefix before a short field name still marks it MCU-owned."""
+    stem = re.sub(r"[^A-Za-z0-9]", "", define_name).upper()
+    return any(n in stem for n in mcu_names)
+
+
 def scan_unverified_computations(
     files: dict[str, list[str]], report: ValidationReport
 ) -> None:
@@ -156,13 +209,18 @@ def scan_unverified_computations(
     so finalize() downgrades a clean 'validated' to
     'validated-with-unverified-fields' — honesty about what was not checked. A
     silent numeric error (>> 3 vs >> 2) would compile and pass cross-check; this
-    at least stops it being presented as fully validated."""
+    at least stops it being presented as fully validated.
+
+    V1.7 extends this to the reference-manual SEQUENCE marker — an ordered init
+    procedure whose registers/bits are checked but whose ordering is not."""
     for fname, lines in files.items():
         for idx, line in enumerate(lines):
-            if COMPUTATION_MARKER in line:
-                report.unverified_computations.append(UnverifiedComputation(
-                    file=fname, line=idx + 1, marker=COMPUTATION_MARKER,
-                ))
+            for marker in PROSE_MARKERS:
+                if marker in line:
+                    report.unverified_computations.append(UnverifiedComputation(
+                        file=fname, line=idx + 1, marker=marker,
+                    ))
+                    break
 
 
 def _check_field(
