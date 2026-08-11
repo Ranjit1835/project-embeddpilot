@@ -14,7 +14,7 @@ import os
 import sys
 
 from validator.compile_check import compile_check
-from validator.crosscheck import crosscheck
+from validator.crosscheck import crosscheck, scan_unverified_computations
 from validator.report import ValidationReport
 from validator.static_check import static_check
 
@@ -47,6 +47,7 @@ def main() -> int:
         report.notes.append("no generated sources found")
     else:
         crosscheck(files, register_map, report)
+        scan_unverified_computations(files, report)
         compile_check(args.workdir, args.platform, report)
         static_check(args.workdir, report)
     report.finalize()

@@ -478,7 +478,7 @@
  ],
  "low_confidence_pages": [],
  "provenance": {
-  "chip": "user",
-  "peripheral": "user"
+  "chip": "sample",
+  "peripheral": "sample"
  }
 }

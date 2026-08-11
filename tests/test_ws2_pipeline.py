@@ -101,6 +101,43 @@ def test_router_template_needs_platform_match():
     assert d.path == "llm"
 
 
+# --- V1.6.1 Fix 1': framing follows base_address, not register count ------------
+
+BMP085_MAP = {
+    "peripheral": "pressure-sensor", "chip": "BMP085",
+    "provenance": {"chip": "user", "peripheral": "user"},
+    "base_address": None,  # byte-addressed I2C sensor: no memory-mapped base
+    "registers": [
+        {"name": "CALIB_AC1", "offset": "0xAA", "fields": [], "source_pages": [12]},
+        {"name": "CTRL_MEAS", "offset": "0xF4", "fields": [], "source_pages": [12]},
+        {"name": "OUT_MSB", "offset": "0xF6", "fields": [], "source_pages": [12]},
+        {"name": "CHIP_ID", "offset": "0xD0", "fields": [], "source_pages": [12]},
+    ],
+    "commands": [], "warnings": [],
+}
+
+
+def test_bus_sensor_routes_to_bus_framing_not_memory_mapped():
+    # BMP085: byte-addressed I2C sensor, base_address null -> the framing label
+    # must be 'bus', never 'register' (the V1.6.1 mislabel bug). 22-register-style
+    # count must NOT force memory-mapped framing.
+    d = route(BMP085_MAP, "raspberry-pi", log=False)
+    assert d.framing == "bus", d.reason
+    assert "bus-attached" in d.reason and "memory-mapped" not in d.reason
+
+
+def test_bmp180_keeps_bus_framing():
+    d = route(BMP180_MAP, "raspberry-pi", log=False)
+    assert d.framing == "bus", d.reason
+
+
+def test_memory_mapped_peripheral_keeps_register_framing():
+    # ESP32 I2C0 has a real base_address -> memory-mapped register framing stays.
+    d = route(REGISTER_MAP, "esp32", log=False)
+    assert d.framing == "register", d.reason
+    assert "memory-mapped" in d.reason
+
+
 # --- cross-check: three-state field logic (Amendment 1) --------------------------
 
 def test_field_matching_map_is_validated():
@@ -163,6 +200,29 @@ def test_device_bus_address_is_not_a_register_offset():
     for name in ("BME280_I2C_ADDR", "BME280_DEV_ADDR", "BME280_SLAVE_ADDR"):
         r = run_crosscheck(f"#define {name} 0x76\n", REGISTER_MAP)
         assert r.status == "validated", (name, [f.message for f in r.failures])
+
+
+def test_cmd_mask_is_a_field_not_an_opcode():
+    # BMP180_CTRL_MEAS_CMD_MASK is a bit-mask on a control register, not a
+    # command opcode. The _MASK suffix must win over the _CMD substring, so it
+    # is NOT cross-checked against the commands array (regression: this false-
+    # failed a valid BMP180 driver). The map MUST carry a command opcode here or
+    # the opcode branch is skipped and the test proves nothing.
+    map_with_cmd = {
+        "peripheral": "pressure-sensor", "chip": "BMP180",
+        "provenance": {"chip": "user", "peripheral": "user"}, "base_address": None,
+        "registers": [{"name": "CTRL_MEAS", "offset": "0xF4", "fields": [],
+                       "source_pages": [18]}],
+        "commands": [{"name": "Temp", "opcode": "0x2E", "description": ""}],
+        "warnings": [],
+    }
+    src = ("/* UNVERIFIED: bit positions not confirmed */\n"
+           "#define BMP180_CTRL_MEAS_CMD_MASK 0x1F\n")
+    r = run_crosscheck(src, map_with_cmd)
+    assert not any("opcode" in f.message for f in r.failures), (
+        [f.message for f in r.failures]
+    )
+    assert r.status == "validated-with-unverified-fields"
 
 
 def test_opcode_not_in_commands_is_hard_failure():
@@ -322,6 +382,191 @@ def test_command_device_end_to_end_with_real_validator(tmp_path):
     checks = result["reports"][-1]["checks"]
     assert checks["register_crosscheck"] == "pass"
     assert checks["compile"] in ("pass", "skipped")
+
+
+# --- V1.6.1 DoD: BMP-style bus sensor reaches a terminal verdict -----------------
+
+BMP180_BUS_MAP = {
+    "peripheral": "pressure-sensor", "chip": "BMP180",
+    "provenance": {"chip": "user", "peripheral": "user"}, "base_address": None,
+    "registers": [
+        {"name": "CHIP_ID", "offset": "0xD0", "fields": [], "source_pages": [18]},
+        {"name": "CTRL_MEAS", "offset": "0xF4", "fields": [], "source_pages": [18]},
+        {"name": "OUT_MSB", "offset": "0xF6", "fields": [], "source_pages": [18]},
+    ],
+    "commands": [{"name": "Temp", "opcode": "0x2E", "description": "",
+                  "address_bytes": None, "dummy_cycles": None,
+                  "data_direction": "none", "source_pages": [18]}],
+    "extraction_confidence": "high", "source_pages": [18], "warnings": [],
+}
+
+_COMP = ("/* UNVERIFIED: computation transcribed from datasheet prose — not "
+         "cross-checked against the register map */")
+_UNV = ("/* UNVERIFIED: bit positions not confirmed against datasheet — verify "
+        "manually (see p.18) */")
+
+BMP180_BUS_DRIVER = {
+    "header_c": (
+        "#ifndef BMP180_DRIVER_H\n#define BMP180_DRIVER_H\n"
+        "#include <stdint.h>\n#include <stddef.h>\n\n"
+        "#define BMP180_CHIP_ID_REG 0xD0\n"
+        f"{_UNV}\n#define BMP180_CTRL_MEAS_CMD_MASK 0x1F\n\n"
+        "typedef int (*bmp180_reg_read_fn)(uint8_t reg, uint8_t *buf, uint32_t len);\n\n"
+        "int bmp180_read_chip_id(bmp180_reg_read_fn read_fn, uint8_t *out);\n"
+        "int32_t bmp180_compensate_temperature(int32_t ut, int32_t ac5, int32_t ac6,\n"
+        "                                      int32_t mc, int32_t md);\n"
+        "#endif\n"
+    ),
+    "source_c": (
+        '#include "bmp180_driver.h"\n\n'
+        "int bmp180_read_chip_id(bmp180_reg_read_fn read_fn, uint8_t *out)\n{\n"
+        "    return read_fn(BMP180_CHIP_ID_REG, out, 1);\n}\n\n"
+        f"{_COMP}\n"
+        "int32_t bmp180_compensate_temperature(int32_t ut, int32_t ac5, int32_t ac6,\n"
+        "                                      int32_t mc, int32_t md)\n{\n"
+        "    int32_t x1 = ((ut - ac6) * ac5) >> 15;\n"
+        "    int32_t x2 = (mc << 11) / (x1 + md);\n"
+        "    int32_t b5 = x1 + x2;\n"
+        "    return (b5 + 8) >> 4;\n}\n"
+    ),
+    "example_c": (
+        '#include <stdint.h>\n#include "bmp180_driver.h"\n\n'
+        "static int stub_read(uint8_t reg, uint8_t *buf, uint32_t len)\n{\n"
+        "    (void)reg;\n    if (len > 0U) {\n        buf[0] = 0x55;\n    }\n"
+        "    return 0;\n}\n\n"
+        "int bmp180_example(void);\nint bmp180_example(void)\n{\n"
+        "    uint8_t id = 0;\n    return bmp180_read_chip_id(stub_read, &id);\n}\n"
+    ),
+    "notes": "",
+}
+
+
+def test_bmp_bus_sensor_reaches_terminal_verdict(tmp_path):
+    # DoD: a BMP085/BMP180-style bus sensor reaches a terminal verdict end-to-end
+    # through the REAL validator — routed as bus, its CMD_MASK not false-failed as
+    # an opcode, and its transcribed compensation math surfaced as unverified so
+    # the verdict is validated-with-unverified-fields, never a clean 'validated'.
+    provider = MockProvider([BMP180_BUS_DRIVER])
+    result = generate_validated_driver(
+        BMP180_BUS_MAP, "raspberry-pi", provider, workdir_root=str(tmp_path)
+    )
+    assert result["decision"]["framing"] == "bus", result["decision"]
+    last = result["reports"][-1]
+    assert last["checks"]["register_crosscheck"] == "pass", last["failures"]
+    assert last["checks"]["compile"] in ("pass", "skipped"), last["failures"]
+    assert last["unverified_computations"], "compensation math not surfaced"
+    if last["checks"]["compile"] == "pass":
+        assert result["status"] == "validated-with-unverified-fields", last
+
+
+# --- V1.6.1 Fix 3: transcribed-computation marking --------------------------------
+
+def test_computation_marker_downgrades_to_unverified():
+    from validator.crosscheck import COMPUTATION_MARKER, scan_unverified_computations
+
+    src = (
+        f"int32_t bmp_pressure(bmp_dev_t *d) {{ {COMPUTATION_MARKER}\n"
+        "    int32_t b6 = d->b5 - 4000;\n"
+        "    return b6; }\n"
+    )
+    report = ValidationReport()
+    scan_unverified_computations({"drv.c": src.splitlines()}, report)
+    # core checks green, but the marker must flip the clean verdict
+    report.checks["compile"] = "pass"
+    report.checks["register_crosscheck"] = "pass"
+    report.finalize()
+    assert report.unverified_computations, "marker not recorded"
+    assert report.status == "validated-with-unverified-fields"
+
+
+def test_no_computation_marker_stays_clean():
+    from validator.crosscheck import scan_unverified_computations
+
+    report = ValidationReport()
+    scan_unverified_computations({"drv.c": ["int add(int a){ return a+1; }"]}, report)
+    report.checks["compile"] = "pass"
+    report.checks["register_crosscheck"] = "pass"
+    report.finalize()
+    assert not report.unverified_computations
+    assert report.status == "validated"
+
+
+def test_worker_prompt_and_marker_strings_agree():
+    # The worker instruction and the validator detector must share the exact
+    # substring (no import across the contamination boundary).
+    from generation.worker import COMPUTATION_UNVERIFIED_COMMENT, SYSTEM_PROMPT
+    from validator.crosscheck import COMPUTATION_MARKER
+
+    assert COMPUTATION_MARKER in COMPUTATION_UNVERIFIED_COMMENT
+    assert COMPUTATION_UNVERIFIED_COMMENT in SYSTEM_PROMPT
+
+
+# --- V1.6.1 Fix 2: generated stubs must compile clean (validator stays strict) ----
+
+def _have_compiler() -> bool:
+    from validator.compile_check import find_compiler
+
+    return find_compiler("raspberry-pi") is not None
+
+
+def test_unused_stub_parameter_still_fails_compile(tmp_path):
+    # The fix belongs in generation (prompt), NOT by relaxing the judge. Prove
+    # the judge still rejects an unused parameter under -Werror.
+    if not _have_compiler():
+        import pytest
+        pytest.skip("no C compiler available")
+    from validator.compile_check import compile_check
+
+    (tmp_path / "x.c").write_text(
+        "int stub_read(int reg) { return 0; }\n"  # 'reg' unused -> -Werror
+    )
+    report = ValidationReport()
+    compile_check(str(tmp_path), "raspberry-pi", report)
+    assert report.checks["compile"] == "fail"
+
+
+def test_worker_prompt_tells_stubs_to_consume_params():
+    d = route(BMP085_MAP, "raspberry-pi", log=False)
+    p = build_worker_prompt(BMP085_MAP, d, "raspberry-pi")
+    assert "(void)reg;" in p and "unused-parameter" in p
+
+
+# --- V1.6.1 Fix 4: requested-vs-actual toolchain labeling -------------------------
+
+def test_toolchain_fallback_names_requested_and_actual(tmp_path, monkeypatch):
+    import validator.compile_check as cc
+
+    if not _have_compiler():
+        import pytest
+        pytest.skip("no C compiler available")
+    monkeypatch.setattr(cc, "_xtensa", lambda: None)  # simulate no xtensa on host
+    (tmp_path / "x.c").write_text("int f(void){ return 0; }\n")
+    report = ValidationReport()
+    cc.compile_check(str(tmp_path), "esp32", report)
+    joined = " ".join(report.notes)
+    assert "NOT TARGET-ACCURATE" in joined
+    assert "xtensa-esp32-elf-gcc" in joined  # requested
+    assert "arm-none-eabi-gcc" in joined or "gcc" in joined  # actual
+
+
+# --- V1.6.1 also-fix: sample provenance is truthful and accepted ------------------
+
+def test_sample_provenance_passes_gate():
+    from generation.inputs import assert_input_provenance
+
+    m = {"chip": "BME280", "peripheral": "i2c",
+         "provenance": {"chip": "sample", "peripheral": "sample"}}
+    assert_input_provenance(m, "esp32")  # must not raise
+
+
+def test_unknown_provenance_still_blocked():
+    from generation.inputs import InputProvenanceError, assert_input_provenance
+    import pytest
+
+    m = {"chip": "X", "peripheral": "i2c",
+         "provenance": {"chip": "invented", "peripheral": "sample"}}
+    with pytest.raises(InputProvenanceError):
+        assert_input_provenance(m, "esp32")
 
 
 # --- contamination guard -----------------------------------------------------------

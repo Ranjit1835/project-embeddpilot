@@ -66,17 +66,32 @@ def route(register_map: dict, platform: str, log: bool = True) -> RouteDecision:
     if decision is None:
         registers = register_map.get("registers", [])
         commands = register_map.get("commands", [])
+        # base_address is the authoritative memory-mapped-vs-bus signal (WS2
+        # contract): a real base means the peripheral is memory-mapped; null
+        # means it is a bus-attached device (I2C/SPI) driven through transfer
+        # callbacks. The framing label MUST agree with the worker's addressing
+        # contract, which keys off the same base — otherwise the prompt carries
+        # a "register-based" label over bus-attached instructions (the V1.6.1
+        # BMP085 bug: a byte-addressed sensor mislabeled memory-mapped).
+        base = register_map.get("base_address")
         if commands and len(registers) <= 2:
             framing = "command"
             reason = (
                 f"no template for chip '{chip}' on '{platform}'; "
                 f"{len(commands)} commands vs {len(registers)} registers -> command-driver framing"
             )
-        else:
+        elif base:
             framing = "register"
             reason = (
                 f"no template for chip '{chip}' on '{platform}'; "
-                f"{len(registers)} registers -> memory-mapped register framing"
+                f"base {base} + {len(registers)} registers -> memory-mapped register framing"
+            )
+        else:
+            framing = "bus"
+            reason = (
+                f"no template for chip '{chip}' on '{platform}'; "
+                f"{len(registers)} registers, base_address null -> "
+                "bus-attached (I2C/SPI) transfer-callback framing"
             )
         decision = RouteDecision(
             path="llm",

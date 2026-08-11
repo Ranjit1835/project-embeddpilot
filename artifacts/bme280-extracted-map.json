@@ -584,7 +584,7 @@
   24
  ],
  "provenance": {
-  "chip": "user",
-  "peripheral": "user"
+  "chip": "sample",
+  "peripheral": "sample"
  }
 }

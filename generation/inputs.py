@@ -16,8 +16,14 @@ field-naming error. There is no third option and no silent fill.
 
 from __future__ import annotations
 
-# provenance a field may carry to be allowed through to the worker
-ALLOWED = {"user", "detected"}
+# provenance a field may carry to be allowed through to the worker:
+#   user     — the human typed/selected it
+#   detected — pulled from the document AND confirmed on the review screen
+#   sample   — a value baked into a bundled sample/demo map by the project. The
+#              old sample maps claimed `user`, which was untrue (no human typed
+#              them). `sample` is a truthful origin that the gate still trusts,
+#              because bundled fixtures are project-curated, not unverified input.
+ALLOWED = {"user", "detected", "sample"}
 # a detected value that pre-filled the form but has NOT been confirmed yet
 UNCONFIRMED = "detected_unconfirmed"
 

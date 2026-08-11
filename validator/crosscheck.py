@@ -19,7 +19,18 @@ from __future__ import annotations
 
 import re
 
-from validator.report import Failure, UnverifiedField, ValidationReport
+from validator.report import (
+    Failure,
+    UnverifiedComputation,
+    UnverifiedField,
+    ValidationReport,
+)
+
+# Stable marker the worker emits on functions whose compensation/conversion math
+# is transcribed from datasheet prose (V1.6.1 Fix 3). Defined as a literal here
+# too — the contamination guard forbids validator<->generation imports, so the
+# two sides agree by this stable substring, not a shared symbol.
+COMPUTATION_MARKER = "UNVERIFIED: computation transcribed from datasheet prose"
 
 DEFINE_RE = re.compile(r"^\s*#\s*define\s+(\w+)\s+(.+?)\s*(?:/\*.*)?$")
 HEX_RE = re.compile(r"0[xX][0-9A-Fa-f]+")
@@ -84,6 +95,17 @@ def crosscheck(files: dict[str, list[str]], register_map: dict, report: Validati
                 # constant, not a register offset. Do not cross-check it.
                 continue
 
+            if MASK_NAME_RE.search(name) or POS_NAME_RE.search(name):
+                # A _MASK/_POS suffix means a bit-field define, and that wins over
+                # the _CMD/_ADDR/_REG substring heuristics below. Without this,
+                # BMP180_CTRL_MEAS_CMD_MASK (a mask on the CTRL_MEAS register's
+                # command bits) is misread as an OPCODE and cross-checked against
+                # the commands array — a false failure on valid code (same class
+                # as the _ADDR device-address false positive above).
+                _check_field(name, expr, value, fname, idx + 1, has_marker,
+                             register_map, report)
+                continue
+
             if OPCODE_NAME_RE.search(name):
                 if opcodes and value not in opcodes:
                     report.failures.append(Failure(
@@ -106,11 +128,6 @@ def crosscheck(files: dict[str, list[str]], register_map: dict, report: Validati
                     ))
                 continue
 
-            if MASK_NAME_RE.search(name) or POS_NAME_RE.search(name):
-                _check_field(name, expr, value, fname, idx + 1, has_marker,
-                             register_map, report)
-                continue
-
             # uncategorized hex define: informational only, unless it lands in
             # the peripheral's own address region — 0xFFFFFFFF-style all-bits
             # masks are legitimate constants, not hard-coded addresses
@@ -128,6 +145,24 @@ def crosscheck(files: dict[str, list[str]], register_map: dict, report: Validati
         "fail" if any(f.check == "register_crosscheck" for f in report.failures)
         else "pass" if ran else "pass"
     )
+
+
+def scan_unverified_computations(
+    files: dict[str, list[str]], report: ValidationReport
+) -> None:
+    """Record every worker-emitted computation marker (V1.6.1 Fix 3).
+
+    We do NOT verify the math (that is a V2/V3 problem). We surface its presence
+    so finalize() downgrades a clean 'validated' to
+    'validated-with-unverified-fields' — honesty about what was not checked. A
+    silent numeric error (>> 3 vs >> 2) would compile and pass cross-check; this
+    at least stops it being presented as fully validated."""
+    for fname, lines in files.items():
+        for idx, line in enumerate(lines):
+            if COMPUTATION_MARKER in line:
+                report.unverified_computations.append(UnverifiedComputation(
+                    file=fname, line=idx + 1, marker=COMPUTATION_MARKER,
+                ))
 
 
 def _check_field(

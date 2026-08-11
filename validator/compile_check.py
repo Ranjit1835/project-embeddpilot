@@ -42,6 +42,32 @@ def _avr() -> str | None:
             or _pio_tool("toolchain-atmelavr/bin/avr-gcc"))
 
 
+def _preferred_toolchains(platform: str) -> list[tuple[str, str | None]]:
+    """The platform's native toolchain candidates, most-specific first, each
+    paired with its resolved path (None if not installed). Order/labels are the
+    single source of truth for both compiler selection and the requested-vs-
+    actual toolchain labeling (Fix 4)."""
+    plat = platform.lower()
+    preferred: list[tuple[str, str | None]] = []
+    if "esp32" in plat or "xtensa" in plat:
+        preferred.append(("xtensa-esp32-elf-gcc", _xtensa()))
+    if any(k in plat for k in ("arm", "stm32", "nrf", "nxp", "cortex", "ti")):
+        preferred.append(("arm-none-eabi-gcc", _arm()))
+    if "avr" in plat or "arduino" in plat:
+        preferred.append(("avr-gcc", _avr()))
+    if "raspberry" in plat or "linux" in plat:
+        preferred.append(("gcc", shutil.which("gcc")))
+    return preferred
+
+
+def requested_toolchain(platform: str) -> str | None:
+    """The label of the platform's own (target-accurate) toolchain, whether or
+    not it is installed — used to name what the compile SHOULD have used when a
+    fallback compiler actually ran. None for free-text ('Other') platforms."""
+    cands = _preferred_toolchains(platform)
+    return cands[0][0] if cands else None
+
+
 def find_compiler(platform: str) -> tuple[str, str, bool] | None:
     """Returns (label, path, exact) for the best compiler for the platform.
 
@@ -58,17 +84,7 @@ def find_compiler(platform: str) -> tuple[str, str, bool] | None:
     if nothing is available the check reports 'skipped' and report.finalize()
     refuses to validate.
     """
-    plat = platform.lower()
-    preferred: list[tuple[str, str | None]] = []
-    if "esp32" in plat or "xtensa" in plat:
-        preferred.append(("xtensa-esp32-elf-gcc", _xtensa()))
-    if any(k in plat for k in ("arm", "stm32", "nrf", "nxp", "cortex", "ti")):
-        preferred.append(("arm-none-eabi-gcc", _arm()))
-    if "avr" in plat or "arduino" in plat:
-        preferred.append(("avr-gcc", _avr()))
-    if "raspberry" in plat or "linux" in plat:
-        preferred.append(("gcc", shutil.which("gcc")))
-    for label, path in preferred:
+    for label, path in _preferred_toolchains(platform):
         if path:
             return label, path, True
     # generic fallbacks — portable C compiles anywhere for warning coverage
@@ -121,12 +137,14 @@ def compile_check(workdir: str, platform: str, report: ValidationReport) -> None
     elif platform and not exact:
         # Recognized platform whose OWN toolchain isn't installed here (e.g.
         # esp32 with no xtensa gcc in the container). We fell back to a generic
-        # C compiler — say so, so a fallback build is never read as a native
-        # -toolchain validation.
+        # C compiler — name BOTH the requested and the actual compiler (Fix 4)
+        # so a fallback build is never read as a native-toolchain validation.
+        want = requested_toolchain(platform) or "the target toolchain"
         report.notes.append(
-            f"platform '{platform}' toolchain not available in this environment; "
-            f"compiled with {label} for portable-C (-Wall -Wextra) coverage only — "
-            "it may not match your target's compiler"
+            f"NOT TARGET-ACCURATE: platform '{platform}' requests {want}, which is "
+            f"not available in this environment; compiled with {label} instead for "
+            "portable-C (-Wall -Wextra) coverage only — it may not match your "
+            "target's compiler"
         )
 
     sources = sorted(glob.glob(os.path.join(workdir, "*.c")))

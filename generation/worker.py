@@ -29,6 +29,16 @@ UNVERIFIED_COMMENT = (
     "verify manually (see p.{pages}) */"
 )
 
+# Marker for functions whose compensation/conversion math is transcribed from
+# datasheet prose (V1.6.1 Fix 3). The validator greps for this exact substring
+# to downgrade the verdict to validated-with-unverified-fields. Keep the leading
+# text in sync with validator/crosscheck.py::COMPUTATION_MARKER (no shared import
+# — the contamination guard forbids it).
+COMPUTATION_UNVERIFIED_COMMENT = (
+    "/* UNVERIFIED: computation transcribed from datasheet prose — not "
+    "cross-checked against the register map */"
+)
+
 SYSTEM_PROMPT = """You are an embedded systems driver generator. You write \
 production-quality C for microcontroller peripherals and external devices.
 
@@ -43,17 +53,30 @@ invent field layouts.
 taken from the provided base_address (or left for the user if null). Register \
 access goes through base + offset. Never hard-code absolute addresses in \
 access expressions.
-4. Compile-clean under -Wall -Wextra -Werror: no unused parameters or \
-variables, no implicit conversions losing precision, no missing prototypes. \
-Register pointers are volatile. #include every header you use. Prefer static \
-or caller-provided buffers; do NOT use malloc/free unless the conventions \
-explicitly allow dynamic allocation.
-6. If the map lacks data a device feature needs (e.g. some calibration \
+4. Compile-clean under -Wall -Wextra -Werror — this applies to EVERY file, \
+INCLUDING the example and any stub/placeholder function in it. Concretely: \
+every function (stubs included) must consume every parameter it declares — add \
+`(void)param;` for any it does not use, or it fails -Werror=unused-parameter. \
+#include every header you use (e.g. <string.h> for memcpy/memset, <stdint.h> \
+for fixed-width types). Match every printf/sprintf conversion to its argument \
+type — an int32_t needs %ld or a cast to (int)/(long), never a bare %d, or it \
+fails -Werror=format. No implicit conversions losing precision, no missing \
+prototypes. Register pointers are volatile. Prefer static or caller-provided \
+buffers; do NOT use malloc/free unless the conventions explicitly allow it.
+5. If the map lacks data a device feature needs (e.g. some calibration \
 registers are missing), OMIT that feature and say so in "notes" — never \
 reference registers or coefficients that are not in the map.
-5. Respond with a single JSON object, keys: "header_c", "source_c", \
+6. Any function whose body implements compensation, calibration, or unit- \
+conversion math transcribed from the datasheet's prose or pseudocode (e.g. a \
+pressure/temperature compensation formula) is NOT verifiable from the register \
+map. Immediately precede each such function definition with exactly this \
+comment: {computation_comment}  Balance every parenthesis and shift with care; \
+this math is the easiest place to introduce a silent numeric error.
+7. Respond with a single JSON object, keys: "header_c", "source_c", \
 "example_c", "notes". Values are complete file contents (or a short string \
-for notes). No markdown, no commentary outside the JSON."""
+for notes). No markdown, no commentary outside the JSON.""".replace(
+    "{computation_comment}", COMPUTATION_UNVERIFIED_COMMENT
+)
 
 
 @dataclass
@@ -181,7 +204,10 @@ def build_worker_prompt(
         lines.append(
             "- example_c must demonstrate usage by IMPLEMENTING the callbacks as "
             "trivial self-contained stubs (return 0, fill a static buffer) and "
-            "calling the driver API — it must NOT touch real hardware or any SDK"
+            "calling the driver API — it must NOT touch real hardware or any SDK. "
+            "Each stub MUST consume every parameter it declares (add `(void)reg;` "
+            "etc. for unused ones) so it compiles clean under -Werror="
+            "unused-parameter"
         )
         lines.append(
             "- do NOT require a *_BASE define and do NOT use #error guards — the "
@@ -225,9 +251,19 @@ def build_worker_prompt(
 
     if feedback:
         lines.append("")
+        # NOTE (V1.6.1 finding, deferred to V2): this retry is a COLD re-roll —
+        # the validator says "line 114: unbalanced paren" but the model never
+        # sees its own line 114, so it regenerates the whole (hard) algorithm and
+        # can break it somewhere new. Echoing the prior failing file back for a
+        # TARGETED edit converges far better, but it does not fit the free Groq
+        # tier: measured, all three prior files -> 413, and even the single
+        # failing file starves the output reservation into truncation on the
+        # 8000-TPM ceiling. Revisit with a larger token budget (paid tier / model
+        # with a bigger context+output window). See V1.6.1 report.
         lines.append(
             "PREVIOUS ATTEMPT FAILED VALIDATION. Fix exactly these issues and "
-            "regenerate all three files:"
+            "regenerate all three files. Pay special attention to balanced "
+            "parentheses and shifts in any compensation math:"
         )
         lines.append(feedback)
 
