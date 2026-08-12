@@ -107,7 +107,7 @@ export default function Home() {
           <span className="font-mono text-[15px] tracking-tight text-ink">
             embedd<span className="text-accent">pilot</span>
           </span>
-          <span className="font-mono text-[10px] text-ink-faint">v1.6</span>
+          <span className="font-mono text-[10px] text-ink-faint">v1.7</span>
         </div>
         <nav aria-label="pipeline steps" className="flex gap-0.5">
           {STEPS.map(([key, label], i) => {
