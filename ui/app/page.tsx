@@ -51,7 +51,7 @@ export default function Home() {
   }, []);
 
   const onGenerate = useCallback(
-    async (m: RegisterMap, p: string, edits: string[]) => {
+    async (m: RegisterMap, p: string, edits: string[], mcuMap?: unknown) => {
       setStep("generate");
       setGenRunning(true);
       setGenError(null);
@@ -63,6 +63,7 @@ export default function Home() {
           register_map: m,
           platform: p,
           edits,
+          mcu_map: mcuMap,
         });
         setJobId(id);
         unsub.current = subscribeJob(id, async (e) => {

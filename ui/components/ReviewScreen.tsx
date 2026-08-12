@@ -8,7 +8,7 @@
    no invented values reach the worker. Edits travel into provenance. */
 
 import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type {
   Command,
   DetectedValue,
@@ -17,6 +17,7 @@ import type {
   RegisterMap,
 } from "../lib/types";
 import { PLATFORMS } from "../lib/types";
+import { getMcuMap, listMcuMaps, type McuMapSummary } from "../lib/api";
 import {
   Button,
   Confidence,
@@ -39,7 +40,12 @@ export function ReviewScreen({
 }: {
   map: RegisterMap;
   platform: string;
-  onGenerate: (map: RegisterMap, platform: string, edits: string[]) => void;
+  onGenerate: (
+    map: RegisterMap,
+    platform: string,
+    edits: string[],
+    mcuMap?: unknown,
+  ) => void;
 }) {
   const [map, setMap] = useState<RegisterMap>(initialMap);
   const [edits, setEdits] = useState<string[]>([]);
@@ -68,7 +74,31 @@ export function ReviewScreen({
   const detectedIfaces = initialMap.detected?.interfaces ?? [];
   const detectedVendor = initialMap.detected?.vendor;
 
+  // V1.7 two-document flow: an optional MCU from the cached library turns this
+  // into a complete driver (clock/GPIO/init/error) cross-checked against the MCU.
+  const [mcuMaps, setMcuMaps] = useState<McuMapSummary[]>([]);
+  const [mcuId, setMcuId] = useState("");
+  const [mcuMap, setMcuMap] = useState<unknown>(null);
+  useEffect(() => {
+    listMcuMaps().then(setMcuMaps).catch(() => setMcuMaps([]));
+  }, []);
+
   const track = (msg: string) => setEdits((e) => [...e, msg]);
+
+  const pickMcu = async (id: string) => {
+    setMcuId(id);
+    if (!id) {
+      setMcuMap(null);
+      track("MCU: none (device-only driver)");
+      return;
+    }
+    try {
+      setMcuMap(await getMcuMap(id));
+      track(`MCU: ${id} (complete driver)`);
+    } catch {
+      setMcuMap(null);
+    }
+  };
 
   const platform =
     platformSel === "other" ? platformOther.trim() : platformSel;
@@ -113,7 +143,7 @@ export function ReviewScreen({
       peripheral: iface.trim(),
       provenance: { chip: chipProv, peripheral: ifaceProv },
     };
-    onGenerate(finalMap, platform, edits);
+    onGenerate(finalMap, platform, edits, mcuMap ?? undefined);
   };
 
   const registers = useMemo(() => {
@@ -292,6 +322,28 @@ export function ReviewScreen({
                 <span className="text-[10px] text-ink-faint font-mono">
                   shape: {shapeHint}
                 </span>
+              )}
+              {mcuMaps.length > 0 && (
+                <Field label="Target MCU (optional — complete driver)">
+                  <Select
+                    ariaLabel="Target MCU"
+                    value={mcuId}
+                    placeholder="None — device-only driver"
+                    onChange={pickMcu}
+                    options={[
+                      { value: "", label: "None — device-only driver" },
+                      ...mcuMaps.map((m) => ({
+                        value: m.id,
+                        label: `${m.label}${m.rm_revision ? ` (${m.rm_revision})` : ""}`,
+                      })),
+                    ]}
+                  />
+                  <span className="text-[10px] text-ink-faint font-mono">
+                    {mcuId
+                      ? "adds clock, GPIO/AF, init & error handling — cross-checked against the MCU map"
+                      : "device register access only (items 1–3)"}
+                  </span>
+                </Field>
               )}
             </div>
           </div>

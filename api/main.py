@@ -187,18 +187,22 @@ async def start_generate(payload: dict):
     conventions = payload.get("conventions") or (
         "snake_case, C99, no dynamic allocation"  # proven default from CLI runs
     )
+    # V1.7 two-document flow: an optional MCU map turns this into a complete
+    # driver (clock/GPIO/init/error) cross-checked against the MCU.
+    mcu_map = payload.get("mcu_map")
     threading.Thread(
         target=_run_generate,
         args=(job, register_map, platform,
               conventions, int(payload.get("max_retries", 3)),
-              payload.get("edits", [])),
+              payload.get("edits", []), mcu_map),
         daemon=True,
     ).start()
     return {"job_id": job.id}
 
 
 def _run_generate(job: Job, register_map: dict, platform: str,
-                  conventions: str, max_retries: int, edits: list):
+                  conventions: str, max_retries: int, edits: list,
+                  mcu_map: dict | None = None):
     from generation.pipeline import generate_validated_driver
     from generation.provider import ProviderError, make_provider
 
@@ -210,7 +214,7 @@ def _run_generate(job: Job, register_map: dict, platform: str,
     try:
         result = generate_validated_driver(
             register_map, platform, provider, conventions=conventions,
-            max_retries=max_retries, on_event=job.emit,
+            max_retries=max_retries, on_event=job.emit, mcu_map=mcu_map,
         )
         result["user_edits"] = edits  # provenance: review-screen corrections
         job.finish(result=result)
@@ -284,3 +288,48 @@ async def get_sample(sample_id: str):
     path, platform, label = entry
     with open(os.path.join(PROJECT_ROOT, path), encoding="utf-8") as f:
         return {"register_map": json.load(f), "platform": platform, "label": label}
+
+
+# --- MCU maps (V1.7 two-document flow) --------------------------------------------
+# The cached MCU maps are the supported-MCU library. The UI lists them as the
+# optional second document; picking one turns generation into a complete driver.
+
+MCU_CACHE_DIR = os.path.join(PROJECT_ROOT, "artifacts", "mcu_cache")
+
+
+def _mcu_map_path(map_id: str) -> str:
+    import re
+
+    if not re.fullmatch(r"[A-Za-z0-9_]+", map_id or ""):  # no path traversal
+        raise HTTPException(404, "no such MCU map")
+    return os.path.join(MCU_CACHE_DIR, map_id + ".json")
+
+
+@app.get("/api/mcu-maps")
+async def list_mcu_maps():
+    out = []
+    if os.path.isdir(MCU_CACHE_DIR):
+        for fn in sorted(os.listdir(MCU_CACHE_DIR)):
+            if not fn.endswith(".json"):
+                continue
+            with open(os.path.join(MCU_CACHE_DIR, fn), encoding="utf-8") as f:
+                m = json.load(f)
+            out.append({
+                "id": fn[:-5],
+                "mcu_family": m.get("mcu_family"),
+                "variant": m.get("variant"),
+                "peripheral": m.get("peripheral"),
+                "rm_revision": m.get("rm_revision"),
+                "label": f"{m.get('mcu_family')} {m.get('variant') or ''} "
+                         f"{m.get('peripheral')}".strip(),
+            })
+    return out
+
+
+@app.get("/api/mcu-maps/{map_id}")
+async def get_mcu_map(map_id: str):
+    path = _mcu_map_path(map_id)
+    if not os.path.isfile(path):
+        raise HTTPException(404, "no such MCU map")
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)

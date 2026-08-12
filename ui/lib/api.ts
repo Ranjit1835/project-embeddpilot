@@ -21,12 +21,39 @@ export async function startIngest(form: FormData): Promise<string> {
   return (await res.json()).job_id;
 }
 
+export interface McuMapSummary {
+  id: string;
+  mcu_family: string;
+  variant: string | null;
+  peripheral: string;
+  rm_revision: string | null;
+  label: string;
+}
+
+export async function listMcuMaps(): Promise<McuMapSummary[]> {
+  if (isDemoActive()) return [];
+  try {
+    const res = await fetch("/api/mcu-maps");
+    if (res.ok) return await res.json();
+  } catch {
+    /* no backend (demo mode) — no MCU library available */
+  }
+  return [];
+}
+
+export async function getMcuMap(id: string): Promise<unknown> {
+  const res = await fetch(`/api/mcu-maps/${id}`);
+  if (!res.ok) throw new Error(`MCU map '${id}' not found`);
+  return res.json();
+}
+
 export async function startGenerate(payload: {
   register_map: RegisterMap;
   platform: string;
   conventions?: string;
   max_retries?: number;
   edits?: string[];
+  mcu_map?: unknown;
 }): Promise<string> {
   if (!isDemoActive()) {
     try {
