@@ -23,8 +23,40 @@ class ProviderError(Exception):
     pass
 
 
+class ContextWindowError(ProviderError):
+    """The assembled prompt + expected output does not fit the provider's
+    context window. Raised BEFORE the request so the maps are never truncated
+    and the system never silently degrades to a weaker strategy (V1.7.1)."""
+
+
+def estimate_tokens(text: str) -> int:
+    """Token estimate for gpt-oss on these JSON-heavy prompts. Measured live at
+    ~chars/3.7; we divide by 3.5 to bias slightly toward OVER-estimation so the
+    fit check errs on the safe side."""
+    return int(len(text) / 3.5)
+
+
+def assert_prompt_fits(
+    name: str, context_window: int, system: str, user: str, expected_output: int
+) -> None:
+    """Fail loudly and specifically when a request will not fit, naming the
+    provider, the required size, and the provider's limit (V1.7.1 Task 1). Never
+    truncate; never fall back to a weaker retry strategy."""
+    prompt_tokens = estimate_tokens(system) + estimate_tokens(user)
+    need = prompt_tokens + expected_output
+    if need > context_window:
+        raise ContextWindowError(
+            f"prompt does not fit provider '{name}': needs ~{need} tokens "
+            f"(~{prompt_tokens} prompt + {expected_output} expected output) but "
+            f"the provider context window is {context_window}. Configure a "
+            "larger-window provider (e.g. NVIDIA) — EmbeddPilot never truncates "
+            "the device/MCU maps to make a job fit."
+        )
+
+
 class LLMProvider(Protocol):
     name: str
+    context_window: int
 
     def complete_json(self, system: str, user: str) -> dict: ...
 
@@ -35,7 +67,10 @@ class GroqProvider:
     def __init__(self, model: str | None = None):
         self.model = model or os.environ.get("GROQ_MODEL", DEFAULT_GROQ_MODEL)
         self.name = f"groq/{self.model}"
-        self.large_window = False  # ~8000 TPM free tier — no room to echo prior code
+        # Free-tier admission is a per-minute budget that behaves like a context
+        # window: prompt + output must fit it. Override via GROQ_TPM_BUDGET for a
+        # paid tier. A both-maps V1.7 job will not fit 8000 and now fails loudly.
+        self.context_window = int(os.environ.get("GROQ_TPM_BUDGET", "8000"))
         if not os.environ.get("GROQ_API_KEY"):
             raise ProviderError(
                 "GROQ_API_KEY is not set — set it in the environment to enable "
@@ -130,7 +165,9 @@ class NVIDIAProvider:
     def __init__(self, model: str | None = None):
         self.model = model or os.environ.get("NVIDIA_MODEL", DEFAULT_NVIDIA_MODEL)
         self.name = f"nvidia/{self.model}"
-        self.large_window = True  # big context/output — targeted-edit retry fits
+        # gpt-oss-120b on NVIDIA exposes a 128K context; the both-maps job and
+        # the targeted-edit echo fit comfortably. Override via NVIDIA_CONTEXT.
+        self.context_window = int(os.environ.get("NVIDIA_CONTEXT", "128000"))
         key = os.environ.get("NVIDIA_API_KEY")
         if not key:
             raise ProviderError("NVIDIA_API_KEY is not set")
@@ -184,9 +221,24 @@ class NVIDIAProvider:
         return _parse_json(text)
 
 
+PROVIDERS = {"nvidia": NVIDIAProvider, "groq": GroqProvider}
+
+
 def make_provider() -> "LLMProvider":
-    """Pick the live provider from the environment: NVIDIA if NVIDIA_API_KEY is
-    set (larger window — needed for V1.7 both-maps generation), else Groq."""
+    """Configuration-driven provider selection (V1.7.1 — no vendor hard-coded).
+
+    EMBEDDPILOT_PROVIDER=nvidia|groq picks explicitly, so a deployment can use a
+    different (licensed) provider than local development with NO code change — see
+    the licensing note in the README. With no explicit setting, default to NVIDIA
+    when its key is present (its window fits the both-maps job), else Groq."""
+    choice = os.environ.get("EMBEDDPILOT_PROVIDER", "").strip().lower()
+    if choice:
+        if choice not in PROVIDERS:
+            raise ProviderError(
+                f"EMBEDDPILOT_PROVIDER='{choice}' is not a known provider "
+                f"({', '.join(sorted(PROVIDERS))})"
+            )
+        return PROVIDERS[choice]()
     if os.environ.get("NVIDIA_API_KEY"):
         return NVIDIAProvider()
     return GroqProvider()
@@ -197,7 +249,7 @@ class MockProvider:
 
     def __init__(self, responses: list[dict]):
         self.name = "mock"
-        self.large_window = True  # exercise the echo path in tests
+        self.context_window = 1_000_000  # tests never hit the fit check
         self._responses = list(responses)
         self.calls: list[tuple[str, str]] = []  # (system, user) per call
 

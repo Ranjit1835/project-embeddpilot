@@ -22,7 +22,7 @@ import re
 from dataclasses import dataclass, field
 
 from generation.inputs import assert_input_provenance, platform_profile
-from generation.provider import LLMProvider, ProviderError
+from generation.provider import LLMProvider, ProviderError, assert_prompt_fits
 from generation.router import RouteDecision
 
 UNVERIFIED_COMMENT = (
@@ -110,14 +110,19 @@ def generate_driver(
     prior_files: dict[str, str] | None = None,
 ) -> WorkerResult:
     chip = _c_ident(register_map["chip"]).lower()
-    # Targeted-edit retry: echo the prior failing code back so the model fixes
-    # only the named error instead of cold re-rolling the whole driver (the
-    # V1.6.1 finding). Only for large-window providers — on Groq's ~8000 TPM
-    # free tier the echo does not fit (413 / output truncation), so fall back to
-    # the cold re-roll there.
-    echo = prior_files if getattr(provider, "large_window", False) else None
+    # ONE retry strategy (V1.7.1): always echo the prior failing code so the
+    # model makes a targeted edit instead of cold re-rolling. No provider gets a
+    # special-cased weaker path — if the result does not fit a provider's window
+    # the fit check below fails loudly rather than degrading silently.
     user_prompt = build_worker_prompt(
-        register_map, decision, platform, conventions, feedback, mcu_map, echo
+        register_map, decision, platform, conventions, feedback, mcu_map, prior_files
+    )
+    # A complete driver (device + MCU bring-up) needs more output than a
+    # device-only driver; reserve accordingly for the fit check.
+    expected_output = 4500 if mcu_map else 2500
+    assert_prompt_fits(
+        provider.name, getattr(provider, "context_window", 1_000_000),
+        SYSTEM_PROMPT, user_prompt, expected_output,
     )
     raw = provider.complete_json(SYSTEM_PROMPT, user_prompt)
 
@@ -317,10 +322,13 @@ def build_worker_prompt(
             lines.append("ERRORS TO FIX (change only what these name):")
             lines.append(feedback)
         else:
+            # No prior code to echo (the previous attempt produced no usable
+            # output, e.g. invalid JSON). Regenerate addressing the error — this
+            # is NOT the removed cold-reroll-of-a-compile-fix path; there simply
+            # is nothing to edit yet.
             lines.append(
-                "PREVIOUS ATTEMPT FAILED VALIDATION. Fix exactly these issues and "
-                "regenerate all three files. Pay special attention to balanced "
-                "parentheses and shifts in any compensation math:"
+                "PREVIOUS ATTEMPT PRODUCED NO USABLE OUTPUT. Regenerate all three "
+                "files, addressing this problem:"
             )
             lines.append(feedback)
 

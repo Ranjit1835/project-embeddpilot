@@ -46,6 +46,10 @@ export function ResultsScreen({
     .slice(1)
     .join(":")
     .trim();
+  // provider.name is "<provider>/<model>" (e.g. "nvidia/openai/gpt-oss-120b");
+  // surface both, same principle as requested-vs-actual compiler labeling.
+  const providerName = result.provider?.split("/")[0];
+  const modelName = result.provider?.split("/").slice(1).join("/");
 
   const unverifiedLines = useMemo(() => {
     const m = new Map<string, Set<number>>();
@@ -167,7 +171,8 @@ export function ResultsScreen({
             <dl className="p-3 grid gap-1.5 text-[12.5px]">
               <Row k="Route" v={result.decision?.user_label ?? "—"} />
               <Row k="Reason" v={result.decision?.reason ?? "—"} dim />
-              <Row k="Model" v={result.provider ?? "—"} mono />
+              <Row k="Provider" v={providerName ?? "—"} mono tone="accent" />
+              <Row k="Model" v={modelName ?? "—"} mono />
               {compiler && <Row k="Compiler" v={compiler} mono tone="accent" />}
               <Row k="Attempts" v={String(result.attempts ?? "—")} mono />
               {result.register_map && (

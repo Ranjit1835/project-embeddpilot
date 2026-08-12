@@ -5,6 +5,8 @@ supplied; without one, behaviour is unchanged. Deterministic — no LLM calls.""
 import os
 import sys
 
+import pytest
+
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
@@ -104,13 +106,15 @@ def test_retry_echoes_prior_file_for_targeted_edit():
     assert "minimal edits" in p
 
 
-def test_echo_gated_on_large_window_provider():
+def test_targeted_edit_retry_echoes_regardless_of_provider():
+    # V1.7.1: ONE strategy — prior code is always echoed on retry, no provider
+    # gating (the cold re-roll path is gone).
     from generation.worker import generate_driver
 
     class _Spy:
-        def __init__(self, large):
+        def __init__(self, window):
             self.name = "spy"
-            self.large_window = large
+            self.context_window = window
             self.prompt = ""
 
         def complete_json(self, system, user):
@@ -120,14 +124,37 @@ def test_echo_gated_on_large_window_provider():
     d = route(DEVICE_MAP, "stm32", log=False)
     prior = {"bme280_driver.c": "CODE_MARKER_XYZ"}
     fb = "- [compile] bme280_driver.c: boom"
+    spy = _Spy(1_000_000)
+    generate_driver(spy, DEVICE_MAP, d, "stm32", feedback=fb, prior_files=prior)
+    assert "CODE_MARKER_XYZ" in spy.prompt  # always echoes for a targeted edit
 
-    big = _Spy(True)
-    generate_driver(big, DEVICE_MAP, d, "stm32", feedback=fb, prior_files=prior)
-    assert "CODE_MARKER_XYZ" in big.prompt  # large window -> echoes prior code
 
-    small = _Spy(False)
-    generate_driver(small, DEVICE_MAP, d, "stm32", feedback=fb, prior_files=prior)
-    assert "CODE_MARKER_XYZ" not in small.prompt  # small window -> cold re-roll
+def test_context_window_exceeded_fails_loudly_and_specifically():
+    from generation.provider import ContextWindowError, assert_prompt_fits
+
+    with pytest.raises(ContextWindowError) as ei:
+        assert_prompt_fits("groq/openai/gpt-oss-120b", 8000,
+                           "system" * 50, "u" * 30000, 4500)
+    msg = str(ei.value)
+    assert "groq/openai/gpt-oss-120b" in msg  # names the provider
+    assert "8000" in msg                       # names the limit
+    assert "does not fit" in msg and "truncate" in msg
+
+
+def test_pipeline_returns_loud_failure_when_job_exceeds_window(tmp_path):
+    from generation.pipeline import generate_validated_driver
+
+    class _Tiny:
+        name = "tiny/model"
+        context_window = 100
+
+        def complete_json(self, system, user):
+            raise AssertionError("complete_json must NOT be called on overflow")
+
+    res = generate_validated_driver(
+        DEVICE_MAP, "stm32", _Tiny(), workdir_root=str(tmp_path), mcu_map=MCU_MAP)
+    assert res["status"] == "provider-window-exceeded"
+    assert "does not fit" in res["message"] and "tiny/model" in res["message"]
 
 
 def test_prompt_stays_within_a_sane_size():

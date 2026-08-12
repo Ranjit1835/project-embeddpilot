@@ -76,3 +76,49 @@ project-embeddpilot/
 | C | Independent judge + library form factor | PHASE_C_REPORT.md |
 | D | IR-grounded generation (two-layer IR) | PHASE_D_REPORT.md |
 | E | Extraction provenance + live case study | PHASE_E_REPORT.md |
+
+## LLM Providers & Environments (V1.7.1)
+
+Generation uses one pluggable LLM provider, selected by configuration — no
+vendor is hard-coded. `generation/provider.py::make_provider()` resolves it:
+
+| Env var | Effect |
+|---|---|
+| `EMBEDDPILOT_PROVIDER=nvidia\|groq` | Selects the provider explicitly (per environment, no code change) |
+| _(unset)_ | Defaults to NVIDIA when `NVIDIA_API_KEY` is present, else Groq |
+
+Keys are read from the environment only and are **never committed**
+(`GROQ_API_KEY`, `NVIDIA_API_KEY`; `.gitignore` covers `.env*`/`*.key`).
+
+### One generation path, no silent degradation
+
+There is a single retry strategy: **targeted-edit** — on a failed attempt the
+worker is handed its own prior failing file and told to fix only the validator-
+named error. Before every request the pipeline checks the assembled prompt +
+expected output against the provider's declared `context_window`; if it does not
+fit it **fails loudly** (`provider-window-exceeded`) naming the provider, the
+required size, and the limit. The device and MCU maps are never truncated and
+the system never quietly falls back to a weaker strategy.
+
+### Which provider where, and why
+
+- **Local development / testing:** NVIDIA (`integrate.api.nvidia.com`,
+  `openai/gpt-oss-120b`). Its ~128K window fits the V1.7 both-maps complete-
+  driver job and the targeted-edit echo; Groq's ~8K free-tier admission window
+  does not (a complete-driver job fails loudly there rather than degrading).
+- **Deployed instance (concierge engineers):** NVIDIA's hosted developer
+  endpoints (build.nvidia.com / integrate.api.nvidia.com) are licensed for
+  *development, testing, research and evaluation* — serving real end-users falls
+  under NVIDIA AI Enterprise, and the free tier is rate-limited (~40 req/min).
+  **Do not hard-wire NVIDIA as the deployed production provider.** Configure the
+  deployed environment via `EMBEDDPILOT_PROVIDER` with a provider licensed for
+  serving end-users (e.g. a paid Groq/Together/Fireworks tier whose window fits
+  the job, or NVIDIA AI Enterprise). The device-only (V1.6.x) flow fits Groq's
+  window; the both-maps V1.7 flow needs a large-window licensed provider.
+
+### Cost
+
+Token cost is negligible (~$0.005 first-attempt / ~$0.016 per 3-attempt run;
+under $1 for 50 runs/month) and identical across Groq/Together/Fireworks at
+$0.15/$0.60 per 1M in/out. MCU reference-manual ingestion is deterministic and
+cached (zero LLM tokens, one-time per MCU). See `V1.7.1_COST_ESTIMATE.md`.

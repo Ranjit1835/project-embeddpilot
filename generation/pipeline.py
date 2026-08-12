@@ -16,7 +16,7 @@ import sys
 from typing import Callable
 
 from generation.inputs import InputProvenanceError, assert_input_provenance
-from generation.provider import LLMProvider, ProviderError
+from generation.provider import ContextWindowError, LLMProvider, ProviderError
 from generation.router import RouteDecision, route
 from generation.worker import generate_driver
 
@@ -95,6 +95,21 @@ def generate_validated_driver(
                 provider, register_map, decision, platform, conventions, feedback,
                 mcu_map, prior_files,
             )
+        except ContextWindowError as e:
+            # The job does not fit this provider's window. Retrying cannot help
+            # (the size is fixed), so fail immediately and loudly — never truncate
+            # the maps or silently degrade (V1.7.1 Task 1).
+            report = {"status": "failed", "failures": [
+                {"check": "context_window", "file": "", "line": None, "message": str(e)}
+            ], "checks": {}, "unverified_fields": [], "notes": []}
+            emit({"type": "attempt_report", "attempt": attempt, "report": report})
+            return {
+                "status": "provider-window-exceeded",
+                "decision": decision.to_json(),
+                "reports": [report],
+                "provider": provider.name,
+                "message": str(e),
+            }
         except ProviderError as e:
             report = {"status": "failed", "failures": [
                 {"check": "worker", "file": "", "line": None, "message": str(e)}

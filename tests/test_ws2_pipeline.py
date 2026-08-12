@@ -270,9 +270,18 @@ def test_prompt_command_framing():
 
 
 def test_retry_feedback_lands_in_prompt():
+    # no prior_files here -> the no-usable-output retry branch; feedback still lands
     d = route(REGISTER_MAP, "stm32", log=False)
     p = build_worker_prompt(REGISTER_MAP, d, "stm32", feedback="- [compile] x.c: boom")
-    assert "PREVIOUS ATTEMPT FAILED VALIDATION" in p and "boom" in p
+    assert "PREVIOUS ATTEMPT" in p and "boom" in p
+
+
+def test_targeted_edit_retry_lands_prior_code_and_feedback():
+    d = route(REGISTER_MAP, "stm32", log=False)
+    prior = {"gen.c": "int PRIOR_CODE_MARKER(void){return 0;}"}
+    p = build_worker_prompt(REGISTER_MAP, d, "stm32",
+                            feedback="- [compile] gen.c: boom", prior_files=prior)
+    assert "PRIOR_CODE_MARKER" in p and "boom" in p and "minimal edits" in p
 
 
 # --- retry loop and graceful fallback ---------------------------------------------
