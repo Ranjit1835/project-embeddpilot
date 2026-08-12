@@ -200,10 +200,10 @@ async def start_generate(payload: dict):
 def _run_generate(job: Job, register_map: dict, platform: str,
                   conventions: str, max_retries: int, edits: list):
     from generation.pipeline import generate_validated_driver
-    from generation.provider import GroqProvider, ProviderError
+    from generation.provider import ProviderError, make_provider
 
     try:
-        provider = GroqProvider()
+        provider = make_provider()  # config-driven (EMBEDDPILOT_PROVIDER) — V1.7.1
     except ProviderError as e:
         job.finish(error=str(e))
         return

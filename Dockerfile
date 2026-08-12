@@ -24,6 +24,9 @@ COPY artifacts/bme280-extracted-map.json \
      artifacts/esp32-i2c-extracted-map.json \
      artifacts/bmp180-extracted-map.json \
      artifacts/
+# V1.7 cached MCU maps (the RM PDFs are gitignored and not in the image, so the
+# committed cache is the only source of MCU maps here — ship it).
+COPY artifacts/mcu_cache artifacts/mcu_cache
 
 # Railway injects PORT
 CMD uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8000}
