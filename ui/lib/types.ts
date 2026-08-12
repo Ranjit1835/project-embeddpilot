@@ -34,7 +34,12 @@ export interface DetectedValue {
 
 /** Origin of an input field. 'user' or 'detected' generate; 'detected_unconfirmed'
     or null are blocked until the user confirms/corrects on the review screen. */
-export type Provenance = "user" | "detected" | "detected_unconfirmed" | null;
+export type Provenance =
+  | "user"
+  | "detected"
+  | "detected_unconfirmed"
+  | "sample"
+  | null;
 
 export interface RegisterMap {
   peripheral: string;

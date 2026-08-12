@@ -103,8 +103,10 @@ export function ReviewScreen({
   const platform =
     platformSel === "other" ? platformOther.trim() : platformSel;
 
+  // 'sample' provenance (bundled sample maps) is generatable, same as the API
+  // gate accepts it — otherwise the Generate button stays disabled for samples.
   const resolved = (v: string, p: Provenance) =>
-    v.trim() !== "" && (p === "user" || p === "detected");
+    v.trim() !== "" && (p === "user" || p === "detected" || p === "sample");
   const chipOk = resolved(chip, chipProv);
   const ifaceOk = resolved(iface, ifaceProv);
   const platformOk = platform.trim() !== "";

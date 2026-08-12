@@ -203,7 +203,7 @@ export function ProvenanceTag({
   state,
   pages,
 }: {
-  state: "detected_unconfirmed" | "detected" | "user" | "empty";
+  state: "detected_unconfirmed" | "detected" | "user" | "sample" | "empty";
   pages?: number[];
 }) {
   if (state === "empty") return null;
@@ -218,7 +218,11 @@ export function ProvenanceTag({
       cls: "text-accent border-accent-dim bg-accent/10",
     },
     user: { text: "you entered", cls: "text-ink-dim border-line-2" },
+    // V1.6.1 added a 'sample' provenance for the bundled sample maps; the UI
+    // must render it, not crash on an unknown key.
+    sample: { text: "sample map", cls: "text-ink-dim border-line-2" },
   }[state];
+  if (!spec) return null; // defensive: never crash on an unrecognized provenance
   return (
     <span
       className={`inline-block border rounded-sm px-1.5 py-0.5 font-mono text-[10px] tracking-wide ${spec.cls}`}
