@@ -15,7 +15,11 @@ import subprocess
 import sys
 from typing import Callable
 
-from generation.inputs import InputProvenanceError, assert_input_provenance
+from generation.inputs import (
+    InputProvenanceError,
+    assert_chip_consistency,
+    assert_input_provenance,
+)
 from generation.provider import ContextWindowError, LLMProvider, ProviderError
 from generation.router import RouteDecision, route
 from generation.worker import generate_driver
@@ -121,6 +125,16 @@ def generate_validated_driver(
 
         files = result.files
         prior_files = files  # feed this attempt's code into the next retry
+        # V1.8 B1: the shipped artifact identity must agree with the map. Compare
+        # against detection only when the chip was NOT user-confirmed (a user
+        # override legitimately supersedes stale detection).
+        _chip_prov = (register_map.get("provenance") or {}).get("chip")
+        _detected_chip = None if _chip_prov == "user" else (
+            (register_map.get("detected") or {}).get("chip") or {}
+        ).get("value")
+        assert_chip_consistency(
+            register_map.get("chip", ""), _detected_chip, list(files.keys())
+        )
         workdir = os.path.join(workdir_root, chip, f"attempt_{attempt}")
         os.makedirs(workdir, exist_ok=True)
         for fname, content in files.items():
