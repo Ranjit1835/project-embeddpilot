@@ -252,7 +252,51 @@ def _bit_column_map(header: list[str]) -> dict[int, int] | None:
     return bit_cols if len(bit_cols) >= 4 else None
 
 
+# A digital-output code column: 5+ contiguous bits. Register addresses and
+# reset values are never presented as a whole column of these; a
+# temperature->code conversion table is (V1.9 item 1).
+_LONGBIN_RE = re.compile(r"^[01]{5,}$")
+
+
+def _is_value_code_lookup(t: LogicalTable) -> bool:
+    """A value->digital-output lookup table (e.g. temperature -> binary/hex code)
+    masquerades as a register index: its binary code column is read as hex
+    'addresses' via BINARY_RE, so rows look address-bearing. A register map is
+    never a full COLUMN of multi-bit binary codes. Reject such a table from
+    register classification.
+
+    The observed false positives (TMP100 p.9-10, LM75B p.14) parsed to 0
+    registers only by luck (their value column isn't identifier-shaped); the same
+    misclassification on another document could emit spurious registers, which
+    would poison the map the cross-check treats as ground truth. This is the
+    highest-risk item in the round, fixed before anything builds on the parser.
+    """
+    rows = t.rows
+    if len(rows) < 3:
+        return False
+    ncols = max((len(r) for r in rows), default=0)
+
+    def col_frac(col: int, pred) -> float:
+        cells = [r[col].strip() for r in rows if col < len(r) and r[col].strip()]
+        return (sum(1 for x in cells if pred(x)) / len(cells)) if cells else 0.0
+
+    has_binary_code_col = any(
+        col_frac(c, lambda x: bool(_LONGBIN_RE.match(x))) >= 0.5 for c in range(ncols)
+    )
+    if not has_binary_code_col:
+        return False
+    # a real register index names its access (R/W/RO); a lookup table never does.
+    has_access_col = any(
+        col_frac(c, lambda x: _norm_access(x) is not None) >= 0.5 for c in range(ncols)
+    )
+    return not has_access_col
+
+
 def classify_table(t: LogicalTable) -> str:
+    # V1.9 item 1: a value->code lookup table must never be read as registers —
+    # a spurious register poisons the map the validator trusts as ground truth.
+    if _is_value_code_lookup(t):
+        return "other"
     roles = table_roles(t)
     if _bit_column_map(t.header) and ("name" in roles or "address" in roles):
         return "bit_column_map"
@@ -280,6 +324,8 @@ def parse_register_index(t: LogicalTable) -> list[ExtractedRegister]:
       name only             -> section subheader ('Status registers') — skip;
                                forward-filling an address here fabricates registers
     """
+    if _is_value_code_lookup(t):
+        return []  # V1.9 item 1: defense-in-depth against lookup false positives
     roles = table_roles(t)
     name_i = roles.get("name", roles.get("field"))
     out: list[ExtractedRegister] = []
@@ -374,6 +420,8 @@ def parse_headerless(t: LogicalTable) -> list[ExtractedRegister]:
     Two consistent hex columns are treated as an MSB/LSB address pair
     (common for calibration/multi-byte parameters) and emit two registers
     per row, suffixed from the column's own label row when present."""
+    if _is_value_code_lookup(t):
+        return []  # V1.9 item 1: defense-in-depth against lookup false positives
     candidates = []  # (row, name_col, name, {col: hex})
     for row in t.rows:
         hexes = {i: h for i, c in enumerate(row) if (h := _norm_hex(c))}
