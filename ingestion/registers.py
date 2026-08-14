@@ -252,7 +252,170 @@ def _bit_column_map(header: list[str]) -> dict[int, int] | None:
     return bit_cols if len(bit_cols) >= 4 else None
 
 
+# A digital-output code column: 5+ contiguous bits. Register addresses and
+# reset values are never presented as a whole column of these; a
+# temperature->code conversion table is (V1.9 item 1).
+_LONGBIN_RE = re.compile(r"^[01]{5,}$")
+
+
+def _is_value_code_lookup(t: LogicalTable) -> bool:
+    """A value->digital-output lookup table (e.g. temperature -> binary/hex code)
+    masquerades as a register index: its binary code column is read as hex
+    'addresses' via BINARY_RE, so rows look address-bearing. A register map is
+    never a full COLUMN of multi-bit binary codes. Reject such a table from
+    register classification.
+
+    The observed false positives (TMP100 p.9-10, LM75B p.14) parsed to 0
+    registers only by luck (their value column isn't identifier-shaped); the same
+    misclassification on another document could emit spurious registers, which
+    would poison the map the cross-check treats as ground truth. This is the
+    highest-risk item in the round, fixed before anything builds on the parser.
+    """
+    rows = t.rows
+    if len(rows) < 3:
+        return False
+    ncols = max((len(r) for r in rows), default=0)
+
+    def col_frac(col: int, pred) -> float:
+        cells = [r[col].strip() for r in rows if col < len(r) and r[col].strip()]
+        return (sum(1 for x in cells if pred(x)) / len(cells)) if cells else 0.0
+
+    has_binary_code_col = any(
+        col_frac(c, lambda x: bool(_LONGBIN_RE.match(x))) >= 0.5 for c in range(ncols)
+    )
+    if not has_binary_code_col:
+        return False
+    # a real register index names its access (R/W/RO); a lookup table never does.
+    has_access_col = any(
+        col_frac(c, lambda x: _norm_access(x) is not None) >= 0.5 for c in range(ncols)
+    )
+    return not has_access_col
+
+
+# V1.9 item 2 — pointer-register devices (TMP100, LM75B, MCP9808 and most simple
+# I2C sensors). A pointer register selects among a few data registers; the
+# register "address" is the pointer value. Two presentations:
+#   - binary pointer columns:  [P1, P0, TYPE, REGISTER]  (TMP100)
+#                              [P2, P1, P0, Register]     (LM75B, header in row 0)
+#   - direct hex address table with a two-row header      (MCP9808)
+_PTR_COL_RE = re.compile(r"^P\s*(\d+)$", re.IGNORECASE)
+
+
+def _pointer_columns(header: list[str]) -> dict[int, int]:
+    """{pointer_bit_index: column_index} for P0/P1/P2… header columns."""
+    cols: dict[int, int] = {}
+    for i, h in enumerate(header):
+        m = _PTR_COL_RE.match((h or "").strip())
+        if m:
+            cols[int(m.group(1))] = i
+    return cols
+
+
+def _looks_like_reg_subheader(cells: list[str]) -> bool:
+    txt = " ".join((c or "") for c in cells).lower()
+    has_addr_or_ptr = ("address" in txt) or (len(_pointer_columns(cells)) >= 2)
+    has_name = ("register" in txt or "name" in txt)
+    return has_addr_or_ptr and has_name
+
+
+def _promote_subheader(t: LogicalTable) -> LogicalTable:
+    """Some register tables carry a merged super-header ('Registers' spanning
+    Address+Name) or an empty stitched header, with the REAL column labels in the
+    first body row (MCP9808 'Address (Hexadecimal) | Register Name'; LM75B
+    'P2 | P1 | P0 | Register'). Promote that row to the header so the normal
+    role/pointer logic can read it. Idempotent when the header is already usable."""
+    if not t.rows or _looks_like_reg_subheader(t.header):
+        return t
+    if _looks_like_reg_subheader(t.rows[0]):
+        row0 = t.rows[0]
+        n = max(len(t.header), len(row0))
+        newhdr = [
+            (row0[i].strip() if i < len(row0) and row0[i].strip()
+             else (t.header[i].strip() if i < len(t.header) else ""))
+            for i in range(n)
+        ]
+        return LogicalTable(header=newhdr, rows=t.rows[1:],
+                            source_pages=list(t.source_pages))
+    return t
+
+
+def _split_name_access(raw: str) -> tuple[str, str | None]:
+    """'Temperature(Readonly)(Power-updefault)' -> ('Temperature', 'RO');
+    'T (Read/Write) HYST' -> ('T_HYST', 'RW'); 'ConfigurationRegister' ->
+    ('Configuration', None). Access is pulled from embedded parentheticals; the
+    word 'Register' and mode/default phrases are stripped from the name."""
+    low = raw.lower()
+    if "read/write" in low or "r/w" in low:
+        acc: str | None = "RW"
+    elif "readonly" in low or "read only" in low or "ronly" in low or "read-only" in low:
+        acc = "RO"
+    else:
+        acc = None
+    name = re.sub(r"\([^)]*\)", " ", raw)
+    name = re.sub(r"registers?", " ", name, flags=re.IGNORECASE)
+    name = re.sub(r"read\s*/?\s*write|read[-\s]*only|power[-\s]*up\s*default|default",
+                  " ", name, flags=re.IGNORECASE)
+    name = re.sub(r"[^A-Za-z0-9]+", "_", name).strip("_")
+    return name, acc
+
+
+def parse_pointer_register_table(t: LogicalTable) -> list[ExtractedRegister]:
+    """Pointer-register table -> registers whose offset IS the pointer value.
+    Handles 2+ binary pointer columns (P0..Pn) plus a register-name column."""
+    t = _promote_subheader(t)
+    ptr_cols = _pointer_columns(t.header)
+    if len(ptr_cols) < 2:
+        return []
+    roles = table_roles(t)
+    ptr_idx = set(ptr_cols.values())
+    name_i = roles.get("name")
+    if name_i is None or name_i in ptr_idx:
+        name_i = next((i for i, h in enumerate(t.header)
+                       if i not in ptr_idx and re.search(r"regist|name", h or "", re.I)),
+                      None)
+    access_i = roles.get("access")
+    if access_i in ptr_idx:
+        access_i = None
+    maxbit = max(ptr_cols)
+    out: list[ExtractedRegister] = []
+    for row in t.rows:
+        bits = ""
+        ok = True
+        for b in range(maxbit, -1, -1):
+            col = ptr_cols.get(b)
+            v = row[col].strip() if (col is not None and col < len(row)) else ""
+            if v not in ("0", "1"):
+                ok = False
+                break
+            bits += v
+        if not ok or not bits:
+            continue
+        addr = int(bits, 2)
+        raw_name = row[name_i].strip() if (name_i is not None and name_i < len(row)) else ""
+        name, acc = _split_name_access(raw_name)
+        if not name:
+            continue
+        if acc is None and access_i is not None and access_i < len(row):
+            acc = _norm_access(row[access_i]) or (
+                "RO" if "ronly" in row[access_i].lower() else None)
+        out.append(ExtractedRegister(
+            name=name, offset=f"0x{addr:02X}", access=acc,
+            confidence="high", source_pages=list(t.source_pages),
+        ))
+    return out
+
+
 def classify_table(t: LogicalTable) -> str:
+    # V1.9 item 1: a value->code lookup table must never be read as registers —
+    # a spurious register poisons the map the validator trusts as ground truth.
+    if _is_value_code_lookup(t):
+        return "other"
+    # V1.9 item 2: pointer-register table (binary pointer columns + register name)
+    t = _promote_subheader(t)
+    if len(_pointer_columns(t.header)) >= 2 and any(
+        re.search(r"regist|name", h or "", re.I) for h in t.header
+    ):
+        return "pointer_register"
     roles = table_roles(t)
     if _bit_column_map(t.header) and ("name" in roles or "address" in roles):
         return "bit_column_map"
@@ -280,6 +443,9 @@ def parse_register_index(t: LogicalTable) -> list[ExtractedRegister]:
       name only             -> section subheader ('Status registers') — skip;
                                forward-filling an address here fabricates registers
     """
+    if _is_value_code_lookup(t):
+        return []  # V1.9 item 1: defense-in-depth against lookup false positives
+    t = _promote_subheader(t)  # V1.9 item 2: two-row header (MCP9808)
     roles = table_roles(t)
     name_i = roles.get("name", roles.get("field"))
     out: list[ExtractedRegister] = []
@@ -374,6 +540,8 @@ def parse_headerless(t: LogicalTable) -> list[ExtractedRegister]:
     Two consistent hex columns are treated as an MSB/LSB address pair
     (common for calibration/multi-byte parameters) and emit two registers
     per row, suffixed from the column's own label row when present."""
+    if _is_value_code_lookup(t):
+        return []  # V1.9 item 1: defense-in-depth against lookup false positives
     candidates = []  # (row, name_col, name, {col: hex})
     for row in t.rows:
         hexes = {i: h for i, c in enumerate(row) if (h := _norm_hex(c))}

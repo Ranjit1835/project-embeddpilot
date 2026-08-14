@@ -18,6 +18,7 @@ from ingestion.registers import (
     parse_bit_column_map,
     parse_bit_fields,
     parse_headerless,
+    parse_pointer_register_table,
     parse_register_index,
 )
 from ingestion.sections import register_pages
@@ -68,6 +69,7 @@ def ingest_datasheet(
     registers: list[ExtractedRegister] = []
     commands: list[ExtractedCommand] = []
     orphan_fields = []  # bit-field tables seen before any register claimed them
+    pointer_seen = False  # V1.9 item 2: a pointer-register device was recognized
     for t in tables:
         # command tables first: opcode tables masquerade as register indexes
         # (WS1 finding 2 — W25Q64 opcodes were mislabeled as registers)
@@ -75,7 +77,14 @@ def ingest_datasheet(
             commands.extend(parse_command_table(t))
             continue
         kind = classify_table(t)
-        if kind == "register_index":
+        if kind == "pointer_register":
+            # V1.9 item 2: pointer register selects among data registers; the
+            # register offset IS the pointer value (TMP100/LM75B).
+            ptr = parse_pointer_register_table(t)
+            if ptr:
+                registers.extend(ptr)
+                pointer_seen = True
+        elif kind == "register_index":
             registers.extend(parse_register_index(t))
         elif kind == "register_index_headerless":
             registers.extend(parse_headerless(t))
@@ -104,6 +113,15 @@ def ingest_datasheet(
 
     commands = _dedupe_commands(commands)
 
+    # V1.9 item 3: a device with NO registers and NO commands may be a fixed-
+    # readout part (TMP125: a 16-bit SPI word sliced into a signed temperature).
+    # Extract the readout parameters; if none can be determined it stays
+    # register-less and is blocked at generation rather than generated ungrounded.
+    readout = None
+    if not registers and not commands:
+        from ingestion.readout import extract_readout
+        readout = extract_readout(doc)
+
     # V1.6 Priority 2: detect chip/vendor/interface from the front matter, and
     # V1.6 Priority 1: NEVER silently invent chip/interface. A value is either
     # user-supplied ("user"), pre-filled from a confident detection but pending
@@ -125,6 +143,11 @@ def ingest_datasheet(
         # inferred memory-mapped base; null = bus-attached device (I2C/SPI),
         # which switches the WS2 worker to the transfer-callback contract
         "base_address": base_address,
+        # V1.9 item 2: access pattern for the register set. "pointer" = a pointer
+        # register selects the data register (write pointer byte, then read/write
+        # N bytes) — TMP100/LM75B; "direct" = the register offset is written/used
+        # as-is. Recorded explicitly so the worker is told, not left to infer.
+        "access_pattern": "pointer" if pointer_seen else "direct",
         "registers": [_reg_to_json(r) for r in registers],
         "commands": [asdict(c) for c in commands],
         "extraction_confidence": _overall_confidence(registers, doc)
@@ -140,6 +163,8 @@ def ingest_datasheet(
             | {p for r in registers if r.confidence == "low" for p in r.source_pages}
         ),
     }
+    if readout:  # V1.9 item 3: fixed-readout device (no register map)
+        result["readout"] = readout
     _validate(result)
     return result
 

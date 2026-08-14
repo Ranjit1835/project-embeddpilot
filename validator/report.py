@@ -59,15 +59,18 @@ class ValidationReport:
         """Compute the three-state verdict. Compile and cross-check are the
         core guarantees: if either was skipped (toolchain missing), the result
         is NOT validated — a skipped judge never passes anyone."""
+        # the grounding check is the register cross-check, or — for a register-
+        # less fixed-readout device (V1.9 item 3) — the readout cross-check.
+        grounding = self.checks.get("register_crosscheck")
+        if grounding is None:
+            grounding = self.checks.get("readout_crosscheck")
         if self.failures:
             self.status = "failed"
-        elif (
-            self.checks.get("compile") == "skipped"
-            or self.checks.get("register_crosscheck") == "skipped"
-        ):
+        elif self.checks.get("compile") == "skipped" or grounding in (None, "skipped"):
             self.status = "failed"
             self.notes.append(
-                "required check could not run (missing toolchain) — result is unvalidated"
+                "required check could not run (missing toolchain or no grounding "
+                "check) — result is unvalidated"
             )
         elif self.unverified_fields or self.unverified_computations:
             # unverified bit fields AND/OR transcribed computation math: the code

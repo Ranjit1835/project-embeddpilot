@@ -11,6 +11,26 @@
       "type": ["string", "null"],
       "pattern": "^0x[0-9A-Fa-f]+$"
     },
+    "access_pattern": {
+      "description": "V1.9: how the register set is addressed. 'pointer' = a pointer register selects the data register (write the pointer byte, then read/write N bytes) — TMP100/LM75B-class parts. 'direct' = the offset is used as-is. Absent is treated as 'direct'.",
+      "type": "string",
+      "enum": ["direct", "pointer"]
+    },
+    "readout": {
+      "description": "V1.9 item 3: fixed-readout device with NO register map (TMP125). Clock out a bit_width-bit word; the value is bits [value_msb:value_lsb], optionally signed two's complement, scaled by lsb_weight. These are the ground truth the generated shift/mask/scale is cross-checked against.",
+      "type": "object",
+      "required": ["bit_width", "value_msb", "value_lsb", "signed", "lsb_weight"],
+      "properties": {
+        "bit_width": { "type": "integer", "minimum": 1 },
+        "value_msb": { "type": "integer", "minimum": 0 },
+        "value_lsb": { "type": "integer", "minimum": 0 },
+        "signed": { "type": "boolean" },
+        "lsb_weight": { "type": "number" },
+        "unit": { "type": "string" },
+        "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+        "source_pages": { "type": "array", "items": { "type": "integer", "minimum": 1 } }
+      }
+    },
     "registers": {
       "type": "array",
       "items": {
