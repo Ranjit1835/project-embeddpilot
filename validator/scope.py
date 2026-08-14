@@ -39,6 +39,8 @@ def build_scope(
     n_fields = len(report.unverified_fields)
     n_comp = len(report.unverified_computations)
     n_map = len(register_map.get("registers", [])) + len(register_map.get("commands", []))
+    readout = register_map.get("readout")
+    ro_ok = report.checks.get("readout_crosscheck") == "pass"
     prov = register_map.get("provenance") or {}
     peripheral = register_map.get("peripheral", "?")
 
@@ -55,11 +57,19 @@ def build_scope(
         items.append(_it(1, "Peripheral / interface identified", "not-covered",
                          "no confirmed interface"))
 
-    # 2 — register map. A cross-check over an EMPTY map verifies nothing, so an
-    # extraction that found no registers/commands must not read as "cross-checked"
-    # (the TMP100 datasheet extracted zero registers — the driver compiled but its
-    # register use could not be checked against anything).
-    if n_map == 0:
+    # 2 — register map (or, for a fixed-readout device, the readout parameters).
+    if readout:
+        # V1.9 item 3: a register-less part is not a degraded part — say so, and
+        # report the readout parameters as the (cross-checked) ground truth.
+        items.append(_it(
+            2, "Register map",
+            "cross-checked" if ro_ok else "not-covered",
+            "no register map — FIXED READOUT device; the value bit-slice "
+            f"[{readout['value_msb']}:{readout['value_lsb']}], sign and "
+            f"{readout['lsb_weight']}/LSB scale were "
+            + ("cross-checked against the datasheet" if ro_ok else "NOT verified")))
+    elif n_map == 0:
+        # A cross-check over an EMPTY map verifies nothing (TMP100 in V1.8).
         items.append(_it(2, "Register map", "not-covered",
                          "no registers or commands were extracted from this "
                          "datasheet — the driver's register use could NOT be "
@@ -72,8 +82,13 @@ def build_scope(
         items.append(_it(2, "Register map", "not-covered",
                          "the register cross-check did not pass"))
 
-    # 3 — bit fields
-    if n_fields:
+    # 3 — bit fields (for a readout device the value bit-slice IS the field)
+    if readout:
+        items.append(_it(3, "Bit fields",
+                         "cross-checked" if ro_ok else "not-covered",
+                         "the value bit-slice is a readout parameter, "
+                         + ("verified against the datasheet" if ro_ok else "unverified")))
+    elif n_fields:
         items.append(_it(3, "Bit fields", "marked-unverified",
                          f"{n_fields} bit-field define(s) the map could not confirm "
                          "are flagged UNVERIFIED in the source"))

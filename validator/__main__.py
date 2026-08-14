@@ -63,10 +63,17 @@ def main() -> int:
         report.checks["compile"] = "skipped"
         report.notes.append("no generated sources found")
     else:
-        crosscheck(files, register_map, report, mcu_map)
-        if mcu_map is not None:
-            from validator.mcu_crosscheck import mcu_crosscheck
-            mcu_crosscheck(files, mcu_map, report)
+        readout = register_map.get("readout")
+        if readout:
+            # V1.9 item 3: fixed-readout device — no register map to check; the
+            # readout parameters are the ground truth instead.
+            from validator.readout_crosscheck import readout_crosscheck
+            readout_crosscheck(files, readout, report)
+        else:
+            crosscheck(files, register_map, report, mcu_map)
+            if mcu_map is not None:
+                from validator.mcu_crosscheck import mcu_crosscheck
+                mcu_crosscheck(files, mcu_map, report)
         scan_unverified_computations(files, report)
         if args.target == "arduino":
             # items 4-6 (clock/GPIO/init) belong to the Arduino core, not us —

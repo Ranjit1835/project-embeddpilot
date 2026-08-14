@@ -113,6 +113,15 @@ def ingest_datasheet(
 
     commands = _dedupe_commands(commands)
 
+    # V1.9 item 3: a device with NO registers and NO commands may be a fixed-
+    # readout part (TMP125: a 16-bit SPI word sliced into a signed temperature).
+    # Extract the readout parameters; if none can be determined it stays
+    # register-less and is blocked at generation rather than generated ungrounded.
+    readout = None
+    if not registers and not commands:
+        from ingestion.readout import extract_readout
+        readout = extract_readout(doc)
+
     # V1.6 Priority 2: detect chip/vendor/interface from the front matter, and
     # V1.6 Priority 1: NEVER silently invent chip/interface. A value is either
     # user-supplied ("user"), pre-filled from a confident detection but pending
@@ -154,6 +163,8 @@ def ingest_datasheet(
             | {p for r in registers if r.confidence == "low" for p in r.source_pages}
         ),
     }
+    if readout:  # V1.9 item 3: fixed-readout device (no register map)
+        result["readout"] = readout
     _validate(result)
     return result
 

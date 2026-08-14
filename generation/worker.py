@@ -535,6 +535,42 @@ def _arduino_bus(register_map: dict) -> str:
     return "SPI" if register_map.get("commands") else "I2C"
 
 
+# V1.9 item 3: a fixed-readout device (TMP125) has no registers — the value is a
+# bit-slice of a clocked-out data word. The worker declares the readout params as
+# named #defines so the validator can cross-check the generated shift/mask/scale
+# against the extracted ground truth; a mismatch is a hard failure.
+ARDUINO_READOUT_SYSTEM_PROMPT = """You are an embedded systems driver generator. \
+You write a clean, importable Arduino library (C++) for a FIXED-READOUT sensor \
+that has NO register map: you clock out a fixed-width data word over the bus and \
+slice the measured value out of it.
+
+Hard rules:
+1. Use ONLY the readout parameters given in the task (word width, value bit \
+range, signedness, LSB weight). Never use values remembered from other \
+datasheets.
+2. Declare EVERY readout parameter as a #define named by convention, and USE \
+those names in the code (so they can be machine cross-checked against the \
+datasheet): <CHIP>_WORD_BITS, <CHIP>_VALUE_MSB, <CHIP>_VALUE_LSB, <CHIP>_SIGNED \
+(1 or 0), and <CHIP>_LSB_WEIGHT (a float). Do NOT bury these as raw literals.
+3. Provide a C++ class named exactly as given. The bus instance and pins are \
+supplied by the USER, never hard-coded (board-agnostic): SPI takes an \
+`SPIClass &bus = SPI` and a chip-select pin `uint8_t csPin`. Read \
+ceil(WORD_BITS/8) bytes, MSB first, into an unsigned integer; extract the value \
+as (word >> VALUE_LSB) masked to (VALUE_MSB - VALUE_LSB + 1) bits; if SIGNED, \
+sign-extend that field; multiply by LSB_WEIGHT to get the engineering value.
+4. #include ONLY <Arduino.h>, <SPI.h>, <stdint.h>. No vendor SDK/HAL headers, no \
+register access.
+5. Compile clean under the AVR, SAMD and ESP32 Arduino cores (-Wall): initialize \
+members, no unused variables/functions, deliberate integer types, no implicit \
+narrowing. The example .ino consumes every variable it declares.
+6. The class exposes a constructor, `bool begin()`, a read method returning the \
+engineering value (e.g. `bool readTemperature(float &out)`), and an error \
+accessor. Keep it small.
+7. Respond with a single JSON object, keys: "header_cpp", "source_cpp", \
+"example_ino", "readme_md", "notes". Values are complete file contents. The \
+example is a BasicRead sketch. No markdown outside the JSON."""
+
+
 def _generate_arduino_library(
     provider: LLMProvider,
     register_map: dict,
@@ -545,6 +581,11 @@ def _generate_arduino_library(
 ) -> WorkerResult:
     chip = register_map["chip"]
     cls = _class_name(chip)
+    readout = register_map.get("readout")
+    if readout and not register_map.get("registers") and not register_map.get("commands"):
+        return _generate_arduino_readout_library(
+            provider, register_map, readout, cls, conventions, feedback, prior_files
+        )
     bus = _arduino_bus(register_map)
     user_prompt = _build_arduino_prompt(
         register_map, conventions, feedback, prior_files, cls, bus
@@ -692,6 +733,111 @@ def _arduino_prior_code(prior_files: dict[str, str] | None) -> list[tuple[str, s
         elif path.endswith(".ino"):
             out.append((f"{path} (example)", content))
     return out
+
+
+def _generate_arduino_readout_library(
+    provider: LLMProvider,
+    register_map: dict,
+    readout: dict,
+    cls: str,
+    conventions: str,
+    feedback: str | None,
+    prior_files: dict[str, str] | None,
+) -> WorkerResult:
+    user_prompt = _build_arduino_readout_prompt(
+        register_map, readout, cls, conventions, feedback, prior_files
+    )
+    assert_prompt_fits(
+        provider.name, getattr(provider, "context_window", 1_000_000),
+        ARDUINO_READOUT_SYSTEM_PROMPT, user_prompt, 3500,
+    )
+    raw = provider.complete_json(ARDUINO_READOUT_SYSTEM_PROMPT, user_prompt)
+    missing = [k for k in ("header_cpp", "source_cpp", "example_ino") if not raw.get(k)]
+    if missing:
+        raise ProviderError(f"arduino readout worker output missing artifacts: {missing}")
+    header = str(raw["header_cpp"])
+    source = str(raw["source_cpp"])
+    example = str(raw["example_ino"])
+    readme = str(raw.get("readme_md") or _default_readme(cls, register_map["chip"], "SPI"))
+    files = {
+        f"{cls}/library.properties": _library_properties(cls, register_map["chip"], "SPI"),
+        f"{cls}/keywords.txt": _keywords_txt(cls, header),
+        f"{cls}/src/{cls}.h": header,
+        f"{cls}/src/{cls}.cpp": source,
+        f"{cls}/examples/BasicRead/BasicRead.ino": example,
+        f"{cls}/README.md": readme,
+    }
+    return WorkerResult(
+        files=files, notes=str(raw.get("notes", "")),
+        prompt_chars=len(user_prompt), provider=provider.name,
+    )
+
+
+def _build_arduino_readout_prompt(
+    register_map: dict,
+    readout: dict,
+    cls: str,
+    conventions: str,
+    feedback: str | None,
+    prior_files: dict[str, str] | None,
+) -> str:
+    chip = register_map["chip"]
+    n_bytes = (readout["bit_width"] + 7) // 8
+    width = readout["value_msb"] - readout["value_lsb"] + 1
+    p = cls.upper()
+    header_name = f"{cls}.h"
+    lines: list[str] = []
+    lines.append(f"Target device: {chip} (FIXED-READOUT sensor — NO register map)")
+    lines.append("Bus: SPI (via the Arduino SPI library)")
+    lines.append(f"C++ class name (use EXACTLY): {cls}")
+    lines.append(
+        f'FILE NAMES: header saved as "src/{header_name}"; source_cpp #include '
+        f'"{header_name}"; example_ino #include <{header_name}>.'
+    )
+    if conventions:
+        lines.append(f"Coding conventions: {conventions}")
+    lines.append("")
+    lines.append("READOUT PARAMETERS (the ONLY source of truth — declare each as "
+                 "a #define with the EXACT name below, and use those names):")
+    lines.append(f"- {p}_WORD_BITS = {readout['bit_width']}  → clock out {n_bytes} "
+                 "byte(s), MSB first, into an unsigned integer")
+    lines.append(f"- {p}_VALUE_MSB = {readout['value_msb']}")
+    lines.append(f"- {p}_VALUE_LSB = {readout['value_lsb']}  → value = "
+                 f"(word >> {p}_VALUE_LSB) masked to {width} bits")
+    lines.append(f"- {p}_SIGNED = {1 if readout['signed'] else 0}  → "
+                 + ("sign-extend the "
+                    f"{width}-bit field (two's complement)" if readout["signed"]
+                    else "unsigned"))
+    lines.append(f"- {p}_LSB_WEIGHT = {readout['lsb_weight']}f  → multiply the "
+                 f"sliced value by this for the result"
+                 + (f" in {readout['unit']}" if readout.get("unit") else ""))
+    lines.append("")
+    lines.append("The read method applies exactly: slice bits "
+                 f"[{readout['value_msb']}:{readout['value_lsb']}], "
+                 + ("sign-extend, " if readout["signed"] else "")
+                 + f"scale by {p}_LSB_WEIGHT. Do NOT hard-code these numbers "
+                 "anywhere except their #define.")
+
+    if feedback:
+        lines.append("")
+        code = _arduino_prior_code(prior_files)
+        if code:
+            lines.append("PREVIOUS ATTEMPT FAILED VALIDATION. Below is your prior "
+                         "code; return all files again, minimally editing only what "
+                         "the errors name:")
+            for label, content in code:
+                lines.append(f"\n--- PREVIOUS {label} ---\n{content.rstrip()}")
+            lines.append("\nERRORS TO FIX:")
+            lines.append(feedback)
+        else:
+            lines.append("PREVIOUS ATTEMPT PRODUCED NO USABLE OUTPUT. Regenerate, "
+                         "addressing:")
+            lines.append(feedback)
+
+    lines.append("")
+    lines.append('Respond with JSON: {"header_cpp": ..., "source_cpp": ..., '
+                 '"example_ino": ..., "readme_md": ..., "notes": ...}')
+    return "\n".join(lines)
 
 
 def _library_properties(cls: str, chip: str, bus: str) -> str:

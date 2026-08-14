@@ -83,6 +83,16 @@ def generate_validated_driver(
     # inputs. This runs before the router so a wrong interface never even frames
     # a route decision.
     assert_input_provenance(register_map, platform)
+    # V1.9 item 3 required condition: a register-less device with no extractable
+    # readout parameters must be BLOCKED, never generated ungrounded (which would
+    # leave the driver grounded only by the compiler).
+    if (not register_map.get("registers") and not register_map.get("commands")
+            and not register_map.get("readout")):
+        raise InputProvenanceError(
+            "no registers, commands, or fixed-readout parameters could be "
+            "extracted from this datasheet — refusing to generate an ungrounded "
+            "driver. The register map / readout structure could not be determined; "
+            "provide a datasheet with an extractable register or readout spec.")
     decision: RouteDecision = route(register_map, platform)
     emit({"type": "route", "decision": decision.to_json()})
     if decision.path == "template":
