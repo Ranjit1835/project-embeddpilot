@@ -83,6 +83,19 @@ def crosscheck(
     base_val = int(base, 16) if base else None
     mcu_names = _mcu_name_set(mcu_map) if mcu_map else set()
 
+    # An extraction that found NO registers and NO commands gives the cross-check
+    # nothing to verify against. Passing in that case would present an
+    # unverified driver as verified (the TMP100/TMP125 datasheets extract zero
+    # registers). Report 'skipped' so finalize() refuses to validate — a check
+    # with no ground truth passes no one.
+    if not regs and not opcodes:
+        report.checks["register_crosscheck"] = "skipped"
+        report.notes.append(
+            "register cross-check skipped: the extracted map has no registers or "
+            "commands, so the generated code's register use could not be verified"
+        )
+        return
+
     ran = False
     for fname, lines in files.items():
         for idx, line in enumerate(lines):

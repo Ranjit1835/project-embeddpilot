@@ -21,7 +21,11 @@ import json
 import re
 from dataclasses import dataclass, field
 
-from generation.inputs import assert_input_provenance, platform_profile
+from generation.inputs import (
+    assert_input_provenance,
+    canonical_bus,
+    platform_profile,
+)
 from generation.provider import LLMProvider, ProviderError, assert_prompt_fits
 from generation.router import RouteDecision
 
@@ -90,6 +94,62 @@ for notes). No markdown, no commentary outside the JSON.""".replace(
 )
 
 
+# V1.8 Part A: an Arduino library is a different output target. It is a C++
+# class routed through the Arduino bus abstractions (Wire/SPI) with a
+# user-supplied bus instance and pins — board-agnostic by construction. Items
+# 4-6 (clock/GPIO/init) belong to the Arduino core, NOT us, so the MCU map is
+# never used here. Items 1-3 (register map) and 7 (error handling) remain ours
+# and stay cross-checked; compensation math keeps its UNVERIFIED marking.
+ARDUINO_SYSTEM_PROMPT = """You are an embedded systems driver generator. You \
+write a clean, importable Arduino library (C++) for an external I2C or SPI \
+sensor.
+
+Hard rules:
+1. Use ONLY registers, offsets, bit fields, and command opcodes present in the \
+provided register map JSON. Never use values remembered from other datasheets.
+2. Declare EVERY register address, command opcode, and bit mask/position you use \
+as a #define named by convention so it can be machine cross-checked against the \
+map: register offsets as <CHIP>_REG_<NAME> or <CHIP>_<NAME>_ADDR, opcodes as \
+<CHIP>_CMD_<NAME>, bit masks as <CHIP>_<FIELD>_MASK, bit positions as \
+<CHIP>_<FIELD>_POS. Do NOT bury raw hex literals in the code. For any register \
+whose bit-field layout is UNKNOWN (called out in the task), every bit mask/pos \
+#define you add MUST be immediately preceded by the exact UNVERIFIED comment \
+given in the task.
+3. Provide a C++ class named exactly as given in the task. The bus instance and \
+pins are supplied by the USER — NEVER hard-coded — this is what makes the \
+library board-agnostic (ESP32-S3, AVR/Uno, SAMD, ...):
+   - I2C: the constructor (or begin) takes a `TwoWire &bus = Wire` and the \
+7-bit device address; use bus.beginTransmission/write/endTransmission/ \
+requestFrom. Call bus.begin() is the sketch's job — begin() may take it as a \
+reference only.
+   - SPI: the constructor (or begin) takes an `SPIClass &bus = SPI` and a \
+chip-select pin `uint8_t csPin`; use SPISettings + bus.beginTransaction/ \
+transfer/endTransaction and drive CS with digitalWrite(csPin, ...). The CS pin \
+is passed in, never a literal.
+4. Do NOT configure MCU peripheral clocks, GPIO alternate functions, or touch \
+any MCU register — the Arduino core owns those. #include ONLY <Arduino.h>, \
+<Wire.h> or <SPI.h> as needed, and <stdint.h>. NO vendor SDK / HAL / CMSIS / \
+ESP-IDF headers, and no direct register access.
+5. The library MUST compile clean under the AVR, SAMD and ESP32 Arduino cores \
+(the sketch is built with -Wall). Initialize every member in the constructor; \
+no unused variables or functions; match integer types (use uint8_t/int16_t/ \
+int32_t deliberately, no implicit narrowing); size buffers statically (no \
+malloc). The example .ino must consume every variable it declares.
+6. Any function whose body implements compensation, calibration, or unit- \
+conversion math transcribed from the datasheet's prose (a temperature/pressure \
+formula) is NOT verifiable from the register map. Immediately precede each such \
+function definition with exactly this comment: {computation_comment}
+7. The class exposes a constructor, `bool begin()`, sensor-specific read \
+method(s) that return engineering units (or fill an out-parameter and return a \
+status), and an error accessor (e.g. `bool ok()` or a last-error getter — item \
+7). Keep the API small and obvious.
+8. Respond with a single JSON object, keys: "header_cpp", "source_cpp", \
+"example_ino", "readme_md", "notes". Values are complete file contents. The \
+example_ino is a BasicRead sketch that constructs the class, calls begin() in \
+setup(), reads in loop(), and prints over Serial. No markdown, no commentary \
+outside the JSON.""".replace("{computation_comment}", COMPUTATION_UNVERIFIED_COMMENT)
+
+
 @dataclass
 class WorkerResult:
     files: dict[str, str]           # filename -> content
@@ -108,7 +168,15 @@ def generate_driver(
     feedback: str | None = None,
     mcu_map: dict | None = None,
     prior_files: dict[str, str] | None = None,
+    target: str = "bare-metal",
 ) -> WorkerResult:
+    if target == "arduino":
+        # The Arduino target ignores the MCU map by design (items 4-6 belong to
+        # the Arduino core). platform is irrelevant to the code — the library is
+        # board-agnostic; it only affects which cores the validator compiles for.
+        return _generate_arduino_library(
+            provider, register_map, decision, conventions, feedback, prior_files
+        )
     chip = _c_ident(register_map["chip"]).lower()
     # ONE retry strategy (V1.7.1): always echo the prior failing code so the
     # model makes a targeted edit instead of cold re-rolling. No provider gets a
@@ -443,3 +511,232 @@ def _c_ident(name: str) -> str:
 
     ident = re.sub(r"[^A-Za-z0-9_]", "_", name)
     return ident if ident and not ident[0].isdigit() else "_" + ident
+
+
+# --- V1.8 Part A: Arduino library target ------------------------------------
+
+def _class_name(chip: str) -> str:
+    """A C++/Arduino class name from the chip: BMP183, TMP100. Kept as printed
+    (uppercase part numbers read naturally as class names); sanitized to a valid
+    identifier."""
+    ident = re.sub(r"[^A-Za-z0-9]", "", chip or "")
+    if not ident:
+        ident = "Device"
+    return ident if not ident[0].isdigit() else "S" + ident
+
+
+def _arduino_bus(register_map: dict) -> str:
+    """I2C or SPI for the Arduino abstraction. The supported-interface gate has
+    already guaranteed the peripheral is one of these; fall back by shape only if
+    the map used a non-bus 'peripheral' label."""
+    bus = canonical_bus(register_map.get("peripheral", ""))
+    if bus in ("I2C", "SPI"):
+        return bus
+    return "SPI" if register_map.get("commands") else "I2C"
+
+
+def _generate_arduino_library(
+    provider: LLMProvider,
+    register_map: dict,
+    decision: RouteDecision,
+    conventions: str,
+    feedback: str | None,
+    prior_files: dict[str, str] | None,
+) -> WorkerResult:
+    chip = register_map["chip"]
+    cls = _class_name(chip)
+    bus = _arduino_bus(register_map)
+    user_prompt = _build_arduino_prompt(
+        register_map, conventions, feedback, prior_files, cls, bus
+    )
+    assert_prompt_fits(
+        provider.name, getattr(provider, "context_window", 1_000_000),
+        ARDUINO_SYSTEM_PROMPT, user_prompt, 4200,
+    )
+    raw = provider.complete_json(ARDUINO_SYSTEM_PROMPT, user_prompt)
+    missing = [k for k in ("header_cpp", "source_cpp", "example_ino") if not raw.get(k)]
+    if missing:
+        raise ProviderError(f"arduino worker output missing artifacts: {missing}")
+
+    header = str(raw["header_cpp"])
+    source = str(raw["source_cpp"])
+    example = str(raw["example_ino"])
+    readme = str(raw.get("readme_md") or _default_readme(cls, chip, bus))
+
+    # Standard importable Arduino library layout. The header/class carry the chip
+    # identity; library.properties + keywords.txt are generated deterministically.
+    files = {
+        f"{cls}/library.properties": _library_properties(cls, chip, bus),
+        f"{cls}/keywords.txt": _keywords_txt(cls, header),
+        f"{cls}/src/{cls}.h": header,
+        f"{cls}/src/{cls}.cpp": source,
+        f"{cls}/examples/BasicRead/BasicRead.ino": example,
+        f"{cls}/README.md": readme,
+    }
+    return WorkerResult(
+        files=files, notes=str(raw.get("notes", "")),
+        prompt_chars=len(user_prompt), provider=provider.name,
+    )
+
+
+def _build_arduino_prompt(
+    register_map: dict,
+    conventions: str,
+    feedback: str | None,
+    prior_files: dict[str, str] | None,
+    cls: str,
+    bus: str,
+) -> str:
+    assert_input_provenance(register_map, "arduino")
+    chip = register_map["chip"]
+    registers = register_map.get("registers", [])
+    commands = register_map.get("commands", [])
+    header_name = f"{cls}.h"
+    lib = "Wire" if bus == "I2C" else "SPI"
+
+    lines: list[str] = []
+    lines.append(f"Target device: {chip}")
+    lines.append(f"Bus: {bus} (via the Arduino {lib} library)")
+    lines.append(f"C++ class name (use EXACTLY): {cls}")
+    lines.append(
+        f'FILE NAMES: the header is saved as "src/{header_name}". source_cpp MUST '
+        f'#include "{header_name}"; example_ino MUST #include <{header_name}>. No '
+        "other local includes."
+    )
+    if conventions:
+        lines.append(f"Coding conventions: {conventions}")
+
+    unknown = [r for r in registers if not r.get("fields")]
+    if unknown:
+        lines.append("")
+        lines.append("REGISTERS WITH UNKNOWN FIELD LAYOUT:")
+        for r in unknown:
+            pages = ",".join(str(p) for p in r.get("source_pages", [])) or "?"
+            lines.append(
+                f"- {r['name']} (offset {r['offset']}): fields are UNKNOWN. Any bit "
+                "mask/position you #define for it MUST be preceded by exactly: "
+                + UNVERIFIED_COMMENT.format(pages=pages)
+            )
+
+    lines.append("")
+    lines.append("REGISTER MAP (the only source of truth):")
+    lines.append(json.dumps(
+        {"registers": [_slim(r) for r in registers],
+         "commands": [_slim(c) for c in commands]},
+        separators=(",", ":"),
+    ))
+
+    if bus == "SPI" and commands:
+        lines.append("")
+        lines.append(
+            "This device is command/opcode based: build each transaction from the "
+            "commands array (opcode byte + address/dummy/data phases per the "
+            "descriptors) using SPI transfers."
+        )
+
+    if feedback:
+        lines.append("")
+        code = _arduino_prior_code(prior_files)
+        if code:
+            lines.append(
+                "PREVIOUS ATTEMPT FAILED VALIDATION. Below is the EXACT code you "
+                "produced last time. Return all files again; keep every line "
+                "byte-for-byte identical EXCEPT the minimal edits that fix the "
+                "errors listed after the code. Do NOT rewrite parts the errors do "
+                "not name."
+            )
+            for label, content in code:
+                lines.append("")
+                lines.append(f"--- PREVIOUS {label} ---")
+                lines.append(content.rstrip("\n"))
+            lines.append("")
+            lines.append("ERRORS TO FIX (change only what these name):")
+            lines.append(feedback)
+        else:
+            lines.append(
+                "PREVIOUS ATTEMPT PRODUCED NO USABLE OUTPUT. Regenerate all files, "
+                "addressing this problem:"
+            )
+            lines.append(feedback)
+
+    lines.append("")
+    lines.append(
+        'Respond with JSON: {"header_cpp": ..., "source_cpp": ..., '
+        '"example_ino": ..., "readme_md": ..., "notes": ...}'
+    )
+    return "\n".join(lines)
+
+
+def _arduino_prior_code(prior_files: dict[str, str] | None) -> list[tuple[str, str]]:
+    """The header/source/example from a prior attempt, for the targeted-edit
+    retry. Keyed off the file suffix so the nested library paths still resolve."""
+    if not prior_files:
+        return []
+    out: list[tuple[str, str]] = []
+    for path, content in prior_files.items():
+        if path.endswith(".h"):
+            out.append((f"{path} (header)", content))
+        elif path.endswith(".cpp"):
+            out.append((f"{path} (source)", content))
+        elif path.endswith(".ino"):
+            out.append((f"{path} (example)", content))
+    return out
+
+
+def _library_properties(cls: str, chip: str, bus: str) -> str:
+    return "\n".join([
+        f"name={cls}",
+        "version=1.0.0",
+        "author=EmbeddPilot",
+        "maintainer=EmbeddPilot",
+        f"sentence=Register-cross-checked {bus} driver for the {chip} sensor.",
+        f"paragraph=Board-agnostic Arduino library generated by EmbeddPilot. The "
+        f"{bus} bus instance and pins are user-supplied, so the same library runs "
+        "on any Arduino core (ESP32-S3, AVR/Uno, SAMD, ...).",
+        "category=Sensors",
+        "url=",
+        "architectures=*",
+        f"includes={cls}.h",
+        "",
+    ])
+
+
+_KW_SKIP = {"if", "for", "while", "switch", "return", "sizeof", "delay",
+            "public", "private", "protected", "class", "struct", "void",
+            "const", "static", "inline", "uint8_t", "uint16_t", "uint32_t",
+            "int8_t", "int16_t", "int32_t", "bool", "float", "double"}
+
+
+def _keywords_txt(cls: str, header: str) -> str:
+    """Arduino keywords.txt: class as KEYWORD1, public method names as KEYWORD2.
+    Method names are lifted from the header (identifier immediately before '(')."""
+    methods: list[str] = []
+    seen: set[str] = set()
+    for m in re.finditer(r"\b([A-Za-z_]\w*)\s*\(", header):
+        name = m.group(1)
+        if name == cls or name in _KW_SKIP or name in seen:
+            continue
+        seen.add(name)
+        methods.append(name)
+    rows = [f"{cls}\tKEYWORD1"]
+    rows += [f"{m}\tKEYWORD2" for m in methods[:40]]
+    return "\n".join(rows) + "\n"
+
+
+def _default_readme(cls: str, chip: str, bus: str) -> str:
+    inc = "Wire" if bus == "I2C" else "SPI"
+    return (
+        f"# {cls}\n\n"
+        f"Arduino library for the **{chip}** sensor ({bus}), generated by "
+        "EmbeddPilot. Register offsets and bit fields are cross-checked against "
+        "the extracted datasheet register map; any compensation math transcribed "
+        "from datasheet prose is marked `UNVERIFIED` in the source.\n\n"
+        "## Install\n\n"
+        f"Copy the `{cls}/` folder into your Arduino `libraries/` directory, or "
+        "add it as a `.zip` library.\n\n"
+        "## Usage\n\n"
+        "The bus instance and pins are **yours** — the library is board-agnostic. "
+        f"Include `<{cls}.h>`, construct the class with your `{inc}` instance "
+        f"(and {'the 7-bit address' if bus == 'I2C' else 'a chip-select pin'}), "
+        "call `begin()`, then read. See `examples/BasicRead`.\n"
+    )

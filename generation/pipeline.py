@@ -15,7 +15,11 @@ import subprocess
 import sys
 from typing import Callable
 
-from generation.inputs import InputProvenanceError, assert_input_provenance
+from generation.inputs import (
+    InputProvenanceError,
+    assert_chip_consistency,
+    assert_input_provenance,
+)
 from generation.provider import ContextWindowError, LLMProvider, ProviderError
 from generation.router import RouteDecision, route
 from generation.worker import generate_driver
@@ -24,14 +28,21 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MAX_RETRIES = 3  # retries after the first attempt
 
 
-def run_validator_subprocess(workdir: str, map_path: str, platform: str) -> dict:
+def run_validator_subprocess(
+    workdir: str, map_path: str, platform: str, target: str = "bare-metal"
+) -> dict:
     cmd = [sys.executable, "-m", "validator", workdir, "--map", map_path,
            "--platform", platform]
-    # V1.7: if an MCU map was written alongside the sources, cross-check the
-    # generated RCC/GPIO/peripheral bring-up against it too.
-    mcu_map_path = os.path.join(workdir, "mcu-map.json")
-    if os.path.exists(mcu_map_path):
-        cmd += ["--mcu-map", mcu_map_path]
+    if target == "arduino":
+        # V1.8: the Arduino target is compiled with arduino-cli against multiple
+        # cores; the MCU map is never used on this target.
+        cmd += ["--target", "arduino"]
+    else:
+        # V1.7: if an MCU map was written alongside the sources, cross-check the
+        # generated RCC/GPIO/peripheral bring-up against it too.
+        mcu_map_path = os.path.join(workdir, "mcu-map.json")
+        if os.path.exists(mcu_map_path):
+            cmd += ["--mcu-map", mcu_map_path]
     proc = subprocess.run(
         cmd, capture_output=True, text=True, cwd=PROJECT_ROOT, timeout=600,
     )
@@ -57,6 +68,7 @@ def generate_validated_driver(
     validate_fn: Callable[[str, str, str], dict] | None = None,
     on_event: Callable[[dict], None] | None = None,
     mcu_map: dict | None = None,
+    target: str = "bare-metal",
 ) -> dict:
     """Full LLM-path pipeline. Returns a result payload with provenance:
     decision, per-attempt validation reports, and a status that is one of
@@ -80,7 +92,11 @@ def generate_validated_driver(
             "message": "covered by the V1 deterministic template engine — run embeddpilot.py",
         }
 
-    validate = validate_fn or run_validator_subprocess
+    # Default validator threads the output target through; a custom validate_fn
+    # (tests) keeps the simple (workdir, map, platform) signature.
+    validate = validate_fn or (
+        lambda wd, mp, pl: run_validator_subprocess(wd, mp, pl, target)
+    )
     workdir_root = workdir_root or os.path.join(PROJECT_ROOT, "build", "llm_gen")
     chip = register_map.get("chip", "device").lower().replace(" ", "_")
 
@@ -93,7 +109,7 @@ def generate_validated_driver(
         try:
             result = generate_driver(
                 provider, register_map, decision, platform, conventions, feedback,
-                mcu_map, prior_files,
+                mcu_map, prior_files, target,
             )
         except ContextWindowError as e:
             # The job does not fit this provider's window. Retrying cannot help
@@ -121,15 +137,28 @@ def generate_validated_driver(
 
         files = result.files
         prior_files = files  # feed this attempt's code into the next retry
+        # V1.8 B1: the shipped artifact identity must agree with the map. Compare
+        # against detection only when the chip was NOT user-confirmed (a user
+        # override legitimately supersedes stale detection).
+        _chip_prov = (register_map.get("provenance") or {}).get("chip")
+        _detected_chip = None if _chip_prov == "user" else (
+            (register_map.get("detected") or {}).get("chip") or {}
+        ).get("value")
+        assert_chip_consistency(
+            register_map.get("chip", ""), _detected_chip, list(files.keys())
+        )
         workdir = os.path.join(workdir_root, chip, f"attempt_{attempt}")
         os.makedirs(workdir, exist_ok=True)
         for fname, content in files.items():
-            with open(os.path.join(workdir, fname), "w", encoding="utf-8") as f:
+            fpath = os.path.join(workdir, fname)
+            # the Arduino target writes a nested library folder (src/, examples/)
+            os.makedirs(os.path.dirname(fpath), exist_ok=True)
+            with open(fpath, "w", encoding="utf-8") as f:
                 f.write(content if content.endswith("\n") else content + "\n")
         map_path = os.path.join(workdir, "register-map.json")
         with open(map_path, "w", encoding="utf-8") as f:
             json.dump(register_map, f, indent=1)
-        if mcu_map:  # V1.7: hand the MCU map to the validator for cross-check
+        if mcu_map and target != "arduino":  # V1.7 MCU cross-check (bare-metal only)
             with open(os.path.join(workdir, "mcu-map.json"), "w", encoding="utf-8") as f:
                 json.dump(mcu_map, f, indent=1)
 

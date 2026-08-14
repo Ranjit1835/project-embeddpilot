@@ -54,6 +54,7 @@ export async function startGenerate(payload: {
   max_retries?: number;
   edits?: string[];
   mcu_map?: unknown;
+  target?: string;
 }): Promise<string> {
   if (!isDemoActive()) {
     try {

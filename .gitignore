@@ -21,3 +21,4 @@ sdkconfig.old
 extraction/input/*.pdf
 extraction/input/fake_regmap.docx
 artifacts/router_log.jsonl
+.arduino-tools/

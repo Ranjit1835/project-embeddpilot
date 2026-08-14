@@ -87,32 +87,67 @@ def _front_matter(doc: Document) -> list[tuple[int, str]]:
     return [(p.number, p.text or "") for p in pages]
 
 
-def _detect_chip(front: list[tuple[int, str]]) -> Detected | None:
-    # 1) known families anywhere in the front matter -> high confidence
+def _family_match(front: list[tuple[int, str]]) -> tuple[str, int, int] | None:
+    """First known-family hit in the front matter, as (part, page, offset). For
+    exact-keeping families (canonical None) the printed token is returned. The
+    offset lets the caller rank it by title prominence against generic tokens."""
     for pattern, canonical in CHIP_FAMILIES:
-        pages = [n for n, text in front if re.search(pattern, text, re.IGNORECASE)]
-        if pages:
-            if canonical is None:  # keep the exact token as printed
-                for n, text in front:
-                    m = re.search(pattern, text, re.IGNORECASE)
-                    if m:
-                        return Detected(m.group(0).upper().replace(" ", ""),
-                                        "high", [n])
-            return Detected(canonical, "high", pages)
+        for n, text in front:
+            m = re.search(pattern, text, re.IGNORECASE)
+            if m:
+                part = canonical if canonical is not None else \
+                    m.group(0).upper().replace(" ", "")
+                return part, n, m.start()
+    return None
 
-    # 2) generic part number: the most frequent candidate on the first pages.
-    # A part repeated across the title block is a stronger signal than a stray
-    # token in a footer, so frequency drives confidence (medium/low, never high).
-    counts: dict[str, list[int]] = {}
+
+def _detect_chip(front: list[tuple[int, str]]) -> Detected | None:
+    """Identify the chip the document is ABOUT.
+
+    B1 (V1.8): the exact printed part number the document is titled/subject on
+    WINS over any known-family pattern. A family pattern that matches a DIFFERENT
+    sibling part mentioned in the body (BMP180/BMP085 inside a BMP183 datasheet)
+    must never override the title part. The subject part is the one printed
+    FIRST in the front matter (the title block on page 1) — earliest
+    first-occurrence, not raw frequency, is the reliable discriminator (a package
+    code like WLCSP12 or a sibling mention repeats, but the title comes first).
+    """
+    first: dict[str, tuple[int, int]] = {}   # token -> earliest (page, offset)
+    pages_of: dict[str, set[int]] = {}
     for n, text in front:
-        for tok in GENERIC_PART.findall(text):
-            if _looks_like_part(tok):
-                counts.setdefault(tok, []).append(n)
-    if not counts:
+        for m in GENERIC_PART.finditer(text):
+            tok = m.group(0).upper()
+            if not _looks_like_part(tok):
+                continue
+            key = (n, m.start())
+            if tok not in first or key < first[tok]:
+                first[tok] = key
+            pages_of.setdefault(tok, set()).add(n)
+
+    # A curated family match is a candidate too — crucially it may name a part
+    # the generic tokenizer cannot split (e.g. W25Q64JV starts with one letter).
+    family = _family_match(front)
+    if family:
+        part, fn, foff = family
+        key = (fn, foff)
+        if part not in first or key < first[part]:
+            first[part] = key
+        pages_of.setdefault(part, set()).add(fn)
+
+    if not first:
         return None
-    tok, pages = max(counts.items(), key=lambda kv: (len(kv[1]), -min(kv[1])))
-    confidence = "medium" if len(pages) >= 2 else "low"
-    return Detected(tok, confidence, pages)
+
+    # subject = the part printed earliest (title block). Family membership does
+    # not boost a body sibling above the title part; position decides.
+    tok = min(first, key=lambda t: first[t])
+    page0 = first[tok][0]
+    first_page = front[0][0] if front else None
+    pages = sorted(pages_of.get(tok, {page0}))
+    if page0 == first_page:
+        conf = "high"
+    else:
+        conf = "medium" if len(pages) >= 2 else "low"
+    return Detected(tok, conf, pages)
 
 
 def _looks_like_part(tok: str) -> bool:

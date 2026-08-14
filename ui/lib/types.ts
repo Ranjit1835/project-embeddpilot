@@ -100,11 +100,51 @@ export interface UnverifiedField {
 
 export type CheckState = "pass" | "fail" | "skipped";
 
+/** V1.8 output target. Bare-metal = register-level C driver (default).
+    Arduino = importable C++ library, board-agnostic via Wire/SPI. */
+export type Target = "bare-metal" | "arduino";
+
+export const OUTPUT_TARGETS: { value: Target; label: string; hint: string }[] = [
+  {
+    value: "bare-metal",
+    label: "Bare-metal C driver",
+    hint: "Register-level C. Best for STM32 / register-level users; add an MCU reference manual to cross-check clock, GPIO and init.",
+  },
+  {
+    value: "arduino",
+    label: "Arduino library",
+    hint: "Importable C++ class over Wire/SPI — board-agnostic (you pass the bus instance and pins). Compiled live against ESP32-S3, AVR and SAMD.",
+  },
+];
+
+/** One core the Arduino library was compiled against (V1.8 Part A). */
+export interface CoreResult {
+  name: string;
+  fqbn?: string;
+  result: "pass" | "fail" | "skipped";
+  detail?: string;
+}
+
+/** One of the seven roadmap items and how it was established (V1.8 Part D). */
+export interface ScopeItem {
+  item: number;
+  title: string;
+  status:
+    | "cross-checked"
+    | "marked-unverified"
+    | "platform-owned"
+    | "your-input"
+    | "not-covered";
+  detail: string;
+}
+
 export interface ValidationReport {
   status: "validated" | "validated-with-unverified-fields" | "failed";
   checks: Record<string, CheckState>;
   failures: Failure[];
   unverified_fields: UnverifiedField[];
+  cores?: CoreResult[];
+  scope?: ScopeItem[];
   notes: string[];
 }
 
@@ -124,6 +164,7 @@ export interface GenerationResult {
   provider?: string;
   message?: string;
   user_edits?: string[];
+  target?: Target;
 }
 
 export type JobEvent =

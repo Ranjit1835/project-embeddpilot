@@ -13,6 +13,7 @@ import json
 import os
 import sys
 
+from validator.arduino_check import arduino_compile_check
 from validator.compile_check import compile_check
 from validator.crosscheck import crosscheck, scan_unverified_computations
 from validator.report import ValidationReport
@@ -27,23 +28,34 @@ def main() -> int:
     ap.add_argument("--map", required=True, help="register map JSON path")
     ap.add_argument("--mcu-map", help="MCU map JSON path (V1.7 clock/GPIO cross-check)")
     ap.add_argument("--platform", default="portable")
+    ap.add_argument("--target", default="bare-metal",
+                    choices=["bare-metal", "arduino"],
+                    help="output target: bare-metal C driver or Arduino library")
     ap.add_argument("--out")
     args = ap.parse_args()
 
     with open(args.map, encoding="utf-8") as f:
         register_map = json.load(f)
     mcu_map = None
-    if args.mcu_map:
+    if args.mcu_map and args.target != "arduino":
         with open(args.mcu_map, encoding="utf-8") as f:
             mcu_map = json.load(f)
 
+    # The Arduino library is a nested folder of .cpp/.h/.ino; the bare-metal
+    # driver is flat .c/.h. Both are loaded for the register/bit cross-check,
+    # which is source-extension-agnostic (it scans #define lines).
+    if args.target == "arduino":
+        patterns = ("**/*.cpp", "**/*.h", "**/*.ino")
+    else:
+        patterns = ("*.c", "*.h")
+    paths: list[str] = []
+    for pat in patterns:
+        paths += glob.glob(os.path.join(args.workdir, pat), recursive=True)
+
     files: dict[str, list[str]] = {}
-    for path in sorted(
-        glob.glob(os.path.join(args.workdir, "*.c"))
-        + glob.glob(os.path.join(args.workdir, "*.h"))
-    ):
+    for path in sorted(set(paths)):
         with open(path, encoding="utf-8", errors="replace") as f:
-            files[os.path.basename(path)] = f.read().splitlines()
+            files[os.path.relpath(path, args.workdir)] = f.read().splitlines()
 
     report = ValidationReport()
     if not files:
@@ -56,9 +68,18 @@ def main() -> int:
             from validator.mcu_crosscheck import mcu_crosscheck
             mcu_crosscheck(files, mcu_map, report)
         scan_unverified_computations(files, report)
-        compile_check(args.workdir, args.platform, report)
-        static_check(args.workdir, report)
+        if args.target == "arduino":
+            # items 4-6 (clock/GPIO/init) belong to the Arduino core, not us —
+            # no MCU compile; instead prove board-agnosticism across real cores.
+            arduino_compile_check(args.workdir, report)
+        else:
+            compile_check(args.workdir, args.platform, report)
+            static_check(args.workdir, report)
     report.finalize()
+
+    # V1.8 Part D: attach the 7-item scope-honesty panel (reads report + target).
+    from validator.scope import build_scope
+    report.scope = build_scope(args.target, register_map, report, mcu_map is not None)
 
     text = json.dumps(report.to_json(), indent=2)
     if args.out:

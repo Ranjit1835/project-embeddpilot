@@ -170,17 +170,25 @@ def _run_ingest(job: Job, path: str, url: str, chip: str, peripheral: str, page_
 
 @app.post("/api/generate")
 async def start_generate(payload: dict):
-    from generation.inputs import InputProvenanceError, assert_input_provenance
+    from generation.inputs import (
+        InputProvenanceError,
+        InterfaceMismatchError,
+        UnsupportedInterfaceError,
+        assert_input_provenance,
+    )
 
     register_map = payload.get("register_map")
     platform = payload.get("platform", "")
     if not register_map:
         raise HTTPException(422, "register_map is required")
-    # Priority 1: block missing/unconfirmed/invented inputs with a specific,
-    # field-naming error — never let a silent default reach generation.
+    # Priority 1 + V1.8 B1/B2: block missing/unconfirmed/invented inputs, an
+    # unsupported bus (TMP107 UART/SMAART Wire), or an interface that contradicts
+    # the document — each with a specific, field-naming error. Never let a silent
+    # default or a wrong-interface driver reach generation.
     try:
         assert_input_provenance(register_map, platform)
-    except InputProvenanceError as e:
+    except (InputProvenanceError, UnsupportedInterfaceError,
+            InterfaceMismatchError) as e:
         raise HTTPException(422, str(e))
 
     job = STORE.create("generate")
@@ -190,11 +198,16 @@ async def start_generate(payload: dict):
     # V1.7 two-document flow: an optional MCU map turns this into a complete
     # driver (clock/GPIO/init/error) cross-checked against the MCU.
     mcu_map = payload.get("mcu_map")
+    # V1.8 Part A: output target — "bare-metal" (register-level C driver, the
+    # default) or "arduino" (importable C++ library compiled across cores).
+    target = payload.get("target", "bare-metal")
+    if target not in ("bare-metal", "arduino"):
+        raise HTTPException(422, f"unknown target '{target}'")
     threading.Thread(
         target=_run_generate,
         args=(job, register_map, platform,
               conventions, int(payload.get("max_retries", 3)),
-              payload.get("edits", []), mcu_map),
+              payload.get("edits", []), mcu_map, target),
         daemon=True,
     ).start()
     return {"job_id": job.id}
@@ -202,7 +215,7 @@ async def start_generate(payload: dict):
 
 def _run_generate(job: Job, register_map: dict, platform: str,
                   conventions: str, max_retries: int, edits: list,
-                  mcu_map: dict | None = None):
+                  mcu_map: dict | None = None, target: str = "bare-metal"):
     from generation.pipeline import generate_validated_driver
     from generation.provider import ProviderError, make_provider
 
@@ -215,8 +228,10 @@ def _run_generate(job: Job, register_map: dict, platform: str,
         result = generate_validated_driver(
             register_map, platform, provider, conventions=conventions,
             max_retries=max_retries, on_event=job.emit, mcu_map=mcu_map,
+            target=target,
         )
         result["user_edits"] = edits  # provenance: review-screen corrections
+        result["target"] = target
         job.finish(result=result)
     except Exception as e:
         job.finish(error=f"generation crashed: {e}")
