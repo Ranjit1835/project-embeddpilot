@@ -11,6 +11,11 @@
       "type": ["string", "null"],
       "pattern": "^0x[0-9A-Fa-f]+$"
     },
+    "access_pattern": {
+      "description": "V1.9: how the register set is addressed. 'pointer' = a pointer register selects the data register (write the pointer byte, then read/write N bytes) — TMP100/LM75B-class parts. 'direct' = the offset is used as-is. Absent is treated as 'direct'.",
+      "type": "string",
+      "enum": ["direct", "pointer"]
+    },
     "registers": {
       "type": "array",
       "items": {

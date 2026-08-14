@@ -598,6 +598,17 @@ def _build_arduino_prompt(
     lines.append(f"Target device: {chip}")
     lines.append(f"Bus: {bus} (via the Arduino {lib} library)")
     lines.append(f"C++ class name (use EXACTLY): {cls}")
+    if register_map.get("access_pattern") == "pointer":
+        # V1.9 item 2: pointer-register device — the offset is the pointer value.
+        lines.append(
+            "ACCESS PATTERN: this is a POINTER-REGISTER device. To read a "
+            "register, write its address (the offset below) as the pointer byte "
+            "with beginTransmission/write/endTransmission, then requestFrom the "
+            "device for the register's byte(s) — multi-byte registers (e.g. a "
+            "16-bit temperature register) are returned MSB first. To write a "
+            "register, send the pointer byte followed by the data byte(s). Do NOT "
+            "invent a register the map does not list."
+        )
     lines.append(
         f'FILE NAMES: the header is saved as "src/{header_name}". source_cpp MUST '
         f'#include "{header_name}"; example_ino MUST #include <{header_name}>. No '
