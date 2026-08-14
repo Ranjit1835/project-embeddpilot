@@ -109,6 +109,17 @@ def test_scope_bare_metal_with_mcu_map_cross_checks_clock():
     assert scope[6]["status"] == "marked-unverified"  # init sequence
 
 
+def test_scope_empty_map_is_not_reported_as_cross_checked():
+    """A driver from a datasheet that extracted zero registers (TMP100) must not
+    claim the register map was cross-checked — there was nothing to check."""
+    empty = {"chip": "TMP100", "peripheral": "I2C",
+             "provenance": {"chip": "user", "peripheral": "user"},
+             "registers": [], "commands": []}
+    scope = {s["item"]: s for s in build_scope("arduino", empty, _passing_report(), False)}
+    assert scope[2]["status"] == "not-covered"
+    assert "no registers" in scope[2]["detail"].lower()
+
+
 # --- three-state verdict with Arduino cores ---------------------------------
 
 def test_finalize_all_cores_pass_is_validated():

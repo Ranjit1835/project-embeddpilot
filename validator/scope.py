@@ -38,6 +38,7 @@ def build_scope(
     reg_ok = report.checks.get("register_crosscheck") == "pass"
     n_fields = len(report.unverified_fields)
     n_comp = len(report.unverified_computations)
+    n_map = len(register_map.get("registers", [])) + len(register_map.get("commands", []))
     prov = register_map.get("provenance") or {}
     peripheral = register_map.get("peripheral", "?")
 
@@ -54,12 +55,22 @@ def build_scope(
         items.append(_it(1, "Peripheral / interface identified", "not-covered",
                          "no confirmed interface"))
 
-    # 2 — register map
-    items.append(_it(2, "Register map",
-                     "cross-checked" if reg_ok else "not-covered",
-                     "every register offset/opcode used in the code exists in the "
-                     "extracted map" if reg_ok
-                     else "the register cross-check did not pass"))
+    # 2 — register map. A cross-check over an EMPTY map verifies nothing, so an
+    # extraction that found no registers/commands must not read as "cross-checked"
+    # (the TMP100 datasheet extracted zero registers — the driver compiled but its
+    # register use could not be checked against anything).
+    if n_map == 0:
+        items.append(_it(2, "Register map", "not-covered",
+                         "no registers or commands were extracted from this "
+                         "datasheet — the driver's register use could NOT be "
+                         "cross-checked against a map"))
+    elif reg_ok:
+        items.append(_it(2, "Register map", "cross-checked",
+                         f"every register offset/opcode used in the code exists in "
+                         f"the extracted map ({n_map} entries)"))
+    else:
+        items.append(_it(2, "Register map", "not-covered",
+                         "the register cross-check did not pass"))
 
     # 3 — bit fields
     if n_fields:
