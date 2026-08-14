@@ -38,6 +38,8 @@ export function ResultsScreen({
   const [copied, setCopied] = useState(false);
   const lastReport = result.reports?.[result.reports.length - 1];
   const unverified = (result.unverified_fields ?? []).filter(Boolean);
+  const cores = lastReport?.cores ?? [];
+  const scope = lastReport?.scope ?? [];
   const isFallback = result.status === "unvalidated";
   // which compiler actually ran (Priority 3): the validator records it in notes
   const compiler = lastReport?.notes
@@ -171,6 +173,14 @@ export function ResultsScreen({
             <dl className="p-3 grid gap-1.5 text-[12.5px]">
               <Row k="Route" v={result.decision?.user_label ?? "—"} />
               <Row k="Reason" v={result.decision?.reason ?? "—"} dim />
+              {result.target && (
+                <Row
+                  k="Output"
+                  v={result.target === "arduino" ? "Arduino library" : "Bare-metal C driver"}
+                  mono
+                  tone="accent"
+                />
+              )}
               <Row k="Provider" v={providerName ?? "—"} mono tone="accent" />
               <Row k="Model" v={modelName ?? "—"} mono />
               {compiler && <Row k="Compiler" v={compiler} mono tone="accent" />}
@@ -197,6 +207,58 @@ export function ResultsScreen({
               )}
             </dl>
           </Panel>
+
+          {cores.length > 0 && (
+            <Panel title="Compiled cores">
+              <ul className="p-3 grid gap-1.5 text-[12.5px]">
+                {cores.map((c, i) => {
+                  const tone =
+                    c.result === "pass"
+                      ? "text-accent"
+                      : c.result === "fail"
+                        ? "text-red"
+                        : "text-ink-faint";
+                  const mark = c.result === "pass" ? "✓" : c.result === "fail" ? "✕" : "–";
+                  return (
+                    <li key={i} className="grid gap-0.5">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="text-ink">{c.name}</span>
+                        <span className={`font-mono ${tone}`}>
+                          {mark} {c.result}
+                        </span>
+                      </div>
+                      {c.fqbn && (
+                        <span className="font-mono text-[10.5px] text-ink-faint">{c.fqbn}</span>
+                      )}
+                      {c.detail && c.result !== "pass" && (
+                        <pre className="overflow-x-auto bg-bg border border-line rounded-sm p-2 font-mono text-[11px] text-red/90 leading-relaxed whitespace-pre-wrap">
+                          {c.detail}
+                        </pre>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </Panel>
+          )}
+
+          {scope.length > 0 && (
+            <Panel title="What was verified — 7 items">
+              <ul className="p-3 grid gap-2 text-[12px]">
+                {scope.map((s) => (
+                  <li key={s.item} className="grid gap-0.5">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-ink">
+                        <span className="text-ink-faint">{s.item}.</span> {s.title}
+                      </span>
+                      <ScopeBadge status={s.status} />
+                    </div>
+                    <span className="text-[11px] text-ink-faint leading-snug">{s.detail}</span>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          )}
 
           {unverified.length > 0 && (
             <Panel title={`Unverified fields (${unverified.length})`}>
@@ -239,6 +301,24 @@ export function ResultsScreen({
         </div>
       </div>
     </motion.div>
+  );
+}
+
+function ScopeBadge({ status }: { status: string }) {
+  const map: Record<string, { label: string; cls: string }> = {
+    "cross-checked": { label: "cross-checked", cls: "text-accent border-accent-dim bg-accent/10" },
+    "marked-unverified": { label: "unverified", cls: "text-amber border-amber/40 bg-amber/10" },
+    "platform-owned": { label: "platform", cls: "text-ink-dim border-line-2 bg-panel-2" },
+    "your-input": { label: "your input", cls: "text-ink border-line-2 bg-panel-2" },
+    "not-covered": { label: "not covered", cls: "text-ink-faint border-line-2" },
+  };
+  const s = map[status] ?? { label: status, cls: "text-ink-faint border-line-2" };
+  return (
+    <span
+      className={`shrink-0 border rounded-sm px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide ${s.cls}`}
+    >
+      {s.label}
+    </span>
   );
 }
 

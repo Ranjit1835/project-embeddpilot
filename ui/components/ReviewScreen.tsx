@@ -15,8 +15,9 @@ import type {
   Provenance,
   Register,
   RegisterMap,
+  Target,
 } from "../lib/types";
-import { PLATFORMS } from "../lib/types";
+import { OUTPUT_TARGETS, PLATFORMS } from "../lib/types";
 import { getMcuMap, listMcuMaps, type McuMapSummary } from "../lib/api";
 import {
   Button,
@@ -45,10 +46,12 @@ export function ReviewScreen({
     platform: string,
     edits: string[],
     mcuMap?: unknown,
+    target?: Target,
   ) => void;
 }) {
   const [map, setMap] = useState<RegisterMap>(initialMap);
   const [edits, setEdits] = useState<string[]>([]);
+  const [target, setTarget] = useState<Target>("bare-metal");
   const [sort, setSort] = useState<SortKey>("offset");
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
@@ -145,7 +148,9 @@ export function ReviewScreen({
       peripheral: iface.trim(),
       provenance: { chip: chipProv, peripheral: ifaceProv },
     };
-    onGenerate(finalMap, platform, edits, mcuMap ?? undefined);
+    // the Arduino target never uses an MCU map (items 4-6 are the core's job)
+    const mcu = target === "arduino" ? undefined : (mcuMap ?? undefined);
+    onGenerate(finalMap, platform, edits, mcu, target);
   };
 
   const registers = useMemo(() => {
@@ -213,6 +218,33 @@ export function ReviewScreen({
             Confirm or correct them — generation is blocked until each is set. Nothing is
             auto-filled with a guess.
           </p>
+
+          {/* V1.8: output target — bare-metal C driver or importable Arduino library */}
+          <Field label="Output target">
+            <div className="flex gap-1.5" role="radiogroup" aria-label="Output target">
+              {OUTPUT_TARGETS.map((t) => (
+                <button
+                  key={t.value}
+                  role="radio"
+                  aria-checked={target === t.value}
+                  onClick={() => {
+                    setTarget(t.value);
+                    track(`output target: ${t.value}`);
+                  }}
+                  className={`flex-1 text-left border rounded-sm px-3 py-2 transition-colors ${
+                    target === t.value
+                      ? "border-accent-dim bg-accent/10 text-ink"
+                      : "border-line-2 text-ink-dim hover:border-ink-faint"
+                  }`}
+                >
+                  <div className="font-mono text-[12px]">{t.label}</div>
+                  <div className="text-[10.5px] text-ink-faint mt-0.5 leading-snug">
+                    {t.hint}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </Field>
 
           <div className="grid gap-4 sm:grid-cols-3">
             {/* chip */}
@@ -325,27 +357,36 @@ export function ReviewScreen({
                   shape: {shapeHint}
                 </span>
               )}
-              {mcuMaps.length > 0 && (
-                <Field label="Target MCU (optional — complete driver)">
-                  <Select
-                    ariaLabel="Target MCU"
-                    value={mcuId}
-                    placeholder="None — device-only driver"
-                    onChange={pickMcu}
-                    options={[
-                      { value: "", label: "None — device-only driver" },
-                      ...mcuMaps.map((m) => ({
-                        value: m.id,
-                        label: `${m.label}${m.rm_revision ? ` (${m.rm_revision})` : ""}`,
-                      })),
-                    ]}
-                  />
-                  <span className="text-[10px] text-ink-faint font-mono">
-                    {mcuId
-                      ? "adds clock, GPIO/AF, init & error handling — cross-checked against the MCU map"
-                      : "device register access only (items 1–3)"}
-                  </span>
-                </Field>
+              {target === "arduino" ? (
+                <span className="text-[10px] text-ink-faint font-mono leading-snug">
+                  Arduino target: board-agnostic — you pass the {iface || "Wire/SPI"}
+                  {" "}instance and pins in your sketch, so there is no peripheral
+                  instance to choose. Clock, GPIO and init are the Arduino core&apos;s
+                  job (items 4–6). Platform selects the compile cores only.
+                </span>
+              ) : (
+                mcuMaps.length > 0 && (
+                  <Field label="Target MCU (optional — complete driver)">
+                    <Select
+                      ariaLabel="Target MCU"
+                      value={mcuId}
+                      placeholder="None — device-only driver"
+                      onChange={pickMcu}
+                      options={[
+                        { value: "", label: "None — device-only driver" },
+                        ...mcuMaps.map((m) => ({
+                          value: m.id,
+                          label: `${m.label}${m.rm_revision ? ` (${m.rm_revision})` : ""}`,
+                        })),
+                      ]}
+                    />
+                    <span className="text-[10px] text-ink-faint font-mono">
+                      {mcuId
+                        ? "adds clock, GPIO/AF, init & error handling — cross-checked against the MCU map, then the peripheral instance (I2C1/2/3) is your pick"
+                        : "device register access only (items 1–3)"}
+                    </span>
+                  </Field>
+                )
               )}
             </div>
           </div>

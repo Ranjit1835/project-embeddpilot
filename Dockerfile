@@ -6,8 +6,25 @@ FROM python:3.12-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         gcc libc6-dev gcc-arm-none-eabi libnewlib-arm-none-eabi \
-        libnewlib-dev cppcheck \
+        libnewlib-dev cppcheck curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# V1.8 Part A: arduino-cli + cores so the Arduino target's multi-core compile
+# judge runs in the deployed environment too — ESP32-S3 (the engineers' board),
+# AVR/Uno, and SAMD (Cortex-M0+). This is a LARGE layer (the esp32 core pulls
+# xtensa/riscv toolchains). If a core is ever absent at runtime, arduino_check
+# reports that core 'skipped' and finalize() refuses to validate — never a
+# silent pass.
+RUN curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh \
+        | BINDIR=/usr/local/bin sh \
+    && arduino-cli config init \
+    && arduino-cli config add board_manager.additional_urls \
+        https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json \
+    && arduino-cli core update-index \
+    && arduino-cli core install arduino:avr \
+    && arduino-cli core install arduino:samd \
+    && arduino-cli core install esp32:esp32 \
+    && rm -rf /tmp/*
 
 WORKDIR /app
 

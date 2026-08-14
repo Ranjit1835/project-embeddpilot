@@ -51,7 +51,13 @@ export default function Home() {
   }, []);
 
   const onGenerate = useCallback(
-    async (m: RegisterMap, p: string, edits: string[], mcuMap?: unknown) => {
+    async (
+      m: RegisterMap,
+      p: string,
+      edits: string[],
+      mcuMap?: unknown,
+      target?: string,
+    ) => {
       setStep("generate");
       setGenRunning(true);
       setGenError(null);
@@ -64,6 +70,7 @@ export default function Home() {
           platform: p,
           edits,
           mcu_map: mcuMap,
+          target,
         });
         setJobId(id);
         unsub.current = subscribeJob(id, async (e) => {
@@ -107,7 +114,7 @@ export default function Home() {
           <span className="font-mono text-[15px] tracking-tight text-ink">
             embedd<span className="text-accent">pilot</span>
           </span>
-          <span className="font-mono text-[10px] text-ink-faint">v1.7</span>
+          <span className="font-mono text-[10px] text-ink-faint">v1.8</span>
         </div>
         <nav aria-label="pipeline steps" className="flex gap-0.5">
           {STEPS.map(([key, label], i) => {
