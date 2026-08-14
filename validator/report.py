@@ -50,6 +50,9 @@ class ValidationReport:
     # V1.8: per-core Arduino compile results — {name, fqbn, result, detail?}.
     # Surfaced in the Results provenance panel; a failing core is also a Failure.
     cores: list = field(default_factory=list)
+    # V1.8 Part D: 7-item scope-honesty panel — how each roadmap item was
+    # established (cross-checked / marked-unverified / platform-owned / ...).
+    scope: list = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
     def finalize(self) -> "ValidationReport":

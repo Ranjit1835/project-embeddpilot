@@ -77,6 +77,10 @@ def main() -> int:
             static_check(args.workdir, report)
     report.finalize()
 
+    # V1.8 Part D: attach the 7-item scope-honesty panel (reads report + target).
+    from validator.scope import build_scope
+    report.scope = build_scope(args.target, register_map, report, mcu_map is not None)
+
     text = json.dumps(report.to_json(), indent=2)
     if args.out:
         with open(args.out, "w", encoding="utf-8") as f:
