@@ -148,11 +148,13 @@ def assert_chip_consistency(
             "inconsistent — confirm the correct part on the review screen."
         )
     for name in generated_names:
-        base = _chip_token(name.rsplit("/", 1)[-1].split(".")[0])
-        # the generated name must START with the chip identity (e.g. bmp183 in
-        # bmp183_driver.c or the BMP183 class); a different family token is the
-        # bug this gate exists to stop.
-        if base and ref not in base and base not in ref:
+        # The chip identity must appear somewhere in the artifact PATH — in the
+        # filename for the bare-metal target (bmp183_driver.c) or in the library
+        # folder for the Arduino target (BMP183/src/BMP183.h, BMP183/keywords.txt).
+        # Boilerplate files (library.properties, README.md) carry it via the
+        # folder. A different family token anywhere here is the bug this stops.
+        path_token = _chip_token(name)
+        if ref not in path_token:
             raise ChipConsistencyError(
                 f"Generated artifact '{name}' does not match the map chip "
                 f"'{map_chip}'. The route/naming identified a different part than "

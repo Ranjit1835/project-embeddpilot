@@ -47,6 +47,9 @@ class ValidationReport:
     failures: list[Failure] = field(default_factory=list)
     unverified_fields: list[UnverifiedField] = field(default_factory=list)
     unverified_computations: list[UnverifiedComputation] = field(default_factory=list)
+    # V1.8: per-core Arduino compile results — {name, fqbn, result, detail?}.
+    # Surfaced in the Results provenance panel; a failing core is also a Failure.
+    cores: list = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
     def finalize(self) -> "ValidationReport":
