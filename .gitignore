@@ -22,3 +22,6 @@ extraction/input/*.pdf
 extraction/input/fake_regmap.docx
 artifacts/router_log.jsonl
 .arduino-tools/
+# Local host compiler for math_crosscheck execution proof (TinyCC). The deployed
+# Docker image uses its own host gcc; this is only for local test runs.
+.tools/

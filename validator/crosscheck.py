@@ -225,15 +225,46 @@ def scan_unverified_computations(
     at least stops it being presented as fully validated.
 
     V1.7 extends this to the reference-manual SEQUENCE marker — an ordered init
-    procedure whose registers/bits are checked but whose ordering is not."""
+    procedure whose registers/bits are checked but whose ordering is not.
+
+    V1.10a records the enclosing function name so a passing math cross-check
+    (which verifies a specific function's math) can discount exactly that
+    marker in finalize() — no more, no less."""
     for fname, lines in files.items():
         for idx, line in enumerate(lines):
             for marker in PROSE_MARKERS:
                 if marker in line:
                     report.unverified_computations.append(UnverifiedComputation(
                         file=fname, line=idx + 1, marker=marker,
+                        function=_following_function_name(lines, idx),
                     ))
                     break
+
+
+_FUNC_DEF_RE = re.compile(
+    r"^[A-Za-z_][\w\s\*\(\),]*?\b([A-Za-z_]\w*)\s*\([^;{]*\)\s*\{?\s*$")
+
+
+def _following_function_name(lines: list[str], marker_idx: int) -> str:
+    """The name of the function definition the marker precedes. The marker sits
+    immediately before a function definition (worker contract); scan the next
+    few non-blank, non-comment lines for the identifier before '(' of a
+    definition (not a call or prototype)."""
+    for j in range(marker_idx + 1, min(marker_idx + 6, len(lines))):
+        s = lines[j].strip()
+        if not s or s.startswith(("//", "/*", "*")):
+            continue
+        if s.endswith(";"):  # prototype/statement, not a definition
+            return ""
+        m = _FUNC_DEF_RE.match(s)
+        if m:
+            return m.group(1)
+        # a definition whose brace is on the next line: "float f(int x)" then "{"
+        m2 = re.match(r"^[A-Za-z_][\w\s\*]*?\b([A-Za-z_]\w*)\s*\([^;{]*\)\s*$", s)
+        if m2:
+            return m2.group(1)
+        break
+    return ""
 
 
 def _check_field(

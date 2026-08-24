@@ -38,6 +38,7 @@ class UnverifiedComputation:
     file: str
     line: int
     marker: str              # the marker comment text found
+    function: str = ""       # enclosing function the marker precedes (for promotion)
 
 
 @dataclass
@@ -47,6 +48,10 @@ class ValidationReport:
     failures: list[Failure] = field(default_factory=list)
     unverified_fields: list[UnverifiedField] = field(default_factory=list)
     unverified_computations: list[UnverifiedComputation] = field(default_factory=list)
+    # V1.10a: generated conversion/compensation function names whose MATH was
+    # executed and matched a document-sourced oracle (math_crosscheck pass). A
+    # computation marker on one of these no longer counts as unverified.
+    verified_computation_entries: list[str] = field(default_factory=list)
     # V1.8: per-core Arduino compile results — {name, fqbn, result, detail?}.
     # Surfaced in the Results provenance panel; a failing core is also a Failure.
     cores: list = field(default_factory=list)
@@ -72,11 +77,19 @@ class ValidationReport:
                 "required check could not run (missing toolchain or no grounding "
                 "check) — result is unvalidated"
             )
-        elif self.unverified_fields or self.unverified_computations:
+        elif self.unverified_fields or self._remaining_computations():
             # unverified bit fields AND/OR transcribed computation math: the code
             # builds and its register access checks out, but something in it was
             # not cross-checked against the map. Never collapse this to a clean
             # "validated".
+            #
+            # V1.10a promotion: a computation whose MATH was executed against a
+            # document-sourced oracle (math_crosscheck pass) no longer counts —
+            # see _remaining_computations(). Promotion to a clean "validated"
+            # happens ONLY when the passing math check covers EVERY unverified
+            # item; a remaining unverified bit field (or an uncovered
+            # computation) keeps the verdict here. This is the rule most likely
+            # to erode silently, so it is asserted in the test suite.
             self.status = "validated-with-unverified-fields"
         else:
             self.status = "validated"
@@ -85,6 +98,13 @@ class ValidationReport:
                 "static analysis skipped (cppcheck unavailable) — install cppcheck for full coverage"
             )
         return self
+
+    def _remaining_computations(self) -> list[UnverifiedComputation]:
+        """Transcribed-math markers NOT covered by a passing math cross-check.
+        A marker on a function whose math was executed and matched a
+        document-sourced oracle is discounted; everything else still counts."""
+        covered = set(self.verified_computation_entries)
+        return [c for c in self.unverified_computations if c.function not in covered]
 
     def to_json(self) -> dict:
         return asdict(self)

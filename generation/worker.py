@@ -364,6 +364,10 @@ def build_worker_prompt(
     if mcu_map:
         lines.extend(_mcu_config_section(mcu_map, peripheral))
 
+    oracle = register_map.get("math_oracle")
+    if oracle:
+        lines.extend(_math_oracle_section(oracle))
+
     if feedback:
         lines.append("")
         if prior_files:
@@ -493,6 +497,44 @@ def _mcu_config_section(mcu_map: dict, device_peripheral: str) -> list[str]:
              "reference-manual prose and is NOT cross-checkable — immediately "
              "precede each such function definition with exactly this comment: "
              + SEQUENCE_UNVERIFIED_COMMENT)
+    return L
+
+
+def _math_oracle_section(oracle: dict) -> list[str]:
+    """V1.10a: the datasheet provides an executable ground truth for the
+    conversion/compensation math. Tell the worker to expose that math as a free
+    function with the EXACT name + signature the validator will call, so the math
+    can be RUN and checked (not just marked UNVERIFIED). The math still carries
+    the UNVERIFIED marker — a passing math cross-check clears it in finalize()."""
+    entry = oracle["entry"]
+    in_ct = oracle.get("input_ctype", "int32_t")
+    out_ct = oracle.get("output_ctype", "int32_t")
+    L = ["", "MATH ORACLE CONTRACT (item verified by EXECUTION, V1.10a):"]
+    if oracle["kind"] == "table":
+        L.append(
+            f"- Expose the value conversion as a free function with EXACTLY this "
+            f"signature: {out_ct} {entry}({in_ct} raw); — where `raw` is the "
+            "register value as the datasheet's conversion table tabulates it (the "
+            "raw N-bit code), and the return is the engineering value (e.g. degrees "
+            "Celsius). Do the sign-extension and scaling inside it.")
+        L.append(
+            "- The driver's normal read path MUST call this same function — do not "
+            "duplicate the math. The validator executes it against the datasheet's "
+            "conversion table (exact match required, negative codes included).")
+    else:  # reference_code
+        L.append(
+            f"- Expose the compensation as a free function with EXACTLY this "
+            f"signature: {out_ct} {entry}({in_ct} adc); returning the datasheet's "
+            "fixed-point compensated value.")
+        L.append(
+            "- Read the calibration coefficients and any carried fine value as "
+            "extern globals using the DATASHEET'S OWN variable names (e.g. dig_T1, "
+            "dig_T2, dig_T3, t_fine); do NOT define those globals yourself and do "
+            "NOT rename them — the validator supplies them and differentially "
+            "tests your function against the datasheet's reference implementation.")
+    L.append(
+        "- Precede the function with the computation UNVERIFIED marker as usual; "
+        "the executor clears it only if the math matches.")
     return L
 
 

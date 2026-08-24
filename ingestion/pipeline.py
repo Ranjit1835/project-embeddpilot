@@ -135,6 +135,14 @@ def ingest_datasheet(
     chip_value, chip_prov = _resolve_field(chip, detected.get("chip"))
     periph_value, periph_prov = _resolve_interface(peripheral, detected.get("interfaces"))
 
+    # V1.10a: a document-sourced MATH ORACLE (conversion table or reference code)
+    # if the datasheet provides one in the text layer. The generated conversion/
+    # compensation math is later EXECUTED against it. Absent -> the math stays
+    # UNVERIFIED (Bosch pressure examples live in figures and are never here).
+    from ingestion.math_oracle import extract_math_oracle
+
+    math_oracle = extract_math_oracle(doc.pages, chip_value or "device")
+
     result = {
         "peripheral": periph_value,
         "chip": chip_value,
@@ -165,6 +173,11 @@ def ingest_datasheet(
     }
     if readout:  # V1.9 item 3: fixed-readout device (no register map)
         result["readout"] = readout
+    if math_oracle:  # V1.10a: executable ground truth for the conversion math
+        result["math_oracle"] = math_oracle
+        result.setdefault("warnings", []).append(
+            f"math oracle extracted ({math_oracle['kind']}, p.{math_oracle['source_pages']}) "
+            f"— the generated conversion math will be executed and checked")
     _validate(result)
     return result
 
