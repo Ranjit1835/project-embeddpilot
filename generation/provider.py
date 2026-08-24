@@ -344,12 +344,15 @@ class MockProvider:
 
 
 def _parse_json(text: str) -> dict:
-    """Models occasionally wrap JSON in code fences despite json mode."""
+    """Models occasionally wrap JSON in code fences despite json mode, and emit
+    literal newlines/tabs inside string values (raw code in a "source_c" field).
+    strict=False tolerates those unescaped control characters — standard
+    json.loads rejects them and would fail every large-driver response."""
     text = text.strip()
     fence = re.match(r"^```(?:json)?\s*(.*?)\s*```$", text, re.DOTALL)
     if fence:
         text = fence.group(1)
     try:
-        return json.loads(text)
+        return json.loads(text, strict=False)
     except json.JSONDecodeError as e:
         raise ProviderError(f"provider returned non-JSON output: {e}") from e

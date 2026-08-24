@@ -52,13 +52,23 @@ def extract_conversion_table(pages: list, chip: str) -> dict | None:
             continue
         rows = _ROW_RE.findall(text)
         vectors, seen = [], set()
-        for temp_s, _binary, hex_s in rows:
+        word_bits = 0
+        for temp_s, binary, hex_s in rows:
             code = int(hex_s, 16)
             out = _num(temp_s)
-            if code in seen:
+            # The table tabulates an N-bit code, but a real driver reads a whole
+            # byte-aligned register WORD and the code sits LEFT-JUSTIFIED in it
+            # (LM75B: a 9-bit code in the top bits of a 16-bit word; the low bits
+            # are unused/zero). Feed the conversion function what it actually
+            # receives — the assembled word — or a correct driver looks wrong.
+            code_bits = len(binary)
+            word_bits = ((code_bits + 7) // 8) * 8
+            shift = word_bits - code_bits
+            reg_word = code << shift
+            if reg_word in seen:
                 continue
-            seen.add(code)
-            vectors.append({"in": code, "out": out})
+            seen.add(reg_word)
+            vectors.append({"in": reg_word, "out": out})
         n_neg = sum(1 for v in vectors if v["out"] < 0)
         if len(vectors) >= 3 and n_neg >= 1:
             ident = _c_ident(chip)
@@ -71,10 +81,12 @@ def extract_conversion_table(pages: list, chip: str) -> dict | None:
                 "tolerance": "exact",
                 "source_pages": [getattr(p, "number", 0)],
                 "provenance": "detected",
+                "word_bits": word_bits,
                 "notes": (
-                    "conversion table extracted from the datasheet; the hex code "
-                    "is passed to the generated conversion function and the result "
-                    "compared exactly to the tabulated temperature"),
+                    f"conversion table extracted from the datasheet; each {word_bits}-"
+                    "bit register word (the N-bit code left-justified, as the driver "
+                    "reads it) is passed to the generated conversion function and the "
+                    "result compared exactly to the tabulated temperature"),
             }
     return None
 

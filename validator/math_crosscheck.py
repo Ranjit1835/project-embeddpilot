@@ -126,6 +126,17 @@ def _c_sources(files: dict[str, list[str]]) -> dict[str, str]:
     return out
 
 
+_MAIN_RE = re.compile(r"\bint\s+main\s*\(")
+
+
+def _without_own_main(sources: dict[str, str]) -> dict[str, str]:
+    """Drop any .c that defines its own main() — the bare-metal target ships a
+    `<chip>_example.c` demo with a main, which would clash with the probe's main
+    (two definitions -> link error). Headers and the driver source are kept."""
+    return {fn: text for fn, text in sources.items()
+            if not (fn.endswith(".c") and _MAIN_RE.search(text))}
+
+
 def _defined_in_c(entry: str, sources: dict[str, str]) -> bool:
     """The entry point must be DEFINED (not merely declared in a header) in a .c
     source. A header declaration doesn't count — a driver that declares but never
@@ -224,7 +235,7 @@ def _check_table(runner, sources, header, oracle, report) -> None:
     main_c = (
         f'#include "{header}"\n#include <stdio.h>\n#include <stdint.h>\n'
         f"int main(void){{\n{calls}\n    return 0;\n}}\n")
-    probe = dict(sources)
+    probe = _without_own_main(sources)
     probe["_ep_math_main.c"] = main_c
 
     rc, out, err = _run_c(runner, probe, "_ep_math_main.c", incdir=".")
@@ -312,7 +323,7 @@ def _check_reference(runner, sources, header, oracle, report) -> None:
         f'#include "{header}"\n#include "_ep_ref.h"\n#include <stdio.h>\n'
         f"#include <stdint.h>\nint main(void){{\n{loop}\n    return 0;\n}}\n")
 
-    probe = dict(sources)
+    probe = _without_own_main(sources)
     probe["_ep_calib.h"] = calib_hdr
     probe["_ep_calib.c"] = calib_src
     probe["_ep_ref.h"] = f"#include <stdint.h>\n{out_ct} {ref_entry}({in_ct});\n"

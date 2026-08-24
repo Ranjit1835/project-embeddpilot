@@ -166,7 +166,11 @@ def test_lm75b_table_extracts_with_negatives():
     assert o is not None and o["kind"] == "table"
     assert o["provenance"] == "detected"
     assert sum(1 for v in o["vectors"] if v["out"] < 0) >= 1  # two's-complement rows
-    assert {"in": 511, "out": -0.5} in o["vectors"]
+    # vectors are the register WORD (code left-justified into the read word), the
+    # representation a real driver receives — 9-bit code 0x1FF (-0.5C) -> <<7.
+    assert o["word_bits"] == 16
+    assert {"in": 0x1FF << 7, "out": -0.5} in o["vectors"]
+    assert {"in": 0x0FA << 7, "out": 125.0} in o["vectors"]
 
 
 def test_bme280_reference_extracts():

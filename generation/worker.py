@@ -511,16 +511,20 @@ def _math_oracle_section(oracle: dict) -> list[str]:
     out_ct = oracle.get("output_ctype", "int32_t")
     L = ["", "MATH ORACLE CONTRACT (item verified by EXECUTION, V1.10a):"]
     if oracle["kind"] == "table":
+        wb = oracle.get("word_bits")
+        wb_txt = f"the assembled {wb}-bit register word" if wb else "the assembled register word"
         L.append(
             f"- Expose the value conversion as a free function with EXACTLY this "
-            f"signature: {out_ct} {entry}({in_ct} raw); — where `raw` is the "
-            "register value as the datasheet's conversion table tabulates it (the "
-            "raw N-bit code), and the return is the engineering value (e.g. degrees "
-            "Celsius). Do the sign-extension and scaling inside it.")
+            f"signature: {out_ct} {entry}({in_ct} raw); — where `raw` is "
+            f"{wb_txt} exactly as your read path assembles it from the device "
+            "(MSB first; the data bits left-justified in the word as the datasheet "
+            "shows), and the return is the engineering value (e.g. degrees "
+            "Celsius). Do the sign-extension/right-alignment and scaling inside it.")
         L.append(
-            "- The driver's normal read path MUST call this same function — do not "
-            "duplicate the math. The validator executes it against the datasheet's "
-            "conversion table (exact match required, negative codes included).")
+            "- The driver's normal read path MUST call this same function on the "
+            "raw word it read — do not duplicate the math. The validator executes "
+            "it against the datasheet's conversion table (exact match, negatives "
+            "included).")
     else:  # reference_code
         L.append(
             f"- Expose the compensation as a free function with EXACTLY this "
