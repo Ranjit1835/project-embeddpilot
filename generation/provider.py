@@ -221,7 +221,90 @@ class NVIDIAProvider:
         return _parse_json(text)
 
 
-PROVIDERS = {"nvidia": NVIDIAProvider, "groq": GroqProvider}
+# Google Gemini via its OpenAI-compatible endpoint. Default to a FREE-tier flash
+# model so live generation costs nothing. The API retired the 2.0/2.5 flash
+# models (confirmed live 2026-08-24: it recommends gemini-3.6-flash); flash-tier
+# models have a large (~1M-token) context. Override with GEMINI_MODEL.
+DEFAULT_GEMINI_MODEL = "gemini-3.6-flash"
+GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+# Free flash-tier options (verify current availability; Google retires old ones):
+FREE_GEMINI_MODELS = {
+    "gemini-3.6-flash", "gemini-3.6-flash-lite", "gemini-3-flash",
+    "gemini-2.5-flash", "gemini-2.5-flash-lite",
+}
+
+
+class GeminiProvider:
+    """Google Gemini through the OpenAI-compatible endpoint. Free-tier models have
+    a large (~1M-token) context window, so the both-maps V1.7 job fits (like
+    NVIDIA, unlike Groq's 8000-TPM free tier)."""
+
+    def __init__(self, model: str | None = None):
+        self.model = model or os.environ.get("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+        self.name = f"gemini/{self.model}"
+        if self.model not in FREE_GEMINI_MODELS:
+            # not a hard error (Google may add free models), but say so plainly
+            print(f"[provider] note: GEMINI_MODEL '{self.model}' is not in the "
+                  "known free-tier list — verify it is free before heavy use")
+        # gemini-2.0-flash exposes ~1M context; override via GEMINI_CONTEXT.
+        self.context_window = int(os.environ.get("GEMINI_CONTEXT", "1000000"))
+        key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        if not key:
+            raise ProviderError(
+                "GEMINI_API_KEY is not set — set it in the environment (never "
+                "commit it) to use the Gemini provider")
+        from openai import OpenAI
+
+        self._client = OpenAI(
+            base_url=os.environ.get("GEMINI_BASE_URL", GEMINI_BASE_URL), api_key=key
+        )
+
+    def complete_json(self, system: str, user: str) -> dict:
+        import openai
+
+        max_tokens = int(os.environ.get("GEMINI_MAX_TOKENS", "8000"))
+        base_kwargs = dict(
+            model=self.model,
+            messages=[{"role": "system", "content": system},
+                      {"role": "user", "content": user}],
+            temperature=0.2,
+            max_tokens=max_tokens,
+        )
+        # ask for a JSON object; drop it and retry once if this model/endpoint
+        # rejects the param rather than failing the whole generation.
+        attempt_kwargs = dict(base_kwargs, response_format={"type": "json_object"})
+        delay = float(os.environ.get("GEMINI_RETRY_DELAY", "10"))
+        resp = None
+        for attempt in range(4):
+            try:
+                resp = self._client.chat.completions.create(**attempt_kwargs)
+                break
+            except openai.BadRequestError as e:
+                if "response_format" in attempt_kwargs:
+                    attempt_kwargs = dict(base_kwargs)  # drop unsupported param
+                    continue
+                raise ProviderError(f"gemini API error 400: {e}") from e
+            except openai.APIStatusError as e:
+                # 429 = free-tier rate/quota; wait and retry (its window rolls)
+                if e.status_code in (429, 503) and attempt < 3:
+                    time.sleep(delay)
+                    delay = min(delay * 2, 60)
+                    continue
+                raise ProviderError(f"gemini API error {e.status_code}: {e.message}") from e
+            except openai.APIConnectionError as e:
+                raise ProviderError(f"gemini connection error: {e}") from e
+        choice = resp.choices[0]
+        text = choice.message.content or ""
+        if getattr(choice, "finish_reason", None) == "length":
+            raise ProviderError(
+                f"response truncated at the {max_tokens}-token output ceiling "
+                "(finish_reason=length) — raise GEMINI_MAX_TOKENS (free-tier flash "
+                "caps output at ~8192)."
+            )
+        return _parse_json(text)
+
+
+PROVIDERS = {"nvidia": NVIDIAProvider, "groq": GroqProvider, "gemini": GeminiProvider}
 
 
 def make_provider() -> "LLMProvider":
