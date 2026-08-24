@@ -129,11 +129,39 @@ def build_scope(
                      "mapped registers" if reg_ok
                      else "not established"))
 
-    # cross-cutting honesty note: transcribed compensation math is never a clean pass
+    # cross-cutting honesty note on the compensation/conversion math. V1.10a: the
+    # math cross-check EXECUTES that math against a document-sourced oracle when
+    # one exists — surface its state DISTINCTLY (pass / fail / not_applicable /
+    # skipped), never conflating "no oracle" with "toolchain missing".
+    math_state = report.checks.get("math_crosscheck")
+    n_verified = len(report.verified_computation_entries)
+    if math_state == "pass":
+        _append_detail(items, 2,
+            f" — note: {n_verified} compensation/conversion function(s) were "
+            "EXECUTED against the datasheet's own values and matched exactly "
+            "(math cross-checked, not merely marked)")
+    elif math_state == "fail":
+        _append_detail(items, 2,
+            " — note: the generated conversion/compensation math was executed and "
+            "DID NOT match the datasheet — hard failure")
+    elif math_state == "skipped":
+        _append_detail(items, 2,
+            " — note: a datasheet math oracle exists but no host compiler was "
+            "available to execute the math (install gcc; the deployed image has it)")
     if n_comp:
-        for it in items:
-            if it["item"] == 2:
-                it["detail"] += (f" — note: {n_comp} block(s) of compensation math "
-                                 "transcribed from datasheet prose are flagged "
-                                 "UNVERIFIED (logic not checked)")
+        # markers still present after any promotion accounting
+        remaining = [c for c in report.unverified_computations
+                     if c.function not in set(report.verified_computation_entries)]
+        if remaining:
+            _append_detail(items, 2,
+                f" — note: {len(remaining)} block(s) of compensation math "
+                "transcribed from datasheet prose remain flagged UNVERIFIED "
+                "(no executable oracle for them)")
     return items
+
+
+def _append_detail(items: list[dict], item_no: int, text: str) -> None:
+    for it in items:
+        if it["item"] == item_no:
+            it["detail"] += text
+            return

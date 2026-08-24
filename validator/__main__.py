@@ -75,6 +75,11 @@ def main() -> int:
                 from validator.mcu_crosscheck import mcu_crosscheck
                 mcu_crosscheck(files, mcu_map, report)
         scan_unverified_computations(files, report)
+        # V1.10a: execute the generated conversion/compensation math against a
+        # document-sourced oracle when one is present (bare-metal C target). No
+        # oracle -> not_applicable (the UNVERIFIED marking stands, unchanged).
+        from validator.math_crosscheck import math_crosscheck
+        math_crosscheck(files, register_map, report)
         if args.target == "arduino":
             # items 4-6 (clock/GPIO/init) belong to the Arduino core, not us —
             # no MCU compile; instead prove board-agnosticism across real cores.

@@ -84,11 +84,19 @@ vendor is hard-coded. `generation/provider.py::make_provider()` resolves it:
 
 | Env var | Effect |
 |---|---|
-| `EMBEDDPILOT_PROVIDER=nvidia\|groq` | Selects the provider explicitly (per environment, no code change) |
+| `EMBEDDPILOT_PROVIDER=nvidia\|groq\|gemini` | Selects the provider explicitly (per environment, no code change) |
 | _(unset)_ | Defaults to NVIDIA when `NVIDIA_API_KEY` is present, else Groq |
 
 Keys are read from the environment only and are **never committed**
-(`GROQ_API_KEY`, `NVIDIA_API_KEY`; `.gitignore` covers `.env*`/`*.key`).
+(`GROQ_API_KEY`, `NVIDIA_API_KEY`, `GEMINI_API_KEY`; `.gitignore` covers
+`.env*`/`*.key`).
+
+**Gemini (free tier).** `EMBEDDPILOT_PROVIDER=gemini` uses Google Gemini through
+its OpenAI-compatible endpoint with a **free-tier flash model** (default
+`gemini-3.6-flash`, ~1M-token context — the both-maps V1.7 job fits, like NVIDIA
+and unlike Groq's ~8K free tier). Set `GEMINI_API_KEY`; override the model with
+`GEMINI_MODEL` (keep it a free flash model). Free tier is rate-limited, so heavy
+batch runs may hit 429s (the provider waits and retries).
 
 ### One generation path, no silent degradation
 

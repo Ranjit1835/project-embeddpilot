@@ -31,6 +31,38 @@
         "source_pages": { "type": "array", "items": { "type": "integer", "minimum": 1 } }
       }
     },
+    "math_oracle": {
+      "description": "V1.10a: document-sourced ground truth the math cross-check EXECUTES the generated conversion/compensation against. 'table' = a datasheet code->value conversion table (exact match); 'reference_code' = the datasheet's own reference functions, differentially tested (transcription fidelity). provenance is always 'detected' or 'user' — never model-supplied, or the check is worthless.",
+      "type": "object",
+      "required": ["kind", "entry", "tolerance", "provenance", "source_pages"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["table", "reference_code"] },
+        "entry": { "type": "string", "minLength": 1 },
+        "input_ctype": { "type": "string" },
+        "output_ctype": { "type": "string" },
+        "tolerance": {
+          "oneOf": [ { "type": "string", "enum": ["exact"] }, { "type": "number" } ]
+        },
+        "provenance": { "type": "string", "enum": ["detected", "user"] },
+        "source_pages": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
+        "notes": { "type": "string" },
+        "vectors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["in", "out"],
+            "properties": {
+              "in": { "type": "number" },
+              "out": { "type": "number" }
+            }
+          }
+        },
+        "reference_entry": { "type": "string" },
+        "reference_c": { "type": "string" },
+        "calibration": { "type": "object" },
+        "input_spread": { "type": "array", "items": { "type": "number" } }
+      }
+    },
     "registers": {
       "type": "array",
       "items": {
