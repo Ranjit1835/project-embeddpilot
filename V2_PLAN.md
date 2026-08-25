@@ -171,18 +171,38 @@ Suggested first slice: **Arduino target** (core owns clock/GPIO — simplest
 composition) OR **STM32F4** (harder, but exercises real pin-mux conflicts + the
 MCU map — the juicier moat demo). Decide in §9.
 
-## 9. Decisions to lock tomorrow
+## 9. Decisions — LOCKED 2026-08-25
 
-1. **First target** — Arduino multi-sensor app (simplest) vs STM32F4 complete app (best moat demo).
-2. **Requirements intake** — structured form first (rec) vs NL chat.
-3. **Agent engine** — defer to a later track (rec) vs bring in from the start.
-4. **Spike scope** — 2 devices + trivial app; must include the emulation assertion.
-5. **Design direction** — evolve the instrument theme (rec) vs bolder redesign.
-6. **Prototype the Resource Map in the spike?** (rec: yes — de-risk the signature screen with mock conflict data.)
+1. **First target: STM32F4.** Best Renode support (Cortex-M; UART/I²C emulate
+   cleanly) → lowest risk for the emulation gate, and the best moat demo (real
+   pin-mux conflicts + the MCU map).
+2. **Requirements intake: conversational NL from the start.** More ambitious —
+   noted tradeoff: ambiguity at the foundation before the verification core is
+   proven; the NL→spec step must itself be validated (spec is still the contract).
+3. **Agent engine: deferred** (build the verification/composition/emulation core
+   natively first; Aider/OpenHands via V1-as-MCP later).
+4. **Spike scope: ambitious — 2 devices + resource conflict + auto-fix +
+   emulated run + assertion.** Bigger surface, but proves composition + the
+   static moat + the runtime moat in one gate.
+5. **Design direction: evolve the instrument theme** (default; revisit if a
+   bolder workspace redesign is wanted).
+6. **Resource Map in the spike: YES** — prototype the hero screen with mocked
+   conflict data alongside the emulation spike.
 
-## 10. First action tomorrow (2026-08-25)
+## 10. First action (2026-08-25) — the emulation gate-before-the-gate
 
-Run the **emulation spike** (§8): stand up Renode, get one minimal firmware to
-read a mocked sensor and assert emulated UART output, headless with an exit code.
-Report + gate decision before any workstream build — exactly the cadence that made
-V1.7 / V1.9 / V1.10a land.
+Everything hinges on emulation being feasible **in this environment**. So the very
+first step is a Renode feasibility check (mirroring the V1.10a compiler check):
+can we install/run Renode and boot an STM32F4 image headless here? Only once that
+is answered do we build the ambitious spike:
+
+**Ambitious spike (STM32F4):** generate a 2-device app (e.g. BME280 + a relay/OLED)
+that triggers a **resource conflict** → **auto-fix** → compiles → runs in **Renode**
+with the sensor **mocked** from the register map / math oracle → **asserts** app
+behavior over emulated UART — headless, one command, exit code. Plus a **Resource
+Map** UI prototype on mocked conflict data.
+
+Gate: pass → build the six workstreams; fail (esp. if Renode can't run here) →
+scope V2's "working" to *compiles + resource-checked*, say so plainly, and move
+emulation to V3. Report before any workstream build — the cadence that landed
+V1.7 / V1.9 / V1.10a.
