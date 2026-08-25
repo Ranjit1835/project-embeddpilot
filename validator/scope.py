@@ -148,6 +148,28 @@ def build_scope(
         _append_detail(items, 2,
             " — note: a datasheet math oracle exists but no host compiler was "
             "available to execute the math (install gcc; the deployed image has it)")
+    # cross-cutting honesty note on SYSTEM-LEVEL resource conflicts (V2 ws3).
+    # Items 1-7 are per-device facts; two individually cross-checked devices can
+    # still double-book pin PB6. Surface that check's state DISTINCTLY (pass /
+    # fail / not_applicable) on the pin item, never conflating "no composition
+    # was supplied" with "the composition was checked and is clean".
+    resource_state = report.checks.get("resource_crosscheck")
+    if resource_state == "pass":
+        _append_detail(items, 5,
+            " — note: the composed system's pin, bus-address, bus-configuration, "
+            "DMA and IRQ claims were cross-checked against each other and no "
+            "conflict exists")
+    elif resource_state == "fail":
+        n_conf = sum(1 for f in report.failures if f.check == "resource_crosscheck")
+        _append_detail(items, 5,
+            f" — note: {n_conf} system-level resource conflict(s) between the "
+            "composed devices — hard failure")
+    elif resource_state == "not_applicable":
+        _append_detail(items, 5,
+            " — note: no multi-device composition was supplied, so cross-device "
+            "resource conflicts (shared pins, duplicate bus addresses, DMA/IRQ "
+            "collisions) were NOT checked — nothing here claims otherwise")
+
     if n_comp:
         # markers still present after any promotion accounting
         remaining = [c for c in report.unverified_computations
