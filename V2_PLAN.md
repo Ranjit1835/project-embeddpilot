@@ -102,22 +102,56 @@ Cursor-like:
   wireframes + design review (frontend-design skill / UI Designer + UX Architect)
   before code.
 
-### Resource Map — rough hero-screen sketch
+### Resource Map — hero screen (two states)
+
+The two frames encode the whole V2 thesis visually: **State A** makes the static
+moat *visible* (a double-booked pin lights red, one-click auto-fix); **State B**
+makes *"working" honest* (the verdict rail reaches `WORKING (emulated)` only after
+the emulation assertions pass, with the mocked sensor fed from V1's register map /
+math oracle). The rail carries V1's honesty language up to the system level.
+
+**State A — conflict detected**
 ```
-┌───────────────────────────────────────────── EmbeddPilot · project: greenhouse ┐
-│ Requirements ▸ Devices ▸ [ Resource Map ] ▸ Code ▸ Run                          │
-├──────────────────────────────┬──────────────────────────────────────────────────┤
-│  TARGET: STM32F4 (Nucleo)    │  DEVICES                                          │
-│                              │   ● BME280  (I²C1)     validated                  │
-│      ┌────────────────┐      │   ● SSD1306 (I²C1)     validated                  │
-│   PB6│ SCL  ◀━━━━━━━━━ │ I²C1 │   ● Relay   (GPIO PB6) ⚠ CONFLICT                 │
-│   PB7│ SDA            │      │                                                  │
-│   PB6│ ⚠ also GPIO out │──────┤  CONFLICTS (1)                                    │
-│      └────────────────┘      │   ⚠ PB6: I²C1_SCL vs Relay GPIO — reassign relay  │
-│  bus 0x76 BME280 / 0x3C OLED │      [ auto-fix ▸ PB5 ]                            │
-├──────────────────────────────┴──────────────────────────────────────────────────┤
-│ ✓ register  ✓ readout  ✓ math   ⚠ resource(1)   ○ emulation(pending)            │
-└───────────────────────────────────────────────────────────────────────────────┘
+┌─ EmbeddPilot ─────────────────────────────────────────  project: greenhouse ▾ ─┐
+│  ① Requirements   ② Devices   ●③ Resource Map   ④ Code   ⑤ Run          ⚙ ◐ │
+├────────────────────────────────────┬────────────────────────────────────────────┤
+│  TARGET  STM32F4 · Nucleo-F411      │  DEVICES (3)                        + add  │
+│  ┌──────────────────────────────┐  │  ┌──────────────────────────────────────┐ │
+│  │            STM32F411          │  │  │ ● BME280   I²C1 @0x76   ✓ reg ✓ math  │ │
+│  │                              │  │  │ ● SSD1306  I²C1 @0x3C   ✓ reg         │ │
+│  │  PB6 ┤SCL ◀━━━━━━━┓ I²C1      │  │  │ ● Relay    GPIO PB6     ⚠ conflict    │ │
+│  │  PB7 ┤SDA ◀━━━━━┓ ┃          │  │  └──────────────────────────────────────┘ │
+│  │  PB6 ┤GPIO ⚠━━━━╋━┛          │  │                                            │
+│  │  PA2 ┤USART2_TX ┃  (free)    │  │  ⚠ CONFLICTS (1)                           │
+│  │  PA9 ┤          ┗━ 0x76,0x3C │  │  ┌──────────────────────────────────────┐ │
+│  │                              │  │  │ PB6 double-booked                     │ │
+│  │  clock: APB1 42MHz  DMA: ok  │  │  │   • I²C1_SCL  (BME280, SSD1306)       │ │
+│  └──────────────────────────────┘  │  │   • GPIO out  (Relay)                 │ │
+│  bus 0x76 BME280 · 0x3C SSD1306     │  │   → reassign Relay   [ auto-fix ▸PB5 ]│ │
+│                                     │  └──────────────────────────────────────┘ │
+├────────────────────────────────────┴────────────────────────────────────────────┤
+│  ✓ register   ✓ readout   ✓ math   ⚠ resource (1)   ○ emulation (blocked)        │
+└───────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**State B — after auto-fix → emulation runs ("watch it run")**
+```
+┌─ EmbeddPilot ─────────────────────────────────────────  project: greenhouse ▾ ─┐
+│  ① Requirements   ② Devices   ③ Resource Map   ④ Code   ●⑤ Run           ⚙ ◑ │
+├────────────────────────────────────┬────────────────────────────────────────────┤
+│  TARGET  STM32F4 · Nucleo-F411      │  ▶ EMULATION · Renode          ● running   │
+│  ┌──────────────────────────────┐  │  ┌──── virtual UART (USART2) ───────────┐ │
+│  │  PB6 ┤SCL ◀━━━━━━━┓ I²C1      │  │  │ boot: I²C1 @400kHz ok                 │ │
+│  │  PB7 ┤SDA ◀━━━━━┓ ┃          │  │  │ BME280 id=0x60  ✓                     │ │
+│  │  PB5 ┤GPIO ✓━━━┓ ┃ (relay)   │  │  │ t=24.81°C  rh=41%   [mock vec #3]      │ │
+│  │  PA2 ┤TX ━━━━━━╋━╋━▶ console  │  │  │ t=31.05°C → THRESHOLD → relay=ON  ✓    │ │
+│  │                ┗━┛ 0x76,0x3C │  │  │ assert: relay ON when t>30  ✓ PASS    │ │
+│  │                              │  │  └──────────────────────────────────────┘ │
+│  └──────────────────────────────┘  │  mocked sensor ▸ BME280 feeding raw vec    │
+│  no conflicts · resources clean     │  from register map · 6/6 assertions pass   │
+├────────────────────────────────────┴────────────────────────────────────────────┤
+│  ✓ register  ✓ readout  ✓ math  ✓ resource  ✓ emulation  →  WORKING (emulated)   │
+└───────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## 8. How we start (spike-first — same discipline as V1.7/1.9/1.10a)
