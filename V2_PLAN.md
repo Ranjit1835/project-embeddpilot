@@ -42,6 +42,41 @@ output asserted. The last mile to physical hardware stays a labeled human step.
 - `make_provider()` (NVIDIA / Groq / **Gemini free**) + the targeted-edit retry loop.
 - The Next.js UI, the Railway backend, the deploy pipeline.
 
+## 4b. Product direction refinements (user, 2026-08-25)
+
+**(a) UI/UX is explicitly NOT "VS Code + a chat window."** It must be genuinely
+beautiful and read as *embedded systems* — a lab-bench instrument, not an editor:
+- The **board is the hero**, not a file tree. The Resource Map / pinout is the
+  center of gravity: you look at your *system*, not a folder.
+- Instrument aesthetic: phosphor-green on dark, oscilloscope / logic-analyzer
+  language, rack + panel framing, LED status indicators, silkscreen-style labels.
+- **Code is a panel you inspect, not a place you live** — no IDE file-tree as the
+  primary surface.
+- "Watch it run" reads like an **instrument readout** (scope trace), not a
+  terminal tab.
+- **No permanent chat rail.** Conversation is a *moment* (intake/clarification),
+  never a sidebar you stare at.
+
+**(b) Clarify before building — never invent a requirement.** The user submits a
+requirement **doc or message**; if anything is ambiguous the system **asks
+questions immediately**, and only starts once understanding is clear. This is the
+**same DNA as V1.6** (which killed silent auto-fill: never invent chip/interface —
+ask). At application scale: *never invent a requirement — ask.* WS1 therefore =
+requirement → **ambiguity detection** → targeted clarifying questions → **spec
+lock**. The spec is verifiable: every generated file traces to a spec line;
+**no spec line ⇒ no code** (provenance, exactly as in V1).
+
+**(c) "The code should never have errors."** Honest engineering translation:
+we cannot guarantee an LLM never emits a wrong line — but we CAN guarantee
+**nothing ships unless it passed verification.** Generate → validate →
+targeted-edit retry → release ONLY on pass; if it cannot converge, say so plainly
+instead of handing over broken code. For V2 the bar rises to: **whole-repo compile
+clean + zero resource conflicts + emulation assertions pass.** In practice the user
+gets error-free code in hand, because errors are caught and fixed *inside* the
+loop. Promising "never generates errors" would assert unproven quality — the one
+thing this product exists not to do. "Never ships unverified code" is the stronger
+claim because it is provable.
+
 ## 5. Workstreams (six)
 
 1. **Requirements → spec.** NL/structured requirement → a structured **application
