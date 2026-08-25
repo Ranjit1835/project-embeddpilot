@@ -328,3 +328,59 @@ def test_generated_platform_has_no_remote_svd_fetch(tmp_path):
     assert "ApplySVD" not in repl
     # the functional init directives must survive
     assert "USB:RESET" in repl
+
+
+# --- the stimulus must be LOAD-BEARING -------------------------------------
+#
+# The original harness proved "firmware runs and talks to a mocked device". It
+# did NOT prove that the mocked device's VALUE reaches the assertion: the probe
+# firmware read only the chip ID, so its pass would have survived any
+# Temperature. These two tests close that gap and are the reason the emulation
+# verdict means anything — if they ever both pass with the SAME expected UT, the
+# stimulus has stopped mattering and the check has quietly become decoration.
+#
+# UT is the BMP180's UNCOMPENSATED temperature word. We assert the raw value on
+# purpose: BMP180's compensation algorithm lives in a datasheet FIGURE and is not
+# extractable (V1.10a), so there is no math oracle for it and computing a
+# temperature here would be inventing the algorithm from memory.
+#
+# 18225 is not a formula — it is the value Renode's BMP180 model was OBSERVED to
+# emit for Temperature=24 on this build.
+
+UT_AT_24 = "BMP180-UT=18225"
+
+
+def _temp_spec(temperature, expect):
+    spec = bmp180_spec(expect=expect)
+    spec["target"]["firmware"] = "firmware.elf"
+    spec["devices"][0]["stimulus"] = {"Temperature": temperature}
+    return spec
+
+
+@needs_renode
+@needs_arm_gcc
+def test_mocked_value_reaches_the_assertion(tmp_path):
+    """Temperature=24 -> the firmware's raw read reports the UT that stimulus
+    produces, and the spec asserting it passes."""
+    build_fixture(str(tmp_path), source="bmp180_temp.c")
+    rep = ValidationReport()
+    emulation_check(str(tmp_path),
+                    _temp_spec(24, ["EP-EMU-BOOT", UT_AT_24, "EP-EMU-DONE"]),
+                    rep)
+    assert rep.checks[CHECK] == "pass", [f.message for f in rep.failures]
+
+
+@needs_renode
+@needs_arm_gcc
+def test_changing_the_stimulus_changes_the_verdict(tmp_path):
+    """The proof. Same firmware, same expectation, DIFFERENT stimulus -> the
+    check must FAIL. If this ever passes, the mocked value is not reaching the
+    assertion and every emulation 'pass' is worth less than it appears."""
+    build_fixture(str(tmp_path), source="bmp180_temp.c")
+    rep = ValidationReport()
+    emulation_check(str(tmp_path),
+                    _temp_spec(60, ["EP-EMU-BOOT", UT_AT_24, "EP-EMU-DONE"]),
+                    rep)
+    assert rep.checks[CHECK] == "fail"
+    # and the failure must show what the different stimulus actually produced
+    assert any("BMP180-UT=" in f.message for f in rep.failures)

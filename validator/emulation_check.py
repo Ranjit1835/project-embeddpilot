@@ -494,34 +494,9 @@ def emulation_check(workdir: str, spec: dict | None, report: ValidationReport) -
     uart = str(target.get("uart") or DEFAULT_UART)
     timeout = int(target.get("timeout") or RUN_TIMEOUT)
 
-    with tempfile.TemporaryDirectory(prefix="ep_emu_") as scratch:
-        repl = _build_repl(root, platform_rel, nodes, notes)
-        resc = _build_resc(uart, run_for, stimulus)
-        with open(os.path.join(scratch, "platform.repl"), "w", encoding="utf-8") as f:
-            f.write(repl)
-        with open(os.path.join(scratch, "run.resc"), "w", encoding="utf-8") as f:
-            f.write(resc)
-        shutil.copyfile(firmware, os.path.join(scratch, "firmware.elf"))
-
-        try:
-            proc = subprocess.run(
-                [renode, "--console", "--disable-xwt", "--plain",
-                 "-e", "include @run.resc"],
-                capture_output=True, text=True, cwd=scratch, timeout=timeout,
-                # MANDATORY: with an open stdin any script error parks Renode in
-                # its interactive monitor and it never returns.
-                stdin=subprocess.DEVNULL,
-            )
-            stdout, timed_out = (proc.stdout or "") + (proc.stderr or ""), False
-        except subprocess.TimeoutExpired as exc:
-            stdout = _decode(exc.stdout) + _decode(exc.stderr)
-            timed_out = True
-
-        uart_path = os.path.join(scratch, "uart.txt")
-        captured = ""
-        if os.path.isfile(uart_path):
-            with open(uart_path, "rb") as f:
-                captured = f.read().decode("utf-8", errors="replace")
+    captured, stdout, timed_out = _run_emulation(
+        renode, root, platform_rel, nodes, stimulus, firmware, uart, run_for,
+        timeout, notes)
 
     for note in notes:
         report.notes.append(f"emulation check: {note}")
@@ -595,6 +570,54 @@ def emulation_check(workdir: str, spec: dict | None, report: ValidationReport) -
         "each device's register interface, not its silicon — analogue behaviour, "
         "real timing and board wiring are NOT covered, so this is not evidence "
         "that the firmware works on physical hardware")
+
+
+def _run_emulation(renode: str, root: str, platform_rel: str,
+                   nodes: list[tuple[str, str, str, int]], stimulus: list[str],
+                   firmware: str, uart: str, run_for: str, timeout: int,
+                   notes: list[str]) -> tuple[str, str, bool]:
+    """Execute ONE bounded Renode run and return `(uart_text, stdout, timed_out)`.
+
+    Split out of `emulation_check` so that a test can observe the exact bytes
+    the check itself judges, rather than a re-implementation of the run that
+    could drift away from it. Every sandboxing rule documented at the top of
+    this module lives here and applies to every caller: fresh scratch directory,
+    deleted afterwards; the ELF copied in; the capture written via `$ORIGIN`;
+    a wall-clock kill; `stdin` closed.
+
+    This is a pure extraction — it adds no way to relax a verdict. The caller
+    still decides what the bytes mean.
+    """
+    with tempfile.TemporaryDirectory(prefix="ep_emu_") as scratch:
+        repl = _build_repl(root, platform_rel, nodes, notes)
+        resc = _build_resc(uart, run_for, stimulus)
+        with open(os.path.join(scratch, "platform.repl"), "w", encoding="utf-8") as f:
+            f.write(repl)
+        with open(os.path.join(scratch, "run.resc"), "w", encoding="utf-8") as f:
+            f.write(resc)
+        shutil.copyfile(firmware, os.path.join(scratch, "firmware.elf"))
+
+        try:
+            proc = subprocess.run(
+                [renode, "--console", "--disable-xwt", "--plain",
+                 "-e", "include @run.resc"],
+                capture_output=True, text=True, cwd=scratch, timeout=timeout,
+                # MANDATORY: with an open stdin any script error parks Renode in
+                # its interactive monitor and it never returns.
+                stdin=subprocess.DEVNULL,
+            )
+            stdout, timed_out = (proc.stdout or "") + (proc.stderr or ""), False
+        except subprocess.TimeoutExpired as exc:
+            stdout = _decode(exc.stdout) + _decode(exc.stderr)
+            timed_out = True
+
+        uart_path = os.path.join(scratch, "uart.txt")
+        captured = ""
+        if os.path.isfile(uart_path):
+            with open(uart_path, "rb") as f:
+                captured = f.read().decode("utf-8", errors="replace")
+
+    return captured, stdout, timed_out
 
 
 def _decode(raw) -> str:
