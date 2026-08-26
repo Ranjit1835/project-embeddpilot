@@ -167,7 +167,12 @@ def test_generated_firmware_emits_no_compensation_math():
     oracle; BMP180's lives in a figure (V1.10a). The firmware must report RAW."""
     code = generate_application(_bmp180_plan())
     assert "NOT converted to engineering units" in code
-    assert "uart_u32(((uint32_t)b0 << 8) | (uint32_t)b1);" in code
+    # the raw 16-bit device word is combined and reported as-is; asserted by
+    # intent rather than by one exact line, so a refactor of HOW it is printed
+    # cannot silently turn into a refactor of WHETHER it stays raw
+    assert "((uint32_t)b0 << 8) | (uint32_t)b1" in code
+    assert "float" not in code and "compensat" not in code.lower().replace(
+        "no compensation", "")
 
 
 @needs_tools
@@ -264,3 +269,95 @@ def test_map_derived_firmware_actually_runs():
         stimulus={"Temperature": 24})
     assert r["status"] == "working-emulated"
     assert r["firmware_origin"] == "generated"
+
+
+# --- the application: trigger -> action, and a complete repo ----------------
+
+from generation.app_worker import (  # noqa: E402
+    AppGenerationError,
+    Behavior,
+    generate_project,
+)
+
+LD = os.path.join(os.path.dirname(__file__), "fixtures", "emulation", "stm32f4.ld")
+
+
+def _plan_from_map():
+    plan, _ = derive_read_plan(_bmp180_map(), 0x77, measurement="Temperature")
+    return plan
+
+
+def test_engineering_unit_threshold_is_refused_without_an_oracle():
+    """THE integrity rule. A 'temp > 30 C' threshold needs raw -> C, which needs a
+    verified math oracle. BMP180's conversion is figure-trapped (V1.10a), so the
+    generator must refuse rather than invent the formula from memory."""
+    with pytest.raises(AppGenerationError) as e:
+        generate_application(_plan_from_map(),
+                             Behavior(threshold=30, unit="C"),
+                             has_math_oracle=False)
+    assert "math oracle" in str(e.value)
+
+
+def test_raw_threshold_is_allowed():
+    """A threshold in raw device units needs no conversion, so nothing is
+    invented and the behaviour is emittable."""
+    code = generate_application(_plan_from_map(),
+                                Behavior(threshold=18500, unit="raw",
+                                         action_label="RELAY"))
+    assert "RELAY=ON" in code and "RELAY=OFF" in code
+    assert "for (uint32_t iter" in code, "an application samples in a bounded loop"
+
+
+def test_generated_repo_is_complete_and_self_building():
+    """The deliverable is a repo, not a loose .c file — and its README must state
+    what was NOT verified as plainly as what was."""
+    files = generate_project(_plan_from_map(),
+                             Behavior(threshold=18500, unit="raw"),
+                             linker_script=open(LD, encoding="utf-8").read())
+    assert set(files) == {"src/main.c", "Makefile", "README.md", "link/stm32f4.ld"}
+    readme = files["README.md"]
+    assert "NOT performed" in readme      # raw -> engineering units
+    assert "NOT verified" in readme       # physical hardware
+
+
+@needs_tools
+def test_behaviour_fires_only_when_the_reading_crosses_the_threshold():
+    """The application actually works: the actuator follows the mocked sensor.
+    18500 sits between the raw words for Temperature 24 (18225) and 60 (18972)."""
+    import glob
+    import subprocess
+    import tempfile
+
+    from validator.emulation_check import emulation_check
+    from validator.report import ValidationReport
+
+    code = generate_application(_plan_from_map(),
+                                Behavior(threshold=18500, unit="raw",
+                                         action_label="RELAY"))
+    d = tempfile.mkdtemp()
+    with open(os.path.join(d, "app.c"), "w", encoding="utf-8", newline="\n") as f:
+        f.write(code)
+    gcc = glob.glob(os.path.expanduser(
+        "~/.platformio/packages/toolchain-gccarmnoneeabi/bin/arm-none-eabi-gcc*"))[0]
+    subprocess.run([gcc, "-mcpu=cortex-m4", "-mthumb", "-Os", "-ffreestanding",
+                    "-nostdlib", "-nostartfiles", "-T", LD,
+                    os.path.join(d, "app.c"), "-o", os.path.join(d, "firmware.elf")],
+                   capture_output=True, check=True)
+
+    def run(temp, expect):
+        spec = {"target": {"platform": "platforms/cpus/stm32f4.repl",
+                           "uart": "usart2", "firmware": "firmware.elf",
+                           "run_for": "0.5", "timeout": 180},
+                "devices": [{"name": "BMP180",
+                             "bus": {"kind": "i2c", "instance": "I2C1",
+                                     "address": "0x77"},
+                             "stimulus": {"Temperature": temp}}],
+                "expect": expect}
+        rep = ValidationReport()
+        emulation_check(d, spec, rep)
+        return rep.checks["emulation_check"]
+
+    assert run(24, ["RELAY=OFF"]) == "pass", "cold must not fire the actuator"
+    assert run(60, ["RELAY=ON"]) == "pass", "hot must fire the actuator"
+    # and the assertion must be capable of failing, or it proves nothing
+    assert run(60, ["RELAY=OFF"]) == "fail"

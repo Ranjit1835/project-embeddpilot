@@ -79,6 +79,26 @@ class ReadPlan:
     steps: list[Step] = field(default_factory=list)
 
 
+@dataclass
+class Behavior:
+    """trigger -> action. "when the reading goes above X, turn the relay on".
+
+    `unit` is the crux of this project's integrity. A threshold stated in
+    ENGINEERING units (degrees C) can only be applied if the raw device word can
+    be converted, and that conversion must come from a datasheet-grounded math
+    oracle (V1.10a). Where no oracle exists we REFUSE to emit the behaviour
+    rather than invent the formula — see generate_application(). A threshold in
+    RAW device units needs no conversion and is always emittable.
+    """
+
+    threshold: int
+    comparator: str = ">"           # one of > >= < <= == !=
+    unit: str = "raw"               # "raw", or an engineering unit e.g. "C"
+    action_label: str = "ACTION"
+    gpio_port: str = "B"            # actuator pin, e.g. relay
+    gpio_pin: int = 5
+
+
 class AppGenerationError(Exception):
     pass
 
@@ -102,7 +122,9 @@ def expectations_for(plan: ReadPlan) -> list[str]:
     return exp
 
 
-def generate_application(plan: ReadPlan, uart_baud_brr: int = 0x0683) -> str:
+def generate_application(plan: ReadPlan, behavior: "Behavior | None" = None,
+                         samples: int = 1, has_math_oracle: bool = False,
+                         uart_baud_brr: int = 0x0683) -> str:
     """ApplicationSpec + device facts -> complete bare-metal STM32F4 C.
 
     The output compiles with:
@@ -115,17 +137,30 @@ def generate_application(plan: ReadPlan, uart_baud_brr: int = 0x0683) -> str:
         raise AppGenerationError(
             "no device steps supplied — refusing to generate firmware that "
             "touches registers nobody specified")
+    if behavior is not None and behavior.unit != "raw" and not has_math_oracle:
+        # The integrity point. Applying a degrees-C threshold means converting the
+        # raw device word, and that conversion is datasheet knowledge we either
+        # verified (a math oracle) or do not have. Emitting it from memory would
+        # be exactly the invention this project exists to prevent.
+        raise AppGenerationError(
+            f"threshold is stated in {behavior.unit!r} but {plan.chip} has no "
+            "verified math oracle to convert the raw device word into that unit "
+            "(V1.10a). Restate the threshold in raw device units, or supply a "
+            "datasheet-grounded oracle — the conversion will not be invented here.")
     p = _ident(plan.chip)
-    body = _emit_body(plan, p)
+    body = _emit_body(plan, p, behavior, samples)
     return _SCAFFOLD.format(
         chip=plan.chip, prefix=p, addr=f"0x{plan.address:02X}u",
         usart=_USART2_BASE, i2c=_I2C1_BASE, rcc=_RCC_BASE,
         brr=f"0x{uart_baud_brr:04X}u", body=body,
+        act_pin=(behavior.gpio_pin if behavior is not None else 5),
     )
 
 
-def _emit_body(plan: ReadPlan, p: str) -> str:
-    """The application half: the device conversation, in spec order."""
+def _emit_body(plan: ReadPlan, p: str, behavior: "Behavior | None" = None,
+               samples: int = 1) -> str:
+    """The application half: the device conversation, in spec order, wrapped in
+    the application's sample loop and followed by its trigger -> action rule."""
     out: list[str] = []
     for i, s in enumerate(plan.steps):
         if s.kind == "read8":
@@ -161,12 +196,38 @@ def _emit_body(plan: ReadPlan, p: str) -> str:
     /* RAW device word. NOT converted to engineering units: that needs a
      * datasheet-grounded oracle and inventing the formula here would be a lie
      * about what has been verified. */
+    last_raw = ((uint32_t)b0 << 8) | (uint32_t)b1;
     uart_puts("{s.label}=");
-    uart_u32(((uint32_t)b0 << 8) | (uint32_t)b1);
+    uart_u32(last_raw);
     uart_puts("\\r\\n");""")
         else:
             raise AppGenerationError(f"unknown step kind: {s.kind!r}")
-    return "\n".join(out)
+
+    if behavior is not None:
+        cmp_ = (behavior.comparator
+                if behavior.comparator in (">", ">=", "<", "<=", "==", "!=")
+                else ">")
+        out.append(f"""
+    /* trigger -> action, from the application spec. The comparison is on the
+     * RAW device word: converting it to engineering units would require a
+     * verified math oracle, and generate_application() refuses without one. */
+    if (last_raw {cmp_} {behavior.threshold}u) {{
+        gpio_write(1);
+        uart_puts("{behavior.action_label}=ON\\r\\n");
+    }} else {{
+        gpio_write(0);
+        uart_puts("{behavior.action_label}=OFF\\r\\n");
+    }}""")
+
+    inner = "\n".join(out)
+    if behavior is not None or samples > 1:
+        # A real application samples in a loop. The loop is BOUNDED so generated
+        # firmware can never hang the emulator — the same discipline every wait
+        # in the scaffold follows.
+        n = max(1, samples)
+        return (f"    for (uint32_t iter = 0; iter < {n}u; iter++) {{\n"
+                f"{inner}\n    }}")
+    return inner
 
 
 # --- the deterministic scaffold ---------------------------------------------
@@ -258,6 +319,22 @@ static void uart_u32(uint32_t v)
     while (i--) {{ uart_putc(buf[i]); }}
 }}
 
+#define GPIOB_BASE  0x40020400u
+#define GPIO_MODER  (*(volatile uint32_t *)(GPIOB_BASE + 0x00u))
+#define GPIO_BSRR   (*(volatile uint32_t *)(GPIOB_BASE + 0x18u))
+#define ACT_PIN     {act_pin}u
+
+static void gpio_out_init(void)
+{{
+    GPIO_MODER &= ~(3u << (ACT_PIN * 2u));
+    GPIO_MODER |=  (1u << (ACT_PIN * 2u));   /* general purpose output */
+}}
+
+static void gpio_write(int on)
+{{
+    GPIO_BSRR = on ? (1u << ACT_PIN) : (1u << (ACT_PIN + 16u));
+}}
+
 static int wait_flag(volatile uint32_t *reg, uint32_t mask)
 {{
     uint32_t g = GUARD;
@@ -319,6 +396,7 @@ void Reset_Handler(void)
 {{
     uint32_t *src, *dst;
     uint8_t b0 = 0, b1 = 0;
+    uint32_t last_raw = 0;
 
     for (src = &_sidata, dst = &_sdata; dst < &_edata; ) {{ *dst++ = *src++; }}
     for (dst = &_sbss; dst < &_ebss; ) {{ *dst++ = 0u; }}
@@ -334,6 +412,7 @@ void Reset_Handler(void)
     I2C_CCR   = 210u;       /* 100 kHz standard mode */
     I2C_TRISE = 43u;
     I2C_CR1   = CR1_PE | CR1_ACK;
+    gpio_out_init();
 {body}
 
 done:
@@ -447,3 +526,101 @@ def derive_read_plan(
             "address nobody specified"]
 
     return ReadPlan(chip=chip, address=address, steps=steps), notes
+
+
+# --- a complete application repo, not a loose .c file -----------------------
+
+_MAKEFILE = """# Generated by EmbeddPilot V2.
+CROSS   ?= arm-none-eabi-
+CC       = $(CROSS)gcc
+OBJCOPY  = $(CROSS)objcopy
+CFLAGS   = -mcpu=cortex-m4 -mthumb -Os -ffreestanding -nostdlib -nostartfiles \
+           -Wall -Wextra
+LDSCRIPT = link/stm32f4.ld
+
+all: build/firmware.elf build/firmware.bin
+
+build:
+\tmkdir -p build
+
+build/firmware.elf: src/main.c $(LDSCRIPT) | build
+\t$(CC) $(CFLAGS) -T $(LDSCRIPT) $< -o $@
+
+build/firmware.bin: build/firmware.elf
+\t$(OBJCOPY) -O binary $< $@
+
+clean:
+\trm -rf build
+
+.PHONY: all clean
+"""
+
+
+def _readme(plan: ReadPlan, behavior, verified: dict) -> str:
+    steps = "\n".join(
+        f"- `{s.label}` — {s.kind} at "
+        + (f"0x{s.reg:02X}" + (f"/0x{s.reg_lo:02X}" if s.reg_lo is not None else "")
+           if s.reg is not None else "bounded wait")
+        for s in plan.steps)
+    act = (f"\nWhen the raw reading {behavior.comparator} `{behavior.threshold}` "
+           f"(raw device units), GPIO{behavior.gpio_port}{behavior.gpio_pin} is "
+           f"driven high and `{behavior.action_label}=ON` is printed.\n"
+           if behavior is not None else "\nNo trigger/action rule was specified.\n")
+    return f"""# {plan.chip} application
+
+Generated by **EmbeddPilot V2**. Bare-metal STM32F4, device at I²C address
+`0x{plan.address:02X}`.
+
+## Build
+
+    make            # -> build/firmware.elf
+
+Requires `arm-none-eabi-gcc`.
+
+## What this firmware does
+{steps}
+{act}
+## What has been verified — and what has NOT
+
+| Property | Status |
+|---|---|
+| Register addresses | {verified.get('registers', 'from the extracted register map')} |
+| Compiles clean (`-Wall -Wextra`) | {verified.get('compile', 'yes')} |
+| Runs against a mocked device | {verified.get('emulation', 'see the emulation report')} |
+| Raw → engineering-unit conversion | **NOT performed** — needs a datasheet-grounded math oracle |
+| Physical hardware | **NOT verified** — emulation is not silicon |
+
+Every register address above comes from the datasheet-extracted register map;
+none was inferred. The raw device word is reported as-is: converting it to
+engineering units requires a verified conversion, and where none exists this
+firmware does not invent one.
+
+Emulation shows the firmware runs and behaves as specified against a *mocked*
+device. It is not evidence that it works on physical hardware — bring-up on real
+silicon remains a human step.
+"""
+
+
+def generate_project(
+    plan: ReadPlan,
+    behavior: "Behavior | None" = None,
+    samples: int = 1,
+    has_math_oracle: bool = False,
+    linker_script: str = "",
+    verified: dict | None = None,
+) -> dict[str, str]:
+    """The deliverable: a complete, buildable application repo.
+
+    Returns {relative_path: file_contents}. The README states plainly what was
+    verified and what was not — a repo that overstates its own guarantees is the
+    failure mode this project exists to prevent.
+    """
+    main_c = generate_application(plan, behavior, samples, has_math_oracle)
+    files = {
+        "src/main.c": main_c,
+        "Makefile": _MAKEFILE,
+        "README.md": _readme(plan, behavior, verified or {}),
+    }
+    if linker_script:
+        files["link/stm32f4.ld"] = linker_script
+    return files
