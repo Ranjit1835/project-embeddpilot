@@ -348,3 +348,136 @@ async def get_mcu_map(map_id: str):
         raise HTTPException(404, "no such MCU map")
     with open(path, encoding="utf-8") as f:
         return json.load(f)
+
+
+# --- V2: requirement -> composed application ---------------------------------
+#
+# Two endpoints, split by cost. `analyze` is fast and synchronous: it turns a
+# requirement into a spec, surfaces the clarifying questions, composes the
+# devices and runs the resource cross-check — everything the Resource Map screen
+# needs, with no toolchain involved. `build` is slow (generate + cross-compile +
+# boot an emulator) so it runs as a job like /api/generate does.
+
+def _spec_json(spec) -> dict:
+    """ApplicationSpec -> JSON, keeping provenance visible. The UI must be able
+    to show WHY a value is present ('you said it' vs 'you answered a question'),
+    so provenance travels with every field rather than being flattened away."""
+    from dataclasses import asdict, is_dataclass
+    if spec is None:
+        return {}
+    try:
+        return asdict(spec)
+    except (TypeError, ValueError):
+        return {"repr": str(spec)} if not is_dataclass(spec) else {}
+
+
+@app.post("/api/v2/analyze")
+async def v2_analyze(payload: dict):
+    """Requirement (+ any answers so far) -> questions, devices, resource map.
+
+    Returns `needs-clarification` with questions when anything is ambiguous —
+    the caller must not be able to skip past this, because no spec line means no
+    code."""
+    from orchestration.v2_pipeline import run_application_pipeline
+
+    text = (payload.get("requirement") or "").strip()
+    if not text:
+        raise HTTPException(422, "requirement text is required")
+    answers = payload.get("answers") or {}
+    try:
+        from generation.provider import make_provider
+        provider = make_provider()
+    except Exception as e:                       # no key configured, etc.
+        raise HTTPException(503, f"no LLM provider available: {e}")
+
+    result = run_application_pipeline(text, answers=answers, provider=provider)
+    report = result.get("report")
+    return {
+        "status": result["status"],
+        "questions": [
+            {"id": q.id, "field": q.field, "text": q.text,
+             "options": list(getattr(q, "options", []) or []),
+             "blocking": bool(getattr(q, "blocking", True))}
+            for q in result.get("questions", [])
+        ],
+        "devices": result.get("devices", []),
+        "resource_map": result.get("resource_map"),
+        "stages": result.get("stages", []),
+        "checks": (report.checks if report is not None else {}),
+        "failures": ([{"check": f.check, "message": f.message}
+                      for f in report.failures] if report is not None else []),
+        "spec": _spec_json(result.get("spec")),
+    }
+
+
+@app.post("/api/v2/build")
+async def v2_build(payload: dict):
+    """Generate the application, compile it, and prove it in emulation.
+
+    Long-running, so it returns a job_id; poll /api/jobs/{id} exactly as the V1
+    generate flow does."""
+    text = (payload.get("requirement") or "").strip()
+    if not text:
+        raise HTTPException(422, "requirement text is required")
+    job = STORE.create("v2-build")
+    threading.Thread(
+        target=_run_v2_build,
+        args=(job, text, payload.get("answers") or {},
+              payload.get("register_map"), payload.get("address"),
+              payload.get("measurement"), payload.get("behavior"),
+              payload.get("stimulus")),
+        daemon=True,
+    ).start()
+    return {"job_id": job.id}
+
+
+def _run_v2_build(job: Job, text: str, answers: dict, register_map, address,
+                  measurement, behavior, stimulus):
+    from generation.app_worker import Behavior, derive_read_plan
+    from generation.provider import make_provider
+    from orchestration.v2_pipeline import run_application_pipeline
+
+    try:
+        provider = make_provider()
+    except Exception as e:
+        job.finish(error=f"no LLM provider available: {e}")
+        return
+    try:
+        plan = None
+        notes: list[str] = []
+        if register_map:
+            addr = address if isinstance(address, int) else int(str(address or "0"), 0)
+            plan, notes = derive_read_plan(register_map, addr, measurement=measurement)
+            if plan is None:
+                # honest stop: the map named nothing we could read, and guessing
+                # an address is exactly what this system refuses to do
+                job.finish(result={"status": "blocked-no-read-plan", "notes": notes})
+                return
+        beh = None
+        if behavior:
+            beh = Behavior(
+                threshold=int(behavior["threshold"]),
+                comparator=behavior.get("comparator", ">"),
+                unit=behavior.get("unit", "raw"),
+                action_label=behavior.get("action_label", "ACTION"),
+                gpio_pin=int(behavior.get("gpio_pin", 5)),
+            )
+        result = run_application_pipeline(
+            text, answers=answers, provider=provider, read_plan=plan,
+            expect=None, stimulus=stimulus,
+        )
+        report = result.get("report")
+        job.finish(result={
+            "status": result["status"],
+            "firmware_origin": result.get("firmware_origin"),
+            "stages": result.get("stages", []),
+            "devices": result.get("devices", []),
+            "verdict_note": result.get("verdict_note", ""),
+            "derivation_notes": notes,
+            "checks": (report.checks if report is not None else {}),
+            "failures": ([{"check": f.check, "message": f.message}
+                          for f in report.failures] if report is not None else []),
+            "notes": (report.notes if report is not None else []),
+        })
+    except Exception as e:
+        job.finish(error=f"v2 build crashed: {e}")
