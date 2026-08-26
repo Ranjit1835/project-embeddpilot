@@ -2,13 +2,20 @@
 
 /* The board IS the screen. A two-layer copper render of the composed system:
    header pads on the left, the die as a peripheral inventory in the middle,
-   devices hanging off the right. Top copper is phosphor (the I²C bus), bottom
-   copper is bronze (the relay control net) — so crossings read as deliberate
-   layer changes, and a genuine double-booking reads as an alarm. */
+   devices hanging off the right. Top copper is phosphor (buses), bottom copper
+   is bronze (plain GPIO nets) — so crossings read as deliberate layer changes,
+   and a genuine double-booking reads as an alarm.
+
+   This component is a RENDERER. It holds no facts about any board: every pad,
+   peripheral block, device and trace comes from the `BoardModel` it is handed,
+   which lib/v2-view.ts derives strictly from what the pipeline reported. If the
+   pipeline reported no pin claims, this draws no pins — it does not know enough
+   about any MCU to fill the gap, and pretending otherwise is the exact class of
+   invented fact `resource_crosscheck` exists to catch. */
 
 import { motion } from "framer-motion";
-import { DIE_BLOCKS, devices, pins, relayNet, NETS, TARGET, type Mode } from "../../lib/resource-map-mock";
-import { GLIDE, SNAP } from "./chrome";
+import type { BoardModel, NetTone } from "../../lib/v2-view";
+import { SNAP } from "./chrome";
 
 const C = {
   pcb: "#0a1512",
@@ -21,6 +28,13 @@ const C = {
   bottom: "#c08a3e",
   alarm: "#e5533c",
   idle: "#2b3a44",
+};
+
+const NET_COLOR: Record<NetTone, string> = {
+  bus: C.bus,
+  uart: C.uart,
+  gpio: C.bottom,
+  alarm: C.alarm,
 };
 
 const KIND_COLOR: Record<string, string> = {
@@ -38,21 +52,34 @@ function Trace({
   color,
   width = 1.6,
   dim,
+  dashed,
   delay = 0,
+  strobe,
 }: {
   d: string;
   color: string;
   width?: number;
   dim?: boolean;
+  dashed?: boolean;
   delay?: number;
+  strobe?: boolean;
 }) {
   return (
     <g>
-      <path d={d} stroke={color} strokeWidth={width + 4} opacity={dim ? 0.04 : 0.11} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d={d}
+        stroke={color}
+        strokeWidth={width + 4}
+        opacity={dim ? 0.04 : 0.11}
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
       <motion.path
         d={d}
         stroke={color}
         strokeWidth={width}
+        strokeDasharray={dashed ? "7 4" : undefined}
         opacity={dim ? 0.42 : 0.95}
         fill="none"
         strokeLinecap="round"
@@ -60,27 +87,35 @@ function Trace({
         initial={{ pathLength: 0 }}
         animate={{ pathLength: 1 }}
         transition={{ duration: 0.7, delay, ease: "easeInOut" }}
+        className={strobe ? "ins-strobe" : undefined}
       />
     </g>
   );
 }
 
-export function BoardView({ mode }: { mode: Mode }) {
-  const conflict = mode === "conflict";
-  const rows = pins(mode);
-  const nodes = devices(mode);
-  const relayColor = conflict ? C.alarm : C.bottom;
+function describe(board: BoardModel): string {
+  if (board.empty) return `Board resource map. ${board.empty}`;
+  const conflicts = board.devices.filter((d) => d.status === "conflict");
+  const base =
+    `Board resource map for ${board.target.mcu} on ${board.target.board}. ` +
+    `${board.devices.length} composed device(s), ${board.die.length} claimed ` +
+    `peripheral(s), ${board.pins.length} claimed pin(s).`;
+  return conflicts.length
+    ? `${base} ${conflicts.length} device(s) are involved in a reported resource conflict, shown in red: ${conflicts
+        .map((d) => d.name)
+        .join(", ")}.`
+    : `${base} No resource conflicts were reported.`;
+}
+
+export function BoardView({ board }: { board: BoardModel }) {
+  const connected = new Set(board.nets.map((n) => n.id));
 
   return (
     <svg
       viewBox="0 0 860 480"
       className="ins-mono h-auto w-full select-none"
       role="img"
-      aria-label={
-        conflict
-          ? "Board resource map. PB6 is claimed by both I2C1 SCL and the relay GPIO output — a pin collision, shown in red."
-          : "Board resource map. Relay moved to PB5; no pin collisions remain and every net is clean."
-      }
+      aria-label={describe(board)}
     >
       <defs>
         <linearGradient id="rm-pcb" x1="0" y1="0" x2="0.4" y2="1">
@@ -124,68 +159,32 @@ export function BoardView({ mode }: { mode: Mode }) {
         </g>
       ))}
 
-      {/* silkscreen */}
+      {/* silkscreen — the target the SPEC states, never a default */}
       <text x="330" y="26" textAnchor="middle" fontSize="10.5" fill={C.silkDim} letterSpacing="3">
-        {TARGET.board}
+        {board.target.board}
       </text>
       <text x="330" y="48" textAnchor="middle" fontSize="12" fill={C.silk} letterSpacing="1.6">
-        {TARGET.mcu}
+        {board.target.mcu}
       </text>
       <text x="72" y="440" fontSize="7.5" fill={C.silkDim} letterSpacing="1.6">
         EMBEDDPILOT · RESOURCE MAP · REV 2.0
       </text>
-      <text x="478" y="440" textAnchor="end" fontSize="7.5" fill={C.silkDim} letterSpacing="1.6">
-        {TARGET.pkg}
-      </text>
-      <text x="84" y="66" fontSize="7.5" fill={C.silkDim} letterSpacing="1.4">
-        CN7 / CN10
-      </text>
-
-      {/* --------------------------------------- bottom copper (relay control) */}
-      <g>
-        <motion.path
-          animate={{ d: relayNet(mode) }}
-          transition={GLIDE}
-          d={NETS.relayConflict}
-          stroke={relayColor}
-          strokeWidth="6"
-          opacity="0.1"
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <motion.path
-          animate={{ d: relayNet(mode), stroke: relayColor }}
-          transition={GLIDE}
-          d={NETS.relayConflict}
-          strokeWidth="2"
-          strokeDasharray="7 4"
-          opacity={conflict ? 0.95 : 0.8}
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className={conflict ? "ins-strobe" : undefined}
-        />
-        <motion.text
-          animate={{ x: 168, y: conflict ? 422 : 422 }}
-          fontSize="8"
-          fill={relayColor}
-          opacity="0.85"
-          letterSpacing="1.4"
-        >
-          {conflict ? "RELAY_CTRL · BOTTOM · UNRESOLVED" : "RELAY_CTRL · BOTTOM LAYER"}
-        </motion.text>
-      </g>
 
       {/* -------------------------------------------------------- header pads */}
-      {rows.map((p, i) => {
+      {board.pins.map((p, i) => {
         const color = p.conflict ? C.alarm : KIND_COLOR[p.kind];
         const live = p.wired && p.kind !== "power";
         return (
           <g key={p.id}>
             {/* stub into the die */}
             {p.wired ? (
-              <Trace d={`M 108 ${p.y} H 250`} color={color} width={p.kind === "power" ? 1.2 : 1.6} dim={p.kind === "power" || p.kind === "reserved"} delay={0.1 + i * 0.035} />
+              <Trace
+                d={`M 108 ${p.y} H 250`}
+                color={color}
+                width={p.kind === "power" ? 1.2 : 1.6}
+                dim={p.kind === "power" || p.kind === "reserved"}
+                delay={0.1 + i * 0.035}
+              />
             ) : (
               <>
                 <path d={`M 108 ${p.y} H 168`} stroke={C.idle} strokeWidth="1.2" strokeDasharray="2 4" fill="none" />
@@ -248,108 +247,144 @@ export function BoardView({ mode }: { mode: Mode }) {
                 <circle cx="100" cy={p.y} r="11" fill="none" stroke={C.alarm} strokeWidth="1" opacity="0.55" />
               </g>
             )}
-            {!conflict && p.id === "PB5" && (
-              <motion.circle
-                initial={{ scale: 0.3, opacity: 0 }}
-                animate={{ scale: 1, opacity: 0.6 }}
-                transition={{ ...SNAP, delay: 0.35 }}
-                cx="100"
-                cy={p.y}
-                r="11"
-                fill="none"
-                stroke={C.bus}
-                strokeWidth="1"
-                style={{ transformBox: "fill-box", transformOrigin: "center" }}
-              />
-            )}
           </g>
         );
       })}
 
+      {/* the spec claimed no pins — say so on the silkscreen rather than
+          drawing a pinout nobody asked for */}
+      {board.pins.length === 0 && !board.empty && (
+        <g>
+          <rect x="76" y="150" width="160" height="52" rx="2" fill="#0d1a16" stroke="#1e3a30" strokeWidth="1" strokeDasharray="4 3" />
+          <text x="86" y="170" fontSize="8.5" fill={C.silkDim} letterSpacing="1.2">
+            NO PIN CLAIMS
+          </text>
+          <text x="86" y="184" fontSize="7.5" fill={C.silkDim} letterSpacing="0.8">
+            the spec named no pins, so
+          </text>
+          <text x="86" y="195" fontSize="7.5" fill={C.silkDim} letterSpacing="0.8">
+            none are drawn or verified
+          </text>
+        </g>
+      )}
+
       {/* collision annotation, parked in the free silkscreen below the header */}
-      {conflict && (
+      {board.alarm && (
         <motion.g initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SNAP, delay: 0.5 }}>
-          <rect x="176" y="398" width="196" height="17" rx="2" fill="#2a0f0c" stroke={C.alarm} strokeWidth="1" />
-          <rect x="176" y="398" width="3" height="17" fill={C.alarm} />
-          <text x="186" y="410" fontSize="8.5" fill={C.alarm} letterSpacing="1.3">
-            ⚠ NET COLLISION · PAD PB6 · 2 CLAIMS
+          {/* sized from the caption: SVG text neither wraps nor ellipsizes, so
+              a fixed plate width silently truncates a longer alarm */}
+          <rect x="120" y="398" width={board.alarm.length * 6.3 + 20} height="17" rx="2" fill="#2a0f0c" stroke={C.alarm} strokeWidth="1" />
+          <rect x="120" y="398" width="3" height="17" fill={C.alarm} />
+          <text x="130" y="410" fontSize="8.5" fill={C.alarm} letterSpacing="1.3">
+            {board.alarm}
           </text>
         </motion.g>
       )}
 
-      {/* ------------------------------------------------------- the die */}
+      {/* ------------------------------------------------------------ the die */}
       <rect x="250" y="56" width="160" height="356" rx="5" fill="url(#rm-die)" stroke="#2b3944" strokeWidth="1.5" />
       <circle cx="262" cy="68" r="3.2" fill={C.silkDim} />
-      {rows.map((p) => (
+      {board.pins.map((p) => (
         <rect key={`lead-l-${p.id}`} x="243" y={p.y - 2.5} width="9" height="5" rx="1" fill={p.conflict ? C.alarm : C.goldDim} />
       ))}
-      {[78, 112, 180, 214].map((y) => (
-        <rect key={`lead-r-${y}`} x="408" y={y - 2.5} width="9" height="5" rx="1" fill={C.goldDim} />
+      {board.die.map((b) => (
+        <rect key={`lead-r-${b.label}`} x="408" y={b.y + b.h / 2 - 2.5} width="9" height="5" rx="1" fill={C.goldDim} />
       ))}
 
-      {DIE_BLOCKS.map((b) => (
+      {board.die.map((b) => (
         <g key={b.label}>
-          <rect x="264" y={b.y} width="132" height={b.h} rx="2" fill={b.lit ? "#101c1a" : "#0d1319"} stroke={b.lit ? "#20402f" : "#1b242d"} strokeWidth="1" />
-          <rect x="264" y={b.y} width="2.5" height={b.h} fill={b.lit ? C.bus : "#233039"} opacity={b.lit ? 0.8 : 1} />
-          <text x="274" y={b.y + 16} fontSize="10" fill={b.lit ? C.silk : C.silkDim} letterSpacing="1.2">
+          <rect
+            x="264"
+            y={b.y}
+            width="132"
+            height={b.h}
+            rx="2"
+            fill={b.conflict ? "#1c1210" : b.lit ? "#101c1a" : "#0d1319"}
+            stroke={b.conflict ? "#5e241c" : b.lit ? "#20402f" : "#1b242d"}
+            strokeWidth="1"
+          />
+          <rect
+            x="264"
+            y={b.y}
+            width="2.5"
+            height={b.h}
+            fill={b.conflict ? C.alarm : b.lit ? C.bus : "#233039"}
+            opacity={b.lit ? 0.8 : 1}
+            className={b.conflict ? "ins-strobe" : undefined}
+          />
+          <text x="274" y={b.y + 16} fontSize="10" fill={b.conflict ? C.alarm : b.lit ? C.silk : C.silkDim} letterSpacing="1.2">
             {b.label}
           </text>
-          <text x="274" y={b.y + 29} fontSize="8" fill={b.lit ? C.bus : C.silkDim} opacity={b.lit ? 0.75 : 0.6} letterSpacing="0.8">
+          <text
+            x="274"
+            y={b.y + Math.min(29, b.h - 6)}
+            fontSize="8"
+            fill={b.conflict ? "#a8564a" : b.lit ? C.bus : C.silkDim}
+            opacity={b.lit ? 0.75 : 0.6}
+            letterSpacing="0.8"
+          >
             {b.note}
           </text>
-          <circle cx="386" cy={b.y + 13} r="2.6" fill={b.lit ? C.bus : "#1b242d"} />
+          <circle cx="386" cy={b.y + 13} r="2.6" fill={b.conflict ? C.alarm : b.lit ? C.bus : "#1b242d"} />
         </g>
       ))}
 
-      {/* --------------------------------------------------- top copper buses */}
-      <Trace d={NETS.scl} color={C.bus} delay={0.4} />
-      <Trace d={NETS.sda} color={C.bus} delay={0.45} />
-      <Trace d={NETS.daisyScl} color={C.bus} delay={0.55} />
-      <Trace d={NETS.daisySda} color={C.bus} delay={0.6} />
-      <Trace d={NETS.uartTx} color={C.uart} delay={0.5} />
-      <Trace d={NETS.uartRx} color={C.uart} delay={0.55} />
-
-      {/* signal flow — faster once emulation is actually running */}
-      <g className={conflict ? "ins-flow" : "ins-flow ins-flow-fast"} opacity={conflict ? 0.35 : 0.9}>
-        <path d={NETS.scl} stroke={C.bus} strokeWidth="2.2" fill="none" strokeLinecap="round" />
-        <path d={NETS.sda} stroke={C.bus} strokeWidth="2.2" fill="none" strokeLinecap="round" />
-        <path d={NETS.daisyScl} stroke={C.bus} strokeWidth="2.2" fill="none" strokeLinecap="round" />
-        <path d={NETS.daisySda} stroke={C.bus} strokeWidth="2.2" fill="none" strokeLinecap="round" />
-      </g>
-      {!conflict && (
-        <g className="ins-flow ins-flow-fast" opacity="0.85">
-          <path d={NETS.uartTx} stroke={C.uart} strokeWidth="2.2" fill="none" strokeLinecap="round" />
-        </g>
+      {board.die.length === 0 && !board.empty && (
+        <text x="330" y="240" textAnchor="middle" fontSize="9" fill={C.silkDim} letterSpacing="1.2">
+          NO PERIPHERAL CLAIMS
+        </text>
       )}
 
-      <text x="500" y="70" fontSize="7.5" fill={C.silkDim} letterSpacing="1.4">
-        I²C1
-      </text>
-      <text x="500" y="290" fontSize="7.5" fill={C.silkDim} letterSpacing="1.4">
-        USART2
-      </text>
-
-      {/* board-edge exit notches */}
-      {[78, 112, 180, 214, 428].map((y) => (
-        <rect key={`notch-${y}`} x="486" y={y - 4} width="4" height="8" fill="#0b1a16" stroke="#22453a" strokeWidth="0.75" />
+      {/* --------------------------------------------------------- the copper */}
+      {board.nets.map((n) => (
+        <Trace
+          key={n.id}
+          d={n.d}
+          color={NET_COLOR[n.tone]}
+          dashed={n.dashed}
+          delay={n.delay}
+          strobe={n.tone === "alarm"}
+        />
       ))}
 
-      {/* ---------------------------------------------------------- devices */}
-      {nodes.map((d) => {
+      {/* signal flow — a bright dash chasing each clean trace */}
+      <g className="ins-flow ins-flow-fast">
+        {board.nets
+          .filter((n) => n.flow)
+          .map((n) => (
+            <path
+              key={`flow-${n.id}`}
+              d={n.d}
+              stroke={NET_COLOR[n.tone]}
+              strokeWidth="2.2"
+              fill="none"
+              strokeLinecap="round"
+              opacity="0.8"
+            />
+          ))}
+      </g>
+
+      {/* board-edge exit notches, one per departing net */}
+      {board.nets.map((n, i) => {
+        const m = n.d.match(/H 570$/) ? n.d.match(/V ([\d.]+) H 570$/) : null;
+        const y = m ? Number(m[1]) : null;
+        return y === null ? null : (
+          <rect key={`notch-${i}`} x="486" y={y - 4} width="4" height="8" fill="#0b1a16" stroke="#22453a" strokeWidth="0.75" />
+        );
+      })}
+
+      {/* ------------------------------------------------------------ devices */}
+      {board.devices.map((d, i) => {
         const bad = d.status === "conflict";
-        const accent = bad ? C.alarm : d.id === "console" ? C.uart : C.bus;
+        const accent = bad ? C.alarm : C.bus;
+        const hasNet = connected.has(`${d.id}-net`);
         return (
-          <motion.g key={d.id} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ ...SNAP, delay: 0.35 }}>
+          <motion.g key={d.id} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ ...SNAP, delay: 0.3 + i * 0.05 }}>
             <rect x="570" y={d.y} width="250" height={d.h} rx="3" fill="url(#rm-dev)" stroke={bad ? "#5e241c" : "#22303b"} strokeWidth="1.25" />
             <rect x="570" y={d.y} width="2.5" height={d.h} fill={accent} opacity={bad ? 1 : 0.55} className={bad ? "ins-strobe" : undefined} />
-            {/* connector pins on the block edge */}
-            {d.id === "bme280" &&
-              [78, 112].map((y) => <rect key={y} x="562" y={y - 3} width="9" height="6" rx="1" fill={C.gold} opacity="0.8" />)}
-            {d.id === "ssd1306" &&
-              [598, 632].map((x) => <rect key={x} x={x - 3} y="164" width="6" height="9" rx="1" fill={C.gold} opacity="0.8" />)}
-            {d.id === "console" &&
-              [298, 332].map((y) => <rect key={y} x="562" y={y - 3} width="9" height="6" rx="1" fill={C.gold} opacity="0.8" />)}
-            {d.id === "relay" && <rect x="562" y="425" width="9" height="6" rx="1" fill={bad ? C.alarm : C.gold} opacity="0.9" />}
+            {hasNet && (
+              <rect x="562" y={d.y + d.h / 2 - 3} width="9" height="6" rx="1" fill={bad ? C.alarm : C.gold} opacity="0.85" />
+            )}
 
             <circle cx="588" cy={d.y + 20} r="3.4" fill={accent}>
               {bad && <animate attributeName="opacity" values="1;0.2;1" dur="0.9s" repeatCount="indefinite" />}
@@ -361,27 +396,32 @@ export function BoardView({ mode }: { mode: Mode }) {
               {d.iface}
               {d.addr ? `  @${d.addr}` : ""}
             </text>
-            <text x="600" y={d.y + 39} fontSize="8.5" fill={bad ? "#a8564a" : C.silkDim} letterSpacing="0.6">
-              {d.role}
-            </text>
-            {d.checks.length > 0 && (
-              <text x="600" y={d.y + 62} fontSize="8.5" fill={C.bus} opacity="0.8" letterSpacing="0.8">
-                {d.checks.map((c) => `✓ ${c.label}`).join("   ")}
+            {d.h > 46 && (
+              <text x="600" y={d.y + 39} fontSize="8.5" fill={bad ? "#a8564a" : C.silkDim} letterSpacing="0.6">
+                {d.role}
               </text>
             )}
-            {d.id === "console" && (
-              <text x="600" y={d.y + 62} fontSize="8.5" fill={C.uart} opacity="0.8" letterSpacing="0.8">
-                115200 8N1 · {conflict ? "idle" : "streaming"}
+            {d.h > 62 && (
+              <text x="600" y={d.y + 58} fontSize="8.5" fill={bad ? "#a8564a" : C.bus} opacity="0.8" letterSpacing="0.8">
+                {d.facts.join("   ")}
               </text>
             )}
           </motion.g>
         );
       })}
 
-      {/* bus annotation under the device stack */}
-      <text x="570" y="472" fontSize="8" fill={C.silkDim} letterSpacing="1.4">
-        BUS I²C1 · 0x76 BME280 · 0x3C SSD1306 · no address collision
-      </text>
+      {/* the honest line: what the map does and does not cover */}
+      {board.footnote && (
+        <text x="60" y="472" fontSize="8" fill={C.silkDim} letterSpacing="1.2">
+          {board.footnote.slice(0, 132)}
+        </text>
+      )}
+
+      {board.empty && (
+        <text x="695" y="240" textAnchor="middle" fontSize="10" fill={C.silkDim} letterSpacing="1.2">
+          NO DEVICES COMPOSED
+        </text>
+      )}
     </svg>
   );
 }

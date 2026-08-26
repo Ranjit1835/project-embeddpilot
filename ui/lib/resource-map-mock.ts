@@ -1,271 +1,246 @@
-/* Mock data for the V2 "Resource Map" hero screen (V2_PLAN §7).
-   Pure fixtures — this module makes no network calls and is safe to import
-   from a client component. Geometry lives here alongside the semantics so the
-   board view stays a renderer, not a source of truth.
+/* Demo fixtures for the V2 Resource Map — the offline fallback.
 
-   Coordinate space is the board SVG viewBox: 0 0 860 480.
-   Pin rows sit on a 34px grid so every stub can be a straight line — the
-   "instrument precision" the panel aesthetic depends on. */
+   Precedent: lib/demo.ts + demo-data.json do this for the V1 wizard, so a
+   hosted case study still demonstrates the product with no Python backend.
 
-export type Mode = "conflict" | "resolved";
+   WHAT MAKES THIS SAFE
+   --------------------
+   These are `AnalyzeResponse` / `BuildResult` values in the SAME shape the real
+   API returns, so demo mode goes through the identical adapters and renderer
+   (lib/v2-view.ts). There is no demo-only rendering path, which means the demo
+   cannot show a capability the live pipeline lacks — the worst way to lie with
+   a fixture.
 
-/* ---------------------------------------------------------------- target */
+   WHAT MAKES IT HONEST
+   --------------------
+   Demo mode is never entered automatically. `api.ts`'s V1 client falls back to
+   recorded runs when the backend is unreachable; the V2 client deliberately
+   does NOT (see lib/v2-api.ts) — it raises, and the screen says the backend is
+   down. Demo is an explicit switch, and while it is on the chassis carries a
+   permanent hazard banner naming it as fixture data.
 
-export const TARGET = {
-  family: "STM32F4",
-  mcu: "STM32F411RET6",
-  board: "NUCLEO-F411RE",
-  pkg: "LQFP64",
-  core: "CORTEX-M4F · 100 MHz",
-  project: "greenhouse",
-} as const;
+   The wording of every message, note and verdict below is copied from what the
+   Python actually emits (validator/resource_crosscheck.py::_check_pins,
+   orchestration/v2_pipeline.py), so the demo does not teach a viewer to expect
+   phrasing the real system never produces. */
 
-/* ------------------------------------------------------------------ pins */
+import type {
+  AnalyzeResponse,
+  BuildResult,
+  ConsoleLine,
+} from "./v2-types";
 
-export type PinKind = "bus" | "uart" | "gpio" | "free" | "power" | "reserved";
+export type DemoState = "conflict" | "resolved";
 
-export interface Pin {
-  /** silkscreen designator */
-  id: string;
-  /** SVG row centre */
-  y: number;
-  kind: PinKind;
-  /** alternate-function label printed on the silkscreen */
-  fn: string;
-  /** who claims this pin, printed under the trace */
-  owner?: string;
-  /** true when two nets are booked onto the same pad */
-  conflict?: boolean;
-  /** the net physically reaches the die */
-  wired: boolean;
-}
+/* -------------------------------------------------------------- the target */
 
-const PIN_Y = [78, 112, 146, 180, 214, 248, 282, 316, 350, 384] as const;
-
-export function pins(mode: Mode): Pin[] {
-  const conflict = mode === "conflict";
-  return [
-    {
-      id: "PB6",
-      y: PIN_Y[0],
-      kind: conflict ? "gpio" : "bus",
-      fn: "I²C1_SCL",
-      owner: conflict ? "BME280 · SSD1306  ✕  RELAY" : "BME280 · SSD1306",
-      conflict,
-      wired: true,
-    },
-    {
-      id: "PB7",
-      y: PIN_Y[1],
-      kind: "bus",
-      fn: "I²C1_SDA",
-      owner: "BME280 · SSD1306",
-      wired: true,
-    },
-    {
-      id: "PB5",
-      y: PIN_Y[2],
-      kind: conflict ? "free" : "gpio",
-      fn: conflict ? "— available" : "RELAY_CTRL",
-      owner: conflict ? undefined : "RELAY  (push-pull)",
-      wired: !conflict,
-    },
-    { id: "PA2", y: PIN_Y[3], kind: "uart", fn: "USART2_TX", owner: "CONSOLE", wired: true },
-    { id: "PA3", y: PIN_Y[4], kind: "uart", fn: "USART2_RX", owner: "CONSOLE", wired: true },
-    { id: "PA5", y: PIN_Y[5], kind: "free", fn: "— available", wired: false },
-    { id: "PA0", y: PIN_Y[6], kind: "free", fn: "— available", wired: false },
-    { id: "PC13", y: PIN_Y[7], kind: "reserved", fn: "USER_BTN", owner: "reserved by board", wired: true },
-    { id: "3V3", y: PIN_Y[8], kind: "power", fn: "VDD", wired: true },
-    { id: "GND", y: PIN_Y[9], kind: "power", fn: "VSS", wired: true },
-  ];
-}
-
-/* -------------------------------------------------------- die sub-blocks */
-
-export interface DieBlock {
-  label: string;
-  note: string;
-  y: number;
-  h: number;
-  /** lit = peripheral is claimed by the composed system */
-  lit: boolean;
-}
-
-export const DIE_BLOCKS: DieBlock[] = [
-  { label: "I²C1", note: "400 kHz · FM", y: 66, h: 40, lit: true },
-  { label: "USART2", note: "115200 8N1", y: 118, h: 40, lit: true },
-  { label: "GPIOB", note: "PP · no PU", y: 170, h: 40, lit: true },
-  { label: "DMA1", note: "0/8 streams", y: 222, h: 40, lit: false },
-  { label: "RCC · APB1", note: "42 MHz", y: 274, h: 40, lit: true },
-  { label: "PWR · VDD", note: "3.3 V", y: 326, h: 40, lit: true },
-  { label: "NVIC", note: "2/60 IRQ", y: 378, h: 34, lit: false },
-];
-
-/* --------------------------------------------------------------- devices */
-
-export interface DeviceNode {
-  id: string;
-  name: string;
-  role: string;
-  iface: string;
-  addr?: string;
-  /** SVG block geometry */
-  y: number;
-  h: number;
-  /** per-device oracle checks carried up from V1 */
-  checks: { label: string; ok: boolean }[];
-  status: "ok" | "conflict";
-}
-
-export function devices(mode: Mode): DeviceNode[] {
-  const conflict = mode === "conflict";
-  return [
-    {
-      id: "bme280",
-      name: "BME280",
-      role: "temp · humidity · pressure",
-      iface: "I²C1",
-      addr: "0x76",
-      y: 52,
-      h: 86,
-      checks: [
-        { label: "reg", ok: true },
-        { label: "readout", ok: true },
-        { label: "math", ok: true },
-      ],
-      status: "ok",
-    },
-    {
-      id: "ssd1306",
-      name: "SSD1306",
-      role: "128×64 OLED",
-      iface: "I²C1",
-      addr: "0x3C",
-      y: 170,
-      h: 86,
-      checks: [
-        { label: "reg", ok: true },
-        { label: "readout", ok: true },
-      ],
-      status: "ok",
-    },
-    {
-      id: "console",
-      name: "CONSOLE",
-      role: "virtual UART · host",
-      iface: "USART2",
-      y: 280,
-      h: 80,
-      checks: [],
-      status: "ok",
-    },
-    {
-      id: "relay",
-      name: "RELAY",
-      role: conflict ? "vent actuator — unplaced" : "vent actuator",
-      iface: conflict ? "GPIO PB6" : "GPIO PB5",
-      y: 400,
-      h: 56,
-      checks: [],
-      status: conflict ? "conflict" : "ok",
-    },
-  ];
-}
-
-/* ------------------------------------------------------------- net paths */
-
-/* Two-layer copper. Top layer carries the buses (phosphor); the relay control
-   net rides the bottom layer (cool cyan) so its crossings read as intentional
-   layer changes rather than shorts. Both relay paths share an identical
-   command sequence so the `d` attribute can be tweened between states. */
-
-export const NETS = {
-  scl: "M 410 78 H 570",
-  sda: "M 410 112 H 570",
-  daisyScl: "M 598 138 V 170",
-  daisySda: "M 632 138 V 170",
-  uartTx: "M 410 180 H 452 L 570 298",
-  uartRx: "M 410 214 H 452 L 570 332",
-  /** relay control — booked onto PB6 (collision) */
-  relayConflict: "M 108 78 L 132 102 V 404 L 156 428 H 570",
-  /** relay control — reassigned to PB5 */
-  relayResolved: "M 108 146 L 132 170 V 404 L 156 428 H 570",
-} as const;
-
-export function relayNet(mode: Mode) {
-  return mode === "conflict" ? NETS.relayConflict : NETS.relayResolved;
-}
-
-/* ------------------------------------------------------------- conflicts */
-
-export interface ConflictRecord {
-  pin: string;
-  headline: string;
-  claimants: { net: string; owners: string; kind: "bus" | "gpio" }[];
-  rule: string;
-  remedy: string;
-  suggestion: string;
-}
-
-export const CONFLICT: ConflictRecord = {
-  pin: "PB6",
-  headline: "PB6 double-booked",
-  claimants: [
-    { net: "I²C1_SCL", owners: "BME280 · SSD1306", kind: "bus" },
-    { net: "GPIO out", owners: "RELAY", kind: "gpio" },
-  ],
-  rule: "AF04 (I2C1_SCL) and GPIO output cannot share one pad",
-  remedy: "reassign RELAY",
-  suggestion: "PB5",
+const SPEC_TARGET = {
+  board: {
+    value: "NUCLEO-F411RE",
+    provenance: "user" as const,
+    evidence: "on a NUCLEO-F411RE",
+  },
+  mcu: {
+    value: "STM32F411RET6",
+    provenance: "user" as const,
+    evidence: "STM32F411RET6",
+  },
 };
 
-/* --------------------------------------------------------- verdict rail */
+const SPEC_DEVICES = [
+  { role: { value: "temp · humidity · pressure", provenance: "user" as const, evidence: "temperature, humidity and pressure" } },
+  { role: { value: "128×64 OLED", provenance: "user" as const, evidence: "128x64 OLED" } },
+  { role: { value: "virtual UART · host console", provenance: "user" as const, evidence: "print over UART" } },
+  { role: { value: "vent actuator", provenance: "asked" as const, evidence: "answer to q:devices[3].role: vent actuator" } },
+];
 
-export type CheckState = "pass" | "warn" | "pending" | "fail";
+const SPEC = {
+  requirement_text:
+    "On a NUCLEO-F411RE with an STM32F411RET6, read temperature, humidity and " +
+    "pressure from a BME280 on I2C1 at 0x76, show them on a 128x64 OLED at " +
+    "0x3C, print over UART, and switch a vent relay when the temperature rises " +
+    "above 30 C. Sample every 500 ms and retry on a failed read.",
+  target: SPEC_TARGET,
+  devices: SPEC_DEVICES,
+  behaviors: [],
+  constraints: [],
+  failure_behavior: { value: "retry", provenance: "user" as const, evidence: "retry on a failed read" },
+  output_target: { value: "cmake-project", provenance: "asked" as const, evidence: "answer to q:output_target: cmake-project" },
+  notes: [],
+  dropped: [],
+};
 
-export interface RailCheck {
-  id: string;
-  label: string;
-  state: CheckState;
-  note: string;
-}
+/* ------------------------------------------------------------- the devices */
 
-export function rail(mode: Mode): RailCheck[] {
-  if (mode === "conflict") {
-    return [
-      { id: "register", label: "register", state: "pass", note: "3/3 maps cross-checked" },
-      { id: "readout", label: "readout", state: "pass", note: "5/5 vectors" },
-      { id: "math", label: "math", state: "pass", note: "compensation ±0.01" },
-      { id: "resource", label: "resource", state: "warn", note: "1 collision" },
-      { id: "emulation", label: "emulation", state: "pending", note: "blocked" },
-    ];
-  }
-  return [
-    { id: "register", label: "register", state: "pass", note: "3/3 maps cross-checked" },
-    { id: "readout", label: "readout", state: "pass", note: "5/5 vectors" },
-    { id: "math", label: "math", state: "pass", note: "compensation ±0.01" },
-    { id: "resource", label: "resource", state: "pass", note: "0 collisions" },
-    { id: "emulation", label: "emulation", state: "pass", note: "6/6 assertions" },
+const BME280 = {
+  name: "BME280",
+  bus: { kind: "i2c", instance: "I2C1", address: "0x76" },
+  pins: [
+    { pin: "PB6", function: "I2C1_SCL" },
+    { pin: "PB7", function: "I2C1_SDA" },
+  ],
+};
+
+const SSD1306 = {
+  name: "SSD1306",
+  bus: { kind: "i2c", instance: "I2C1", address: "0x3C" },
+  pins: [
+    { pin: "PB6", function: "I2C1_SCL" },
+    { pin: "PB7", function: "I2C1_SDA" },
+  ],
+};
+
+const CONSOLE = {
+  name: "CONSOLE",
+  bus: { kind: "uart", instance: "USART2" },
+  pins: [
+    { pin: "PA2", function: "USART2_TX" },
+    { pin: "PA3", function: "USART2_RX" },
+  ],
+};
+
+const relay = (pin: string) => ({
+  name: "RELAY",
+  pins: [{ pin, function: "GPIO_OUT" }],
+});
+
+/* ------------------------------------------------------------ resource map */
+
+const claim = (
+  device: string,
+  resource: string,
+  fn: string,
+  signal: string,
+  instance: string,
+) => ({ device, resource, function: fn, signal, instance, shared: null });
+
+function resourceMap(relayPin: string) {
+  const pins: Record<string, ReturnType<typeof claim>[]> = {
+    PA2: [claim("CONSOLE", "PA2", "USART2_TX", "TX", "USART2")],
+    PA3: [claim("CONSOLE", "PA3", "USART2_RX", "RX", "USART2")],
+    PB6: [
+      claim("BME280", "PB6", "I2C1_SCL", "SCL", "I2C1"),
+      claim("SSD1306", "PB6", "I2C1_SCL", "SCL", "I2C1"),
+    ],
+    PB7: [
+      claim("BME280", "PB7", "I2C1_SDA", "SDA", "I2C1"),
+      claim("SSD1306", "PB7", "I2C1_SDA", "SDA", "I2C1"),
+    ],
+  };
+  pins[relayPin] = [
+    ...(pins[relayPin] ?? []),
+    claim("RELAY", relayPin, "GPIO_OUT", "OUT", ""),
   ];
+  return {
+    pins,
+    buses: {
+      I2C1: [
+        { device: "BME280", kind: "i2c", instance: "I2C1", address: "0x76" },
+        { device: "SSD1306", kind: "i2c", instance: "I2C1", address: "0x3C" },
+      ],
+      USART2: [{ device: "CONSOLE", kind: "uart", instance: "USART2" }],
+    },
+    dma: {},
+    irq: {},
+    device_count: 4,
+  };
 }
 
-export function verdict(mode: Mode) {
-  return mode === "conflict"
-    ? { label: "BLOCKED — 1 RESOURCE COLLISION", tone: "bad" as const }
-    : { label: "WORKING (EMULATED)", tone: "good" as const };
-}
+/* ------------------------------------------------------ analyze: conflict */
 
-/* --------------------------------------------------- emulated UART trace */
+/** Wording copied from validator/resource_crosscheck.py::_check_pins. */
+const PIN_CONFLICT_MESSAGE =
+  'pin PB6 double-booked: I2C1_SCL (BME280, SSD1306) vs GPIO_OUT (RELAY) — ' +
+  "these claims cannot coexist on one pin. Reassign one device to a free pin, " +
+  'or, if this pin really is a shared bus signal here, declare it with ' +
+  '"shared": true so the intent is stated rather than assumed';
 
-export type LineTone = "dim" | "ink" | "good" | "warn" | "bad";
+export const DEMO_ANALYZE_CONFLICT: AnalyzeResponse = {
+  status: "blocked-resource-conflict",
+  questions: [],
+  devices: [BME280, SSD1306, CONSOLE, relay("PB6")],
+  resource_map: resourceMap("PB6"),
+  stages: [
+    { stage: "spec", state: "pass", detail: "every field traces to something the user stated" },
+    { stage: "compose", state: "pass", detail: "4 device(s) composed" },
+    { stage: "resource", state: "fail", detail: PIN_CONFLICT_MESSAGE },
+  ],
+  checks: { resource_crosscheck: "fail" },
+  failures: [{ check: "resource_crosscheck", message: PIN_CONFLICT_MESSAGE }],
+  spec: SPEC,
+};
 
-export interface UartLine {
-  t: string;
-  text: string;
-  tone: LineTone;
-}
+/* ------------------------------------------------------ analyze: resolved */
 
-export const UART: UartLine[] = [
+export const DEMO_ANALYZE_RESOLVED: AnalyzeResponse = {
+  status: "no-firmware",
+  questions: [],
+  devices: [BME280, SSD1306, CONSOLE, relay("PB5")],
+  resource_map: resourceMap("PB5"),
+  stages: [
+    { stage: "spec", state: "pass", detail: "every field traces to something the user stated" },
+    { stage: "compose", state: "pass", detail: "4 device(s) composed" },
+    { stage: "resource", state: "pass", detail: "" },
+    {
+      stage: "firmware",
+      state: "skipped",
+      detail:
+        "no firmware source and no read plan — the pipeline does not fabricate one",
+    },
+  ],
+  checks: { resource_crosscheck: "pass", emulation_check: "skipped" },
+  failures: [],
+  spec: SPEC,
+};
+
+/* ----------------------------------------------------------------- build */
+
+/** The recorded build for the resolved system. `firmware_origin: "fixture"` is
+    the truth about this artifact and is displayed as such — the pipeline treats
+    that distinction as load-bearing and so does the screen. */
+export const DEMO_BUILD: BuildResult = {
+  status: "working-emulated",
+  firmware_origin: "fixture",
+  stages: [
+    { stage: "spec", state: "pass", detail: "every field traces to something the user stated" },
+    { stage: "compose", state: "pass", detail: "4 device(s) composed" },
+    { stage: "resource", state: "pass", detail: "" },
+    { stage: "compile", state: "pass", detail: "firmware.elf built (fixture source)" },
+    { stage: "emulate", state: "pass", detail: "" },
+  ],
+  devices: [BME280, SSD1306, CONSOLE, relay("PB5")],
+  // verbatim from orchestration/v2_pipeline.py
+  verdict_note:
+    "ran on an emulated MCU against mocked devices and matched the spec's " +
+    "expectations — NOT evidence it works on physical hardware",
+  checks: { resource_crosscheck: "pass", emulation_check: "pass" },
+  failures: [],
+  notes: [
+    "resource cross-check: 4 composed devices, 5 pin(s), 2 bus instance(s), " +
+      "0 DMA claim(s), 0 IRQ line(s) — no pin-mux, bus-address, bus-config, DMA " +
+      "or IRQ conflicts",
+    "pin alternate-function capability was NOT verified: the supplied MCU map " +
+      "has no pin_alternate_functions table (the V1.7 MCU map extracts " +
+      "clock/GPIO/peripheral registers only). Conflicts BETWEEN claims were " +
+      "checked; whether each pin can actually provide its claimed function was " +
+      "not — that mapping is unavailable and is not guessed here",
+    "emulation: 6/6 assertions held over a 4.00 s run on stm32f4.repl",
+  ],
+};
+
+export const DEMO_ANALYZE: Record<DemoState, AnalyzeResponse> = {
+  conflict: DEMO_ANALYZE_CONFLICT,
+  resolved: DEMO_ANALYZE_RESOLVED,
+};
+
+/* ------------------------------------------ recorded emulation transcript */
+
+/* Only demo mode has this. A live V2 build reports stages, checks, failures and
+   notes — it returns no UART capture — so the live emulation bay renders those
+   instead and never a transcript. If this array ever showed up in a live run it
+   would be a fabricated console. */
+
+export const DEMO_UART: ConsoleLine[] = [
   { t: "0.000", text: "rcc   SYSCLK 100 MHz · APB1 42 MHz", tone: "dim" },
   { t: "0.004", text: "i2c1  init 400 kHz  PB6/PB7        ok", tone: "dim" },
   { t: "0.011", text: "bme280  chip_id=0x60               ok", tone: "good" },
@@ -285,9 +260,9 @@ export const UART: UartLine[] = [
 ];
 
 /** °C samples, 4 s window, 250 ms apart — feeds the scope trace. */
-export const TEMP_TRACE = [
+export const DEMO_TRACE = [
   23.9, 24.2, 24.81, 25.6, 26.4, 27.44, 28.6, 29.5, 30.2, 31.05, 31.4, 31.62,
   31.5, 31.55, 31.4, 31.48,
 ];
 
-export const THRESHOLD_C = 30;
+export const DEMO_THRESHOLD_C = 30;
