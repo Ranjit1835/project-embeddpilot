@@ -124,3 +124,74 @@ def test_pin_conflict_blocks_before_emulation():
     resource_crosscheck(devices, None, rep)
     assert rep.checks["resource_crosscheck"] == "fail"
     assert any("PB6" in f.message for f in rep.failures)
+
+
+# --- WS4: the pipeline GENERATES the firmware it claims to produce ----------
+#
+# Until this section existed the pipeline proved the CHAIN worked while a
+# hand-written fixture stood in for the artifact — a demo, not a product. These
+# assert the real capability: firmware generated from the spec + the device's
+# register facts, compiled, and proven to run.
+
+from generation.app_worker import ReadPlan, Step, generate_application  # noqa: E402
+
+
+def _bmp180_plan():
+    """Device facts come from the BMP180 register map — the generator invents
+    no register address, and the plan is the single source both the firmware and
+    its expectations derive from."""
+    return ReadPlan(chip="BMP180", address=0x77, steps=[
+        Step("read8", label="BMP180-ID", reg=0xD0, expect_hex="55"),
+        Step("write8", label="BMP180-START", reg=0xF4, value=0x2E),
+        Step("delay", label="BMP180-WAIT", ticks=200000),
+        Step("read16", label="BMP180-UT", reg=0xF6, reg_lo=0xF7),
+    ])
+
+
+def test_generation_is_deterministic():
+    """Same spec in, byte-identical firmware out. Determinism is a V1 rule and
+    it does not get relaxed because the output got bigger."""
+    assert generate_application(_bmp180_plan()) == generate_application(_bmp180_plan())
+
+
+def test_generator_refuses_to_invent_register_access():
+    """No plan means no device facts. Emitting register accesses nobody
+    specified is the exact failure this project exists to prevent."""
+    from generation.app_worker import AppGenerationError
+    with pytest.raises(AppGenerationError):
+        generate_application(ReadPlan(chip="BMP180", address=0x77, steps=[]))
+
+
+def test_generated_firmware_emits_no_compensation_math():
+    """Converting a raw reading to engineering units needs a datasheet-grounded
+    oracle; BMP180's lives in a figure (V1.10a). The firmware must report RAW."""
+    code = generate_application(_bmp180_plan())
+    assert "NOT converted to engineering units" in code
+    assert "uart_u32(((uint32_t)b0 << 8) | (uint32_t)b1);" in code
+
+
+@needs_tools
+def test_pipeline_generates_firmware_that_actually_runs():
+    """The product claim: a requirement becomes GENERATED firmware that boots on
+    an emulated MCU, talks to a mocked device, and matches its expectations."""
+    r = run_application_pipeline(
+        REQ, answers=dict(ANSWERS), provider=_provider(), read_plan=_bmp180_plan(),
+        expect=["EP-EMU-BOOT", "BMP180-ID=0x55", "BMP180-UT=18225", "EP-EMU-DONE"],
+        stimulus={"Temperature": 24})
+    stages = {s["stage"]: s["state"] for s in r["stages"]}
+    assert stages["generate"] == "pass"
+    assert stages["compile"] == "pass"
+    assert stages["emulate"] == "pass"
+    assert r["status"] == "working-emulated"
+    assert r["firmware_origin"] == "generated", "generated code must not be mislabelled"
+
+
+@needs_tools
+def test_generated_firmware_verdict_is_load_bearing():
+    """Generated code earns the same scrutiny as the fixture: change the mocked
+    value and the verdict must change, or the pass means nothing."""
+    r = run_application_pipeline(
+        REQ, answers=dict(ANSWERS), provider=_provider(), read_plan=_bmp180_plan(),
+        expect=["EP-EMU-BOOT", "BMP180-ID=0x55", "BMP180-UT=18225", "EP-EMU-DONE"],
+        stimulus={"Temperature": 60})
+    assert r["status"] == "not-working"

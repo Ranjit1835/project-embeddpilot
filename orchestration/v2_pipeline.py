@@ -129,13 +129,17 @@ def run_application_pipeline(
     firmware_source: str | None = None,
     expect: list[str] | None = None,
     stimulus: dict | None = None,
+    read_plan=None,
 ) -> dict:
     """Run requirement -> verdict. See the module docstring for the contract.
 
-    `firmware_source` is a path to bare-metal C. When it comes from
-    tests/fixtures/emulation it is reported as origin "fixture"; a caller
-    supplying LLM-generated sources reports "generated". The pipeline never
-    guesses which it is.
+    `read_plan` (generation.app_worker.ReadPlan) makes this a real product path:
+    the application firmware is GENERATED from the spec plus the device's own
+    register facts, and reported as origin "generated".
+
+    `firmware_source` is an explicit path to bare-metal C, used instead. When it
+    comes from tests/fixtures/emulation it is reported as origin "fixture". The
+    pipeline never guesses which it is, and never labels one as the other.
     """
     result: dict = {"status": "unknown", "stages": [], "spec": None,
                     "questions": [], "devices": [], "resource_map": None,
@@ -199,14 +203,23 @@ def run_application_pipeline(
         return result
 
     # -- WS4: firmware + compile -------------------------------------------
-    owns_dir = workdir is None
     workdir = workdir or tempfile.mkdtemp(prefix="ep_v2_")
+    if firmware_source is None and read_plan is not None:
+        # WS4: GENERATE the application firmware from the spec + the device's
+        # register facts. This is the difference between a demo and a product:
+        # the pipeline now produces the artifact it claims to produce.
+        from generation.app_worker import generate_application
+        firmware_source = os.path.join(workdir, "app.c")
+        with open(firmware_source, "w", encoding="utf-8") as f:
+            f.write(generate_application(read_plan))
+        stage("generate", "pass",
+              f"application firmware generated for {read_plan.chip}")
     if firmware_source is None:
         result["status"] = "no-firmware"
         stage("firmware", "skipped",
-              "no firmware source supplied — the pipeline does not fabricate one")
+              "no firmware source and no read plan — the pipeline does not "
+              "fabricate one")
         report.checks["emulation_check"] = "skipped"
-        report.finalize()
         result["report"] = report
         return result
     origin = ("fixture" if os.path.abspath(firmware_source).startswith(
