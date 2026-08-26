@@ -341,3 +341,109 @@ done:
     for (;;) {{ __asm__ volatile("wfi"); }}
 }}
 '''
+
+
+# --- deriving a ReadPlan from a V1-verified register map --------------------
+#
+# This is what makes the generator general rather than BMP180-specific: the plan
+# is DERIVED from the map V1 already extracted and cross-checked, so any device
+# we can ingest becomes an application we can generate.
+#
+# The derivation is by NAMING CONVENTION over the map's own register names, and
+# it is deliberately conservative. Every address it emits comes from the map;
+# none is inferred, defaulted, or remembered. When a required piece cannot be
+# identified the function returns (None, reasons) — it does NOT fall back to a
+# plausible guess, because a firmware that reads a register the device does not
+# have is worse than no firmware at all.
+
+_ID_RE = re.compile(r"^(id|chip_?id|who_?am_?i|device_?id|part_?id)$", re.I)
+_CTRL_RE = re.compile(r"(ctrl|control|meas|cfg|config)", re.I)
+_OUT_MSB_RE = re.compile(r"(out|data|result|temp).*(_msb|_h|_hi)$|^(msb)$", re.I)
+_OUT_LSB_RE = re.compile(r"(out|data|result|temp).*(_lsb|_l|_lo)$|^(lsb)$", re.I)
+
+
+def _regs(register_map: dict) -> list[tuple[str, int]]:
+    out = []
+    for r in register_map.get("registers", []):
+        try:
+            out.append((r["name"], int(r["offset"], 16)))
+        except (KeyError, ValueError, TypeError):
+            continue
+    return out
+
+
+def derive_read_plan(
+    register_map: dict,
+    address: int,
+    measurement: str | None = None,
+    conv_ticks: int = 200000,
+) -> tuple[ReadPlan | None, list[str]]:
+    """V1 register map -> a ReadPlan the generator can build firmware from.
+
+    `measurement` names which command in the map starts the conversion (e.g.
+    "Temperature"). If the map has no such command the plan simply omits the
+    start/wait steps and reads the data registers directly — which is correct
+    for devices that continuously convert (LM75B-class parts).
+
+    Returns (plan, notes). `plan is None` means a required piece could not be
+    identified from the map; `notes` says which, so the caller can ask the user
+    instead of the generator inventing it.
+    """
+    regs = _regs(register_map)
+    if not regs:
+        return None, ["the register map contains no registers — nothing to read"]
+    chip = register_map.get("chip") or "device"
+    notes: list[str] = []
+    steps: list[Step] = []
+    by = lambda rx: [(n, o) for n, o in regs if rx.search(n)]
+
+    # 1. identity read, when the map names an ID register. Optional: its absence
+    #    is not a failure, only a weaker boot check.
+    ident = [(n, o) for n, o in regs if _ID_RE.match(n)]
+    if ident:
+        steps.append(Step("read8", label=f"{chip}-ID", reg=ident[0][1]))
+    else:
+        notes.append("no ID register in the map — boot check omitted")
+
+    # 2. start a conversion, when the caller named one AND the map has both a
+    #    control register and that command's opcode. All three or none.
+    if measurement:
+        ctrl = by(_CTRL_RE)
+        cmd = [c for c in register_map.get("commands", [])
+               if measurement.lower() in str(c.get("name", "")).lower()]
+        if ctrl and cmd:
+            try:
+                opcode = int(cmd[0]["opcode"], 16)
+            except (KeyError, ValueError, TypeError):
+                opcode = None
+            if opcode is not None:
+                steps.append(Step("write8", label=f"{chip}-START",
+                                  reg=ctrl[0][1], value=opcode))
+                steps.append(Step("delay", label=f"{chip}-WAIT", ticks=conv_ticks))
+            else:
+                notes.append(f"command {measurement!r} has an unreadable opcode")
+        else:
+            missing = []
+            if not ctrl:
+                missing.append("a control register")
+            if not cmd:
+                missing.append(f"a {measurement!r} command")
+            notes.append("conversion start skipped: the map has no "
+                         + " and no ".join(missing))
+
+    # 3. the measurement read itself — this one is REQUIRED. Without it the
+    #    firmware would demonstrate nothing.
+    msb = by(_OUT_MSB_RE)
+    lsb = by(_OUT_LSB_RE)
+    if msb and lsb:
+        steps.append(Step("read16", label=f"{chip}-RAW",
+                          reg=msb[0][1], reg_lo=lsb[0][1]))
+    elif msb:
+        steps.append(Step("read8", label=f"{chip}-RAW", reg=msb[0][1]))
+    else:
+        return None, notes + [
+            "no data/output register could be identified in the map, so there is "
+            "nothing to read — refusing to generate firmware that reads an "
+            "address nobody specified"]
+
+    return ReadPlan(chip=chip, address=address, steps=steps), notes

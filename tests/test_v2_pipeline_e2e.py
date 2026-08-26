@@ -195,3 +195,72 @@ def test_generated_firmware_verdict_is_load_bearing():
         expect=["EP-EMU-BOOT", "BMP180-ID=0x55", "BMP180-UT=18225", "EP-EMU-DONE"],
         stimulus={"Temperature": 60})
     assert r["status"] == "not-working"
+
+
+# --- generality: the plan is DERIVED from the V1 register map ---------------
+#
+# Hand-writing a ReadPlan per chip would make the generator a BMP180 demo. These
+# assert the real capability: any device V1 can ingest and cross-check becomes an
+# application we can generate and prove. Every address in the derived plan comes
+# from the map; none is remembered or defaulted.
+
+import json  # noqa: E402
+
+from generation.app_worker import derive_read_plan  # noqa: E402
+
+MAP_PATH = os.path.join(os.path.dirname(__file__), "..", "artifacts",
+                        "bmp180-extracted-map.json")
+
+
+def _bmp180_map():
+    if not os.path.exists(MAP_PATH):
+        pytest.skip("bmp180-extracted-map.json not present")
+    with open(MAP_PATH, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def test_plan_is_derived_from_the_register_map():
+    """The addresses must come from the map, not from the generator."""
+    m = _bmp180_map()
+    plan, notes = derive_read_plan(m, 0x77, measurement="Temperature")
+    assert plan is not None, notes
+    kinds = [s.kind for s in plan.steps]
+    assert kinds == ["read8", "write8", "delay", "read16"]
+    by_kind = {s.kind: s for s in plan.steps}
+    assert by_kind["read8"].reg == 0xD0          # `id` in the map
+    assert by_kind["write8"].reg == 0xF4         # `ctrl_meas` in the map
+    assert by_kind["write8"].value == 0x2E       # the Temperature command opcode
+    assert by_kind["read16"].reg == 0xF6         # `out_msb`
+    assert by_kind["read16"].reg_lo == 0xF7      # `out_lsb`
+
+
+def test_derivation_refuses_when_there_is_nothing_to_read():
+    """A map with no identifiable data register yields no plan and a reason —
+    never a plausible guess at an address the device may not have."""
+    plan, notes = derive_read_plan(
+        {"chip": "MYSTERY", "registers": [{"name": "cfg", "offset": "0x01"}]}, 0x40)
+    assert plan is None
+    assert any("nothing to read" in n or "refusing" in n for n in notes)
+
+
+def test_missing_id_register_is_a_note_not_a_failure():
+    """Absence of an ID register weakens the boot check; it does not stop us."""
+    plan, notes = derive_read_plan({"chip": "X", "registers": [
+        {"name": "out_msb", "offset": "0x10"},
+        {"name": "out_lsb", "offset": "0x11"}]}, 0x40)
+    assert plan is not None
+    assert [s.kind for s in plan.steps] == ["read16"]
+    assert any("no ID register" in n for n in notes)
+
+
+@needs_tools
+def test_map_derived_firmware_actually_runs():
+    """End of the chain: ingested map -> derived plan -> generated firmware ->
+    compiled -> booted on emulated silicon -> asserted. Nothing hand-written."""
+    plan, _ = derive_read_plan(_bmp180_map(), 0x77, measurement="Temperature")
+    r = run_application_pipeline(
+        REQ, answers=dict(ANSWERS), provider=_provider(), read_plan=plan,
+        expect=["EP-EMU-BOOT", "BMP180-ID=0x55", "BMP180-RAW=18225", "EP-EMU-DONE"],
+        stimulus={"Temperature": 24})
+    assert r["status"] == "working-emulated"
+    assert r["firmware_origin"] == "generated"
