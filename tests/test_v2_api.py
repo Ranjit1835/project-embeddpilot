@@ -18,6 +18,20 @@ from generation.provider import MockProvider  # noqa: E402
 REQ = ("Read the BMP180 over I2C at address 0x77 and print the raw temperature "
        "over UART.")
 
+# the answers a user would give to the clarify loop, so a test can get PAST the
+# gate and exercise a later stage
+COMPLETE_ANSWERS = {
+    "q:target.board": "Nucleo-F411RE",
+    "q:target.mcu": "STM32F411RET6",
+    "q:behaviors": "read temperature and print it over UART",
+    "q:failure_behavior": "retry",
+    "q:output_target": "cmake-project",
+    "q:behaviors[0].trigger.source": "temperature",
+    "q:behaviors[0].trigger.comparator": ">",
+    "q:behaviors[0].trigger.threshold": "30 C",
+    "q:constraints.sample_rate": "500 ms",
+}
+
 
 @pytest.fixture
 def client(monkeypatch):
@@ -89,11 +103,13 @@ def test_build_refuses_a_map_with_nothing_readable(client):
     — never a guessed address."""
     import time
 
+    # a COMPLETE spec, so the run gets past the clarify gate and actually reaches
+    # read-plan derivation — the thing under test here
     r = client.post("/api/v2/build", json={
         "requirement": REQ,
-        "register_map": {"chip": "MYSTERY",
-                         "registers": [{"name": "cfg", "offset": "0x01"}]},
-        "address": "0x40"})
+        "answers": COMPLETE_ANSWERS,
+        "register_map": {"chip": "BMP180",
+                         "registers": [{"name": "cfg", "offset": "0x01"}]}})
     job_id = r.json()["job_id"]
     for _ in range(50):
         snap = client.get(f"/api/jobs/{job_id}").json()
@@ -101,5 +117,15 @@ def test_build_refuses_a_map_with_nothing_readable(client):
             break
         time.sleep(0.1)
     result = snap.get("result") or {}
-    assert result.get("status") == "blocked-no-read-plan"
-    assert result.get("notes"), "must say WHY it refused"
+    # The refusal is asserted by its PROPERTIES, not by one status string: the
+    # derivation moved into the pipeline, so the shape changed while the promise
+    # did not. What must hold is that nothing was generated and the reason is
+    # stated — never a guessed register address.
+    assert result.get("firmware_origin") is None, "nothing may be generated"
+    assert result.get("status") != "working-emulated"
+    generate = [s for s in result.get("stages", []) if s["stage"] == "generate"]
+    reasons = " ".join(
+        [s.get("detail", "") for s in generate]
+        + list(result.get("derivation_notes", []))
+        + list(result.get("notes", [])))
+    assert "no data/output register" in reasons or "refusing" in reasons, reasons

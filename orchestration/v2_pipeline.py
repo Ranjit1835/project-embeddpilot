@@ -130,6 +130,8 @@ def run_application_pipeline(
     expect: list[str] | None = None,
     stimulus: dict | None = None,
     read_plan=None,
+    register_map: dict | None = None,
+    measurement: str | None = None,
 ) -> dict:
     """Run requirement -> verdict. See the module docstring for the contract.
 
@@ -204,6 +206,25 @@ def run_application_pipeline(
 
     # -- WS4: firmware + compile -------------------------------------------
     workdir = workdir or tempfile.mkdtemp(prefix="ep_v2_")
+    if read_plan is None and register_map is not None and devices:
+        # Derive the plan HERE, not in the caller: the device's bus address lives
+        # in the spec, so the plan can only be built once the spec has been
+        # resolved and composed. Deriving it earlier would mean the caller
+        # guessing an address the user may never have stated.
+        from generation.app_worker import derive_read_plan
+        addr = devices[0].get("bus", {}).get("address")
+        if addr is None:
+            stage("generate", "skipped",
+                  "the spec never stated the device's bus address, so no read "
+                  "plan can be derived — asking is correct here, not guessing")
+        else:
+            addr_i = addr if isinstance(addr, int) else int(str(addr), 0)
+            read_plan, derive_notes = derive_read_plan(
+                register_map, addr_i, measurement=measurement)
+            result.setdefault("derivation_notes", []).extend(derive_notes)
+            if read_plan is None:
+                stage("generate", "skipped",
+                      "; ".join(derive_notes)[:300] or "no read plan derivable")
     if firmware_source is None and read_plan is not None:
         # WS4: GENERATE the application firmware from the spec + the device's
         # register facts. This is the difference between a demo and a product:
@@ -240,6 +261,12 @@ def run_application_pipeline(
     dev0 = dict(devices[0]) if devices else {}
     if stimulus:
         dev0["stimulus"] = stimulus
+    if not expect and read_plan is not None:
+        # Assertions come from the SAME plan that generated the firmware, so they
+        # can never drift from the code they check, and nobody hand-writes them
+        # per run.
+        from generation.app_worker import expectations_for
+        expect = expectations_for(read_plan)
     emu_spec = {
         "target": {"platform": "platforms/cpus/stm32f4.repl", "uart": "usart2",
                    "firmware": "firmware.elf", "run_for": "0.5", "timeout": 180},

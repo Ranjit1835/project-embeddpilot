@@ -431,6 +431,40 @@ async def v2_build(payload: dict):
     return {"job_id": job.id}
 
 
+def _resolve_register_map(requirement: str, answers: dict):
+    """Find a V1-extracted register map for the chip named in the requirement.
+
+    Returns (map_or_None, explanation). The explanation always travels with the
+    result: a caller must be able to see WHICH datasheet-derived map the firmware
+    was generated against, because "generated" only means something if you know
+    what it was generated from.
+    """
+    import glob as _glob
+
+    haystack = " ".join([requirement or ""] + [str(v) for v in (answers or {}).values()]).upper()
+    best = None
+    for path in _glob.glob(os.path.join(PROJECT_ROOT, "artifacts", "*extracted-map.json")):
+        try:
+            with open(path, encoding="utf-8") as f:
+                candidate = json.load(f)
+        except (OSError, ValueError):
+            continue
+        chip = str(candidate.get("chip") or "").upper()
+        if chip and chip in haystack:
+            best = (candidate, os.path.basename(path), chip)
+            break
+    if best is None:
+        return None, (
+            "no V1-extracted register map matches a chip named in the "
+            "requirement — refusing to generate firmware against a map for a "
+            "different part. Ingest the datasheet first, or name a chip we have "
+            "a verified map for.")
+    candidate, fname, chip = best
+    return candidate, (
+        f"register map resolved from the V1-extracted artifact {fname} "
+        f"(chip {chip}); every register address the firmware uses comes from it")
+
+
 def _run_v2_build(job: Job, text: str, answers: dict, register_map, address,
                   measurement, behavior, stimulus):
     from generation.app_worker import Behavior, derive_read_plan
@@ -443,15 +477,18 @@ def _run_v2_build(job: Job, text: str, answers: dict, register_map, address,
         job.finish(error=f"no LLM provider available: {e}")
         return
     try:
-        plan = None
         notes: list[str] = []
-        if register_map:
-            addr = address if isinstance(address, int) else int(str(address or "0"), 0)
-            plan, notes = derive_read_plan(register_map, addr, measurement=measurement)
-            if plan is None:
-                # honest stop: the map named nothing we could read, and guessing
-                # an address is exactly what this system refuses to do
-                job.finish(result={"status": "blocked-no-read-plan", "notes": notes})
+        if not register_map:
+            # No map supplied. Resolve one from the V1-extracted artifacts by the
+            # chip the requirement names — and say so in the result. This is a
+            # lookup of a datasheet-derived map, not an invention: if nothing
+            # matches we stop and say so rather than generating against a map for
+            # some other part.
+            register_map, why = _resolve_register_map(text, answers)
+            notes.append(why)
+            if register_map is None:
+                job.finish(result={"status": "blocked-no-register-map",
+                                   "notes": notes})
                 return
         beh = None
         if behavior:
@@ -463,8 +500,9 @@ def _run_v2_build(job: Job, text: str, answers: dict, register_map, address,
                 gpio_pin=int(behavior.get("gpio_pin", 5)),
             )
         result = run_application_pipeline(
-            text, answers=answers, provider=provider, read_plan=plan,
-            expect=None, stimulus=stimulus,
+            text, answers=answers, provider=provider,
+            register_map=register_map, measurement=measurement,
+            stimulus=stimulus,
         )
         report = result.get("report")
         job.finish(result={
@@ -473,7 +511,7 @@ def _run_v2_build(job: Job, text: str, answers: dict, register_map, address,
             "stages": result.get("stages", []),
             "devices": result.get("devices", []),
             "verdict_note": result.get("verdict_note", ""),
-            "derivation_notes": notes,
+            "derivation_notes": notes + list(result.get("derivation_notes", [])),
             "checks": (report.checks if report is not None else {}),
             "failures": ([{"check": f.check, "message": f.message}
                           for f in report.failures] if report is not None else []),
