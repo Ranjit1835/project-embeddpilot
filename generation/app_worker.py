@@ -156,6 +156,7 @@ def generate_application(plan: ReadPlan, behavior: "Behavior | None" = None,
         act_pin=(behavior.gpio_pin if behavior is not None else 5),
         driver_include="", driver_decls="", driver_glue="",
         extra_defines="",
+       spi_block="", spi_init="",
     )
 
 
@@ -394,7 +395,7 @@ static int i2c_write_reg(uint8_t addr, uint8_t reg, uint8_t val)
     return 1;
 }}
 
-{driver_glue}
+{spi_block}{driver_glue}
 void Reset_Handler(void)
 {{
     uint32_t *src, *dst;
@@ -416,7 +417,7 @@ void Reset_Handler(void)
     I2C_CCR   = 210u;       /* 100 kHz standard mode */
     I2C_TRISE = 43u;
     I2C_CR1   = CR1_PE | CR1_ACK;
-    gpio_out_init();
+{spi_init}    gpio_out_init();
 {body}
 
 done:
@@ -766,6 +767,7 @@ static int {pl}_bus_write(uint8_t reg, const uint8_t *buf, uint32_t len)
                       "    (void)b0; (void)b1;\n"
                       "    (void)uart_hex8; (void)delay_ticks;"),
         driver_glue=glue, extra_defines="",
+       spi_block="", spi_init="",
     )
 
 
@@ -933,6 +935,7 @@ def generate_system(
         act_pin=(behavior.gpio_pin if behavior is not None else 5),
         driver_include="", driver_glue="", extra_defines=extra,
         driver_decls="    uint32_t sys_raw = 0; (void)sys_raw;",
+       spi_block="", spi_init="",
     )
 
 
@@ -947,6 +950,149 @@ def expectations_for_system(plans: list[ReadPlan], behavior=None) -> list[str]:
             for s in pl.steps])
         exp.extend(e for e in expectations_for(relabelled)
                    if e not in ("EP-EMU-BOOT", "EP-EMU-DONE"))
+    if behavior is not None:
+        exp.append(f"{behavior.action_label}=")
+    exp.append("EP-EMU-DONE")
+    return exp
+
+
+# --- SPI devices -------------------------------------------------------------
+#
+# I2C addresses a device on the wire; SPI selects it with a chip-select line and
+# clocks a word out. So an SPI part needs no bus address, and the simplest ones
+# (TI LM74, TMP125 — the V1.9 "fixed readout" shape) have no register pointer
+# either: assert CS, clock N bytes, deassert. That is the shape supported here.
+#
+# Renode models these: Sensors.TI_LM74 attaches as `lm74: Sensors.TI_LM74 @ spi1`
+# with no address, which is why the emulation harness had to stop demanding one.
+
+_SPI1_BASE = "0x40013000u"
+
+_SPI_BLOCK = """
+/* SPI1 lives on APB2, which the I2C-only scaffold has no reason to declare. */
+#define RCC_APB2ENR (*(volatile uint32_t *)({rcc} + 0x44u))
+#define SPI1_BASE   {spi_base}
+#define SPI_CR1     (*(volatile uint32_t *)(SPI1_BASE + 0x00u))
+#define SPI_SR      (*(volatile uint32_t *)(SPI1_BASE + 0x08u))
+#define SPI_DR      (*(volatile uint32_t *)(SPI1_BASE + 0x0Cu))
+#define SPI_SR_RXNE (1u << 0)
+#define SPI_SR_TXE  (1u << 1)
+#define SPI_CR1_SPE (1u << 6)
+#define SPI_CR1_MSTR (1u << 2)
+#define SPI_CR1_SSI  (1u << 8)
+#define SPI_CR1_SSM  (1u << 9)
+#define SPI_CS_PIN  {cs_pin}u
+
+static void spi_cs(int select)
+{{
+    /* active LOW chip select */
+    GPIO_BSRR = select ? (1u << (SPI_CS_PIN + 16u)) : (1u << SPI_CS_PIN);
+}}
+
+/* One byte out, one byte back. Bounded like every other wait here: a stuck
+ * peripheral must fail the run, never hang the emulator. */
+static int spi_xfer(uint8_t out, uint8_t *in)
+{{
+    uint32_t g = GUARD;
+    while (!(SPI_SR & SPI_SR_TXE)) {{ if (!g--) {{ return 0; }} }}
+    SPI_DR = out;
+    g = GUARD;
+    while (!(SPI_SR & SPI_SR_RXNE)) {{ if (!g--) {{ return 0; }} }}
+    *in = (uint8_t)SPI_DR;
+    return 1;
+}}
+
+static int spi_read16(uint32_t *word)
+{{
+    uint8_t hi = 0, lo = 0;
+    spi_cs(1);
+    if (!spi_xfer(0x00u, &hi) || !spi_xfer(0x00u, &lo)) {{ spi_cs(0); return 0; }}
+    spi_cs(0);
+    *word = ((uint32_t)hi << 8) | (uint32_t)lo;
+    return 1;
+}}
+"""
+
+_SPI_INIT = """    RCC_APB2ENR |= (1u << 12);          /* SPI1 clock */
+    GPIO_MODER &= ~(3u << (SPI_CS_PIN * 2u));
+    GPIO_MODER |=  (1u << (SPI_CS_PIN * 2u));   /* CS as output */
+    spi_cs(0);
+    SPI_CR1 = SPI_CR1_MSTR | SPI_CR1_SSM | SPI_CR1_SSI | SPI_CR1_SPE;
+"""
+
+
+def generate_spi_application(
+    chip: str,
+    label: str = "",
+    behavior: "Behavior | None" = None,
+    samples: int = 1,
+    has_math_oracle: bool = False,
+    cs_pin: int = 4,
+    uart_baud_brr: int = 0x0683,
+) -> str:
+    """Firmware for a fixed-readout SPI device: assert CS, clock a 16-bit word,
+    report it RAW.
+
+    No register map is consulted because this device shape has no registers —
+    and no conversion is applied, for the usual reason: turning the word into
+    engineering units needs a verified oracle.
+    """
+    if behavior is not None and behavior.unit != "raw" and not has_math_oracle:
+        raise AppGenerationError(
+            f"threshold is stated in {behavior.unit!r} but no verified math "
+            "oracle converts this device's raw word into that unit (V1.10a). "
+            "Restate it in raw units or supply an oracle.")
+    p = _ident(chip)
+    lab = label or f"{chip}-RAW"
+    act = behavior.gpio_pin if behavior is not None else 5
+    if behavior is not None and behavior.gpio_pin == cs_pin:
+        raise AppGenerationError(
+            f"the actuator and the SPI chip-select both claim pin {cs_pin} — "
+            "driving CS as an actuator would break the bus")
+    parts = [f"""
+        if (!spi_read16(&last_raw)) {{
+            uart_puts("{lab}-FAILED\\r\\n");
+            goto done;
+        }}
+        /* RAW device word, not converted: that needs a verified oracle. */
+        uart_puts("{lab}=");
+        uart_u32(last_raw);
+        uart_puts("\\r\\n");"""]
+    if behavior is not None:
+        cmp_ = (behavior.comparator
+                if behavior.comparator in (">", ">=", "<", "<=", "==", "!=")
+                else ">")
+        parts.append(f"""
+        if (last_raw {cmp_} {behavior.threshold}u) {{
+            gpio_write(1);
+            uart_puts("{behavior.action_label}=ON\\r\\n");
+        }} else {{
+            gpio_write(0);
+            uart_puts("{behavior.action_label}=OFF\\r\\n");
+        }}""")
+    n = max(1, samples)
+    body = (f"    for (uint32_t iter = 0; iter < {n}u; iter++) {{\n"
+            + "\n".join(parts) + "\n    }")
+    return _SCAFFOLD.format(
+        chip=chip, prefix=p, addr="0x00u",
+        usart=_USART2_BASE, i2c=_I2C1_BASE, rcc=_RCC_BASE,
+        brr=f"0x{uart_baud_brr:04X}u", body=body, act_pin=act,
+        driver_include="",
+        # An SPI part never touches the I2C helpers. Reference them rather than
+        # deleting them from the shared scaffold — one scaffold proven to boot is
+        # worth more than several that drift apart.
+        driver_decls=("    (void)b0; (void)b1;\n"
+                      "    (void)i2c_read_reg; (void)i2c_write_reg;\n"
+                      "    (void)uart_hex8; (void)delay_ticks;"),
+        driver_glue="", extra_defines="",
+        spi_block=_SPI_BLOCK.format(spi_base=_SPI1_BASE, cs_pin=cs_pin,
+                                    rcc=_RCC_BASE),
+        spi_init=_SPI_INIT,
+    )
+
+
+def expectations_for_spi(chip: str, label: str = "", behavior=None) -> list[str]:
+    exp = ["EP-EMU-BOOT", f"{label or (chip + '-RAW')}="]
     if behavior is not None:
         exp.append(f"{behavior.action_label}=")
     exp.append("EP-EMU-DONE")

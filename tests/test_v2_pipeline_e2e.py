@@ -559,3 +559,80 @@ def test_two_device_system_runs_and_the_named_source_drives_the_action():
     # the OTHER device stays at 24 in both runs, so a pass here would mean the
     # action was following the wrong device
     assert run(24) == "fail", "cold named source must not fire it"
+
+
+# --- SPI: a second bus, proven the same way as the first --------------------
+#
+# I2C addresses a device on the wire; SPI selects it with a chip-select line, so
+# an SPI part has no bus address and the simplest ones have no register pointer
+# either — assert CS, clock a word, deassert. Renode models this
+# (Sensors.TI_LM74 @ spi1), so the SPI path is PROVEN, not merely emitted.
+
+from generation.app_worker import (  # noqa: E402
+    expectations_for_spi,
+    generate_spi_application,
+)
+
+
+def test_spi_generation_is_deterministic():
+    assert generate_spi_application("LM74") == generate_spi_application("LM74")
+
+
+def test_spi_refuses_a_chip_select_actuator_clash():
+    """Driving the SPI chip-select as an actuator would break the bus."""
+    with pytest.raises(AppGenerationError) as e:
+        generate_spi_application(
+            "LM74", behavior=Behavior(threshold=1, unit="raw", gpio_pin=4),
+            cs_pin=4)
+    assert "chip-select" in str(e.value)
+
+
+def test_spi_refuses_unit_thresholds_without_an_oracle():
+    with pytest.raises(AppGenerationError):
+        generate_spi_application(
+            "LM74", behavior=Behavior(threshold=30, unit="C"),
+            has_math_oracle=False)
+
+
+def test_spi_reports_the_raw_word():
+    code = generate_spi_application("LM74")
+    assert "spi_read16" in code
+    assert "not converted" in code.lower()
+
+
+@needs_tools
+def test_spi_firmware_runs_against_a_mocked_spi_sensor():
+    """The SPI path earns the same proof the I2C path did: real firmware, real
+    emulated peripheral, real mocked device, asserted output."""
+    import subprocess
+    import tempfile
+
+    from validator.emulation_check import emulation_check
+    from validator.report import ValidationReport
+
+    beh = Behavior(threshold=1000, unit="raw", action_label="FAN")
+    d = tempfile.mkdtemp()
+    with open(os.path.join(d, "app.c"), "w", encoding="utf-8", newline="\n") as f:
+        f.write(generate_spi_application("LM74", behavior=beh))
+    subprocess.run(
+        [find_arm_gcc(), "-mcpu=cortex-m4", "-mthumb", "-Os", "-ffreestanding",
+         "-nostdlib", "-nostartfiles", "-Wall", "-Wextra", "-T",
+         os.path.join(FIXTURE_DIR, "stm32f4.ld"), os.path.join(d, "app.c"),
+         "-o", os.path.join(d, "firmware.elf"), "-lgcc"],
+        capture_output=True, check=True, timeout=240)
+
+    def run(expect):
+        spec = {"target": {"platform": "platforms/cpus/stm32f4.repl",
+                           "uart": "usart2", "firmware": "firmware.elf",
+                           "run_for": "0.5", "timeout": 240},
+                "devices": [{"name": "LM74",
+                             "bus": {"kind": "spi", "instance": "SPI1"},
+                             "renode_model": "Sensors.TI_LM74"}],
+                "expect": expect}
+        rep = ValidationReport()
+        emulation_check(d, spec, rep)
+        return rep.checks["emulation_check"]
+
+    assert run(expectations_for_spi("LM74", behavior=beh)) == "pass"
+    # and the SPI assertion must be capable of failing, or it proves nothing
+    assert run(["LM74-RAW=", "NEVER-EMITTED-BY-THIS-FIRMWARE"]) == "fail"

@@ -274,7 +274,9 @@ def _build_repl(root: str, platform_rel: str, nodes: list[tuple[str, str, str, i
                 notes: list[str]) -> str:
     parts = [f'using "{platform_rel}"', ""]
     for node, model, bus, address in nodes:
-        parts.append(f"{node}: {model} @ {bus} 0x{address:02X}")
+        # SPI attaches by chip-select, so no address is written
+        where = f"{bus} 0x{address:02X}" if address is not None else bus
+        parts.append(f"{node}: {model} @ {where}")
     parts.append("")
 
     init = _sysbus_init_lines(root, platform_rel)
@@ -459,10 +461,15 @@ def emulation_check(workdir: str, spec: dict | None, report: ValidationReport) -
             continue
         bus = _bus_node(device)
         address = _address(device)
-        if bus is None or address is None:
+        # An I2C device is addressed on the wire; an SPI device is selected by
+        # its chip-select line and therefore has no bus address. Requiring one
+        # would make every SPI part permanently unemulatable.
+        needs_address = not (bus or "").lower().startswith("spi")
+        if bus is None or (needs_address and address is None):
             gaps.append(
-                f"{label}: emulating it needs a bus instance and an address; the "
-                f"spec gives instance={bus!r} address={address!r}")
+                f"{label}: emulating it needs a bus instance"
+                + (" and an address" if needs_address else "")
+                + f"; the spec gives instance={bus!r} address={address!r}")
             continue
         node = _node_name(device, i, taken)
         nodes.append((node, model, bus, address))
@@ -501,7 +508,10 @@ def emulation_check(workdir: str, spec: dict | None, report: ValidationReport) -
     for note in notes:
         report.notes.append(f"emulation check: {note}")
 
-    device_summary = ", ".join(f"{m} @ {b} 0x{a:02X}" for _n, m, b, a in nodes)
+    # SPI parts are selected by chip-select and carry no bus address
+    device_summary = ", ".join(
+        f"{m} @ {b} 0x{a:02X}" if a is not None else f"{m} @ {b}"
+        for _n, m, b, a in nodes)
 
     if timed_out:
         report.checks[CHECK] = "fail"
