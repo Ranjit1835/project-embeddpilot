@@ -150,8 +150,17 @@ def find_renode() -> str | None:
 
 
 def renode_root(renode_exe: str) -> str:
-    """The Renode installation directory — where `platforms/` lives."""
-    return os.path.dirname(os.path.abspath(renode_exe))
+    """The Renode installation directory — where `platforms/` lives.
+
+    realpath, not abspath: a packaged install is normally reached through a
+    symlink on PATH (/usr/local/bin/renode -> /opt/renode/renode, as in the
+    Docker image). abspath would hand back /usr/local/bin, which has no
+    platforms/ — the model catalogue would come up empty and EVERY device would
+    be reported as "no Renode model for this part". That reads like an honest
+    gap while actually being a broken install path, which is the worst kind of
+    wrong: a truthful-sounding message about a bug.
+    """
+    return os.path.dirname(os.path.realpath(renode_exe))
 
 
 # --- the device-model catalogue ----------------------------------------------

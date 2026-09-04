@@ -26,6 +26,17 @@ RUN curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/inst
     && arduino-cli core install esp32:esp32 \
     && rm -rf /tmp/*
 
+# V2 WS5: Renode, so the emulation check can actually RUN the generated firmware
+# here rather than reporting "skipped". Without it the deployed product could
+# compile an application but never prove it works — and "working (emulated)" is
+# the whole V2 claim. Self-contained portable build; no mono/dotnet needed.
+RUN curl -fsSL -o /tmp/renode.tar.gz \
+        https://github.com/renode/renode/releases/download/v1.16.1/renode-1.16.1.linux-portable-dotnet.tar.gz \
+    && mkdir -p /opt/renode \
+    && tar -xzf /tmp/renode.tar.gz -C /opt/renode --strip-components=1 \
+    && ln -s /opt/renode/renode /usr/local/bin/renode \
+    && rm -rf /tmp/renode.tar.gz
+
 WORKDIR /app
 
 COPY requirements-api.txt .
@@ -36,6 +47,13 @@ COPY generation generation
 COPY validator validator
 COPY ingestion ingestion
 COPY schema schema
+# V2: the end-to-end pipeline lives in its own top-level package (it may not sit
+# in generation/, which the contamination guard forbids from importing
+# validator/). Without this the /api/v2/* routes ImportError at request time.
+COPY orchestration orchestration
+# V2 WS4: the linker script the generated firmware is built against. It is a
+# build input, not a test fixture, even though it lives under tests/.
+COPY tests/fixtures/emulation/stm32f4.ld tests/fixtures/emulation/stm32f4.ld
 COPY artifacts/bme280-extracted-map.json \
      artifacts/w25q64-extracted-map.json \
      artifacts/esp32-i2c-extracted-map.json \
