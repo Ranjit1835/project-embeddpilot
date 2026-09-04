@@ -361,3 +361,201 @@ def test_behaviour_fires_only_when_the_reading_crosses_the_threshold():
     assert run(60, ["RELAY=ON"]) == "pass", "hot must fire the actuator"
     # and the assertion must be capable of failing, or it proves nothing
     assert run(60, ["RELAY=OFF"]) == "fail"
+
+
+# --- V2 runs V1's VERIFIED driver -------------------------------------------
+#
+# Until this section existed, V2 emitted its own I2C primitives and talked to the
+# device directly — improvised device code sitting beside V1's verified driver
+# rather than USING it. Two pipelines that never met. These assert the seam: V1
+# owns device logic (cross-checked against the datasheet), V2 owns MCU bring-up,
+# implements the driver's callbacks, and runs the application.
+
+from generation.app_worker import (  # noqa: E402
+    DriverInterface,
+    generate_application_using_driver,
+    parse_driver_interface,
+)
+
+V1_DRIVER_DIR = os.path.join(os.path.dirname(__file__), "..", "build",
+                             "llm_gen", "lm75b", "attempt_1")
+
+
+def _v1_driver():
+    h = os.path.join(V1_DRIVER_DIR, "lm75b_driver.h")
+    if not os.path.exists(h):
+        pytest.skip("no V1-generated driver artifact present")
+    with open(h, encoding="utf-8") as f:
+        return f.read()
+
+
+def test_driver_interface_is_read_from_the_header_not_guessed():
+    iface, why = parse_driver_interface(_v1_driver(), "lm75b_driver.h")
+    assert iface is not None, why
+    assert iface.init_fn == "lm75b_init"
+    assert iface.dev_type == "lm75b_dev_t"
+    assert "raw" in iface.read_raw_fn, "must call the RAW reader, not a converted one"
+
+
+def test_header_without_the_callback_shape_is_refused():
+    """A driver that does not expose the callback seam cannot be driven, and we
+    say which piece is missing rather than guessing a function name."""
+    iface, why = parse_driver_interface("int something(void);", "x.h")
+    assert iface is None
+    assert any("callback typedef" in w for w in why)
+
+
+def test_generated_app_delegates_the_device_to_the_driver():
+    """The application must CALL the verified driver, and the only device-facing
+    code it owns is the two bus callbacks."""
+    iface, _ = parse_driver_interface(_v1_driver(), "lm75b_driver.h")
+    code = generate_application_using_driver(iface, 0x48)
+    assert '#include "lm75b_driver.h"' in code
+    assert "lm75b_init(&dev" in code
+    assert "lm75b_read_temp_raw(&dev" in code
+    assert "lm75b_bus_read" in code and "lm75b_bus_write" in code
+    # it must NOT re-derive the device's registers
+    assert "0xD0" not in code and "TEMP_REG" not in code
+
+
+def test_driver_path_still_refuses_unit_thresholds_without_an_oracle():
+    iface, _ = parse_driver_interface(_v1_driver(), "lm75b_driver.h")
+    with pytest.raises(AppGenerationError):
+        generate_application_using_driver(
+            iface, 0x48, Behavior(threshold=30, unit="C"), has_math_oracle=False)
+
+
+@pytest.mark.skipif(find_arm_gcc() is None, reason="no arm-none-eabi-gcc")
+def test_app_and_v1_driver_compile_and_link_together():
+    """The proof: one firmware image containing the generated application AND
+    the datasheet-verified driver, clean under -Wall -Wextra."""
+    import shutil
+    import subprocess
+    import tempfile
+
+    iface, _ = parse_driver_interface(_v1_driver(), "lm75b_driver.h")
+    code = generate_application_using_driver(
+        iface, 0x48, Behavior(threshold=100, unit="raw", action_label="FAN"))
+    d = tempfile.mkdtemp()
+    with open(os.path.join(d, "app.c"), "w", encoding="utf-8", newline="\n") as f:
+        f.write(code)
+    for n in ("lm75b_driver.h", "lm75b_driver.c"):
+        shutil.copy(os.path.join(V1_DRIVER_DIR, n), d)
+    proc = subprocess.run(
+        [find_arm_gcc(), "-mcpu=cortex-m4", "-mthumb", "-Os", "-ffreestanding",
+         "-nostdlib", "-nostartfiles", "-Wall", "-Wextra", "-I", d,
+         "-T", os.path.join(FIXTURE_DIR, "stm32f4.ld"),
+         os.path.join(d, "app.c"), os.path.join(d, "lm75b_driver.c"),
+         "-o", os.path.join(d, "fw.elf"),
+         # V1 drivers may use float; -nostdlib drops libgcc's soft-float helpers
+         "-lgcc"],
+        capture_output=True, text=True, timeout=240)
+    assert proc.returncode == 0, proc.stderr[:800]
+    assert "warning:" not in proc.stderr, proc.stderr[:800]
+    assert os.path.exists(os.path.join(d, "fw.elf"))
+
+
+# --- multi-device: a real application is rarely one sensor ------------------
+#
+# The resource cross-check has always reasoned about a COMPOSED system; the
+# generator emitted exactly one device, so a two-sensor application could be
+# CHECKED but not BUILT. These assert the composed path — and the one honest
+# decision it forces: WHICH device's reading drives the actuator.
+
+from generation.app_worker import (  # noqa: E402
+    expectations_for_system,
+    generate_system,
+)
+
+
+def _two_devices():
+    m = _bmp180_map()
+    a, _ = derive_read_plan(m, 0x77, measurement="Temperature")
+    b, _ = derive_read_plan(m, 0x76, measurement="Temperature")
+    b.chip = "BMP180B"
+    return a, b
+
+
+def test_multi_device_refuses_to_guess_which_reading_drives_the_action():
+    """With two readings available, which one triggers the relay is genuinely
+    ambiguous. Choosing the first would be inventing a requirement."""
+    a, b = _two_devices()
+    with pytest.raises(AppGenerationError) as e:
+        generate_system([a, b], Behavior(threshold=18500, unit="raw"))
+    assert "does not say which one" in str(e.value)
+
+
+def test_multi_device_refuses_an_address_collision():
+    """Emitting firmware for a system that cannot physically work is worse than
+    refusing to."""
+    a, _ = _two_devices()
+    dup, _ = derive_read_plan(_bmp180_map(), 0x77, measurement="Temperature")
+    dup.chip = "DUP"
+    with pytest.raises(AppGenerationError) as e:
+        generate_system([a, dup])
+    assert "same I2C address" in str(e.value)
+
+
+def test_multi_device_labels_are_unique_per_device():
+    """Two devices both reporting '<chip>-RAW=' would make a two-device system
+    look like it worked while only one device was ever observed."""
+    a, b = _two_devices()
+    code = generate_system([a, b], Behavior(threshold=1, unit="raw"),
+                           source_chip="BMP180")
+    assert "BMP180-RAW=" in code and "BMP180B-RAW=" in code
+    assert "0x77u" in code and "0x76u" in code
+    exp = expectations_for_system([a, b], Behavior(threshold=1, unit="raw"))
+    assert "BMP180-RAW=" in exp and "BMP180B-RAW=" in exp
+
+
+@needs_tools
+def test_two_device_system_runs_and_the_named_source_drives_the_action():
+    """The composed application actually works: two devices on one I2C bus, and
+    the actuator follows the device the spec NAMED — not whichever was read last."""
+    import glob as _glob
+    import subprocess
+    import tempfile
+
+    from validator.emulation_check import emulation_check
+    from validator.report import ValidationReport
+
+    a, b = _two_devices()
+    code = generate_system([a, b],
+                           Behavior(threshold=18500, unit="raw",
+                                    action_label="RELAY"),
+                           source_chip="BMP180")
+    d = tempfile.mkdtemp()
+    with open(os.path.join(d, "app.c"), "w", encoding="utf-8", newline="\n") as f:
+        f.write(code)
+    subprocess.run(
+        [find_arm_gcc(), "-mcpu=cortex-m4", "-mthumb", "-Os", "-ffreestanding",
+         "-nostdlib", "-nostartfiles", "-T",
+         os.path.join(FIXTURE_DIR, "stm32f4.ld"), os.path.join(d, "app.c"),
+         "-o", os.path.join(d, "firmware.elf"), "-lgcc"],
+        capture_output=True, check=True, timeout=240)
+
+    def run(source_temp):
+        spec = {
+            "target": {"platform": "platforms/cpus/stm32f4.repl",
+                       "uart": "usart2", "firmware": "firmware.elf",
+                       "run_for": "0.5", "timeout": 240},
+            "devices": [
+                {"name": "BMP180",
+                 "bus": {"kind": "i2c", "instance": "I2C1", "address": "0x77"},
+                 "stimulus": {"Temperature": source_temp}},
+                {"name": "BMP180B",
+                 "bus": {"kind": "i2c", "instance": "I2C1", "address": "0x76"},
+                 "renode_model": "Sensors.BMP180",
+                 "stimulus": {"Temperature": 24}},
+            ],
+            "expect": ["EP-EMU-BOOT", "BMP180-RAW=", "BMP180B-RAW=",
+                       "RELAY=ON", "EP-EMU-DONE"],
+        }
+        rep = ValidationReport()
+        emulation_check(d, spec, rep)
+        return rep.checks["emulation_check"]
+
+    assert run(60) == "pass", "hot named source must fire the actuator"
+    # the OTHER device stays at 24 in both runs, so a pass here would mean the
+    # action was following the wrong device
+    assert run(24) == "fail", "cold named source must not fire it"

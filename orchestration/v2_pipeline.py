@@ -112,7 +112,10 @@ def build_firmware(source: str, dest_dir: str) -> tuple[str | None, str]:
     proc = subprocess.run(
         [gcc, "-mcpu=cortex-m4", "-mthumb", "-Os", "-ffreestanding", "-nostdlib",
          "-nostartfiles", "-Wall", "-Wextra",
-         "-T", os.path.join(FIXTURE_DIR, "stm32f4.ld"), source, "-o", elf],
+         "-T", os.path.join(FIXTURE_DIR, "stm32f4.ld"), source, "-o", elf,
+         # V1 drivers may use float (e.g. read_temp_celsius); -nostdlib drops
+         # libgcc's soft-float helpers (__aeabi_i2f), so link it back explicitly
+         "-lgcc"],
         capture_output=True, text=True, timeout=180)
     if proc.returncode != 0:
         return None, f"compile failed: {proc.stderr.strip()[:400]}"
