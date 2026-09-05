@@ -1,0 +1,178 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "embeddpilot/application-spec.schema.json",
+  "title": "Application spec (V2 WS1 requirements intake)",
+  "description": "The contract everything downstream verifies against: requirement -> ambiguity detection -> clarifying questions -> spec lock. Mirrors generation/spec.py::ApplicationSpec.to_dict(). THE RULE (V2_PLAN 4b(b)): never invent a requirement — ask. Every user-supplied value is a provenancedValue whose provenance is 'user' (the human stated it, with the verbatim span quoted in `evidence`) or 'asked' (the human answered a clarifying question). There is deliberately NO 'inferred'/'model'/'default' — a value that cannot be grounded in something the user said is not a value, it is an entry in open_questions. This is generation/inputs.py's V1.6 provenance gate at application scale. A spec is only buildable when assert_spec_complete() passes, which requires zero blocking open_questions; no spec line => no code.",
+  "type": "object",
+  "required": ["schema_version", "target", "devices", "behaviors", "constraints"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "2.0" },
+    "requirement_text": {
+      "description": "The user's own words, accumulated across the intake conversation. Every `evidence` span on a 'user'-provenanced value must occur verbatim in here — that is what makes the spec auditable.",
+      "type": "string"
+    },
+    "target": {
+      "description": "Board and MCU. Both are required and neither is ever derived from the other: 'Nucleo-F411RE' does not auto-fill the MCU part, because that inference is exactly the silent auto-fill V1.6 killed.",
+      "type": "object",
+      "properties": {
+        "board": { "$ref": "#/definitions/provenancedOrNull" },
+        "mcu": { "$ref": "#/definitions/provenancedOrNull" }
+      }
+    },
+    "devices": {
+      "description": "The composed devices. Deliberately shaped close to the device dicts validator/resource_crosscheck.py consumes, so the spec feeds the resource map with no translation layer in between that could invent a pin or an address.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "An orderable part number (BME280, SSD1306), not a category. A category ('a temp sensor') is an ambiguous_chip question, never resolved to a part on the user's behalf.",
+            "$ref": "#/definitions/provenancedOrNull"
+          },
+          "role": { "$ref": "#/definitions/provenancedOrNull" },
+          "interface": {
+            "description": "value is one of I2C, SPI, GPIO, ANALOG, UART, 1-WIRE.",
+            "$ref": "#/definitions/provenancedOrNull"
+          },
+          "address": {
+            "description": "7-bit bus address, only when the user stated one; otherwise it comes from the device datasheet downstream, never from here.",
+            "$ref": "#/definitions/provenancedOrNull"
+          },
+          "pin": {
+            "description": "Required for GPIO/ANALOG devices — a pin-less GPIO device cannot be resource-checked.",
+            "$ref": "#/definitions/provenancedOrNull"
+          }
+        }
+      }
+    },
+    "behaviors": {
+      "description": "trigger -> action. 'when temperature is above 30 C, turn the relay on'. These are what the WS5 emulation run asserts against.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "trigger"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "trigger": {
+            "type": "object",
+            "properties": {
+              "source": { "$ref": "#/definitions/provenancedOrNull" },
+              "comparator": {
+                "description": "value is one of >, >=, <, <=, ==, !=. Grounded from the user's own words ('above' -> '>'), never chosen for them.",
+                "$ref": "#/definitions/provenancedOrNull"
+              },
+              "threshold": {
+                "description": "value is a number. A behavior with no stated number is a missing_threshold question, never a plausible default.",
+                "$ref": "#/definitions/provenancedOrNull"
+              },
+              "unit": { "$ref": "#/definitions/provenancedOrNull" }
+            }
+          },
+          "action": { "$ref": "#/definitions/provenancedOrNull" }
+        }
+      }
+    },
+    "constraints": {
+      "description": "Named non-functional values (sample_rate, timeout, baud_rate). `name` is this project's vocabulary key, so it carries no provenance; `value` and `unit` are the user's and do.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "value": { "$ref": "#/definitions/provenancedOrNull" },
+          "unit": { "$ref": "#/definitions/provenancedOrNull" }
+        }
+      }
+    },
+    "failure_behavior": {
+      "description": "What the application does when a device read fails. Required: silently choosing 'log and continue' would be inventing a safety decision.",
+      "$ref": "#/definitions/provenancedOrNull"
+    },
+    "output_target": {
+      "description": "The artifact to produce: arduino-sketch | platformio-project | cmake-project (free text is accepted and echoed back).",
+      "$ref": "#/definitions/provenancedOrNull"
+    },
+    "open_questions": {
+      "description": "Everything still ambiguous, as specific answerable questions. Recomputed deterministically by detect_ambiguities(); assert_spec_complete() recomputes rather than trusting this list, so clearing it does not buy permission to build.",
+      "type": "array",
+      "items": { "$ref": "#/definitions/question" }
+    },
+    "dropped": {
+      "description": "Audit trail of values the model produced that could NOT be grounded in the user's text and were therefore discarded in favour of a question. This is the honesty receipt: 'the model wanted to say BME280; we refused and asked'.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["field", "reason"],
+        "properties": {
+          "field": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "notes": { "type": "array", "items": { "type": "string" } }
+  },
+  "definitions": {
+    "provenancedValue": {
+      "type": "object",
+      "required": ["value", "provenance", "evidence"],
+      "properties": {
+        "value": { "type": ["string", "number", "boolean"] },
+        "provenance": {
+          "description": "'user' = stated in the requirement text, with `evidence` quoting the exact span. 'asked' = the human answered a clarifying question, with `evidence` naming the question id and the answer. No other value exists, by design.",
+          "type": "string",
+          "enum": ["user", "asked"]
+        },
+        "evidence": {
+          "description": "The receipt. For 'user' it is a verbatim span of requirement_text (checked mechanically, so a fabricated quote is rejected before the value is read). For 'asked' it is 'answer to <question id>: <answer>'. A value with no evidence is an invented value.",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "provenancedOrNull": {
+      "oneOf": [
+        { "$ref": "#/definitions/provenancedValue" },
+        { "type": "null" }
+      ]
+    },
+    "question": {
+      "type": "object",
+      "required": ["id", "field", "kind", "text"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "field": {
+          "description": "Dotted path of the field this answers: target.board, devices[0].interface, behaviors[0].trigger.threshold, constraints.sample_rate.",
+          "type": "string"
+        },
+        "kind": {
+          "description": "Ambiguity class. 'model_proposed' questions come from the LLM: they are screened for specificity, may only be added for a field already unknown, and are non-blocking — the model can surface nuance but can never hold generation hostage or set a value.",
+          "type": "string",
+          "enum": [
+            "missing_target", "missing_device", "ambiguous_chip",
+            "missing_interface", "missing_role", "missing_pin",
+            "missing_behavior", "missing_trigger_source", "missing_comparator",
+            "missing_threshold", "missing_units", "missing_action",
+            "missing_sample_rate", "missing_failure_behavior",
+            "missing_output_target", "model_proposed"
+          ]
+        },
+        "text": {
+          "description": "The question itself: specific and answerable in one line ('Which I2C address is the BME280 strapped to?'), never vague ('Any other details?').",
+          "type": "string",
+          "minLength": 1
+        },
+        "options": {
+          "description": "Only ever drawn from a closed vocabulary this project owns (interfaces, comparators, output targets). Never a suggested part number, board or threshold — a suggestion is an invented value wearing a question mark.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "blocking": {
+          "description": "True = assert_spec_complete() refuses to let generation start until it is answered. No spec line => no code.",
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
