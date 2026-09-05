@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import glob
 import os
+import shutil
 import subprocess
 import tempfile
 
@@ -61,8 +62,22 @@ ARM_GCC_GLOB = os.path.expanduser(
 
 
 def find_arm_gcc() -> str | None:
-    hit = glob.glob(ARM_GCC_GLOB)
-    return hit[0] if hit else None
+    """Path to arm-none-eabi-gcc, or None.
+
+    Order: explicit override, the local PlatformIO toolchain, then PATH. PATH
+    matters and was the omission that mattered: the deployed image installs the
+    compiler via apt at /usr/bin, so globbing only ~/.platformio made the
+    compile stage report "arm-none-eabi-gcc not available" in production while
+    the compiler sat right there. Honest degradation is worthless if it fires
+    for a reason that is not true.
+    """
+    override = os.environ.get("EMBEDDPILOT_ARM_GCC")
+    if override and os.path.isfile(override):
+        return override
+    hit = sorted(glob.glob(ARM_GCC_GLOB))
+    if hit:
+        return hit[-1]
+    return shutil.which("arm-none-eabi-gcc")
 
 
 # --- WS2: spec -> the dicts the resource check consumes ---------------------
