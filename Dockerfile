@@ -7,6 +7,13 @@ FROM python:3.12-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
         gcc libc6-dev gcc-arm-none-eabi libnewlib-arm-none-eabi \
         libnewlib-dev cppcheck curl ca-certificates \
+        # Renode is a .NET application and refuses to start without ICU:
+        # "Couldn't find a valid ICU package installed on the system".
+        # The slim base image does not carry it, so emulation died at machine
+        # start in production while every other stage passed. libicu-dev is
+        # used rather than a versioned runtime package so this survives a
+        # Debian release bump of the base image.
+        libicu-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # V1.8 Part A: arduino-cli + cores so the Arduino target's multi-core compile
