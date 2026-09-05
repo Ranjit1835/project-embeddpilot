@@ -2,23 +2,23 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useRef, useState, useSyncExternalStore } from "react";
-import { isDemoActive, subscribeDemoFlag } from "../lib/demo";
+import { isDemoActive, subscribeDemoFlag } from "../../lib/demo";
 import {
   GenerationScreen,
   attemptsFromEvents,
   type Attempt,
-} from "../components/GenerationScreen";
-import { InputScreen } from "../components/InputScreen";
-import { ResultsScreen } from "../components/ResultsScreen";
-import { ReviewScreen } from "../components/ReviewScreen";
-import { EASE } from "../components/ui";
-import { jobSnapshot, startGenerate, subscribeJob } from "../lib/api";
+} from "../../components/GenerationScreen";
+import { InputScreen } from "../../components/InputScreen";
+import { ResultsScreen } from "../../components/ResultsScreen";
+import { ReviewScreen } from "../../components/ReviewScreen";
+import { EASE } from "../../components/ui";
+import { jobSnapshot, startGenerate, subscribeJob } from "../../lib/api";
 import type {
   GenerationResult,
   JobEvent,
   RegisterMap,
   RouteDecision,
-} from "../lib/types";
+} from "../../lib/types";
 
 type Step = "input" | "review" | "generate" | "results";
 
@@ -114,7 +114,16 @@ export default function Home() {
           <span className="font-mono text-[15px] tracking-tight text-ink">
             embedd<span className="text-accent">pilot</span>
           </span>
-          <span className="font-mono text-[10px] text-ink-faint">v1.8</span>
+          <span className="font-mono text-[10px] text-ink-faint">
+            driver only
+          </span>
+          {/* the fuller product lives at the root; do not strand anyone here */}
+          <a
+            href="/"
+            className="font-mono text-[10px] text-ink-faint underline decoration-line underline-offset-4 transition-colors hover:text-accent"
+          >
+            ← build a whole application instead
+          </a>
         </div>
         <nav aria-label="pipeline steps" className="flex gap-0.5">
           {STEPS.map(([key, label], i) => {

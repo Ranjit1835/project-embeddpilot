@@ -305,6 +305,15 @@ export default function ResourceMapPage() {
           <span className="ins-mono text-[10px] uppercase tracking-[0.18em] text-ink-faint">
             v2 · requirement → verified application
           </span>
+          {/* V1 is a narrower tool, not a worse one: sometimes you have a
+              datasheet and want only the driver. Keep it one click away rather
+              than buried at a URL nobody would guess. */}
+          <a
+            href="/driver"
+            className="ins-mono text-[10px] uppercase tracking-[0.16em] text-ink-faint underline decoration-line underline-offset-4 transition-colors hover:text-accent"
+          >
+            have a datasheet? → driver only
+          </a>
         </div>
 
         <StepRibbon steps={STAGES} active={step} />
