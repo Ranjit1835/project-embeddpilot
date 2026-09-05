@@ -106,6 +106,7 @@ AMBIGUOUS_CHIP = "ambiguous_chip"                    # "a temp sensor" — which
 MISSING_INTERFACE = "missing_interface"              # device named, no bus
 MISSING_ROLE = "missing_role"                        # device named, no job
 MISSING_PIN = "missing_pin"                          # GPIO device, no pin
+MISSING_ADDRESS = "missing_address"                  # I2C device, no address
 MISSING_BEHAVIOR = "missing_behavior"                # nothing for the app to do
 MISSING_TRIGGER_SOURCE = "missing_trigger_source"    # "when it's hot" — what reading?
 MISSING_COMPARATOR = "missing_comparator"            # above or below?
@@ -870,6 +871,18 @@ def detect_ambiguities(spec: ApplicationSpec) -> list[Question]:
             qs.append(_q(f"{base}.pin", MISSING_PIN,
                          f"Which MCU pin is the {label} wired to (for example "
                          "'PB5')?"))
+        # An I2C part is addressed ON THE WIRE, so without its 7-bit address it
+        # cannot be read: the read plan cannot be derived and the build ends
+        # with no firmware. Treating the address as optional let a spec look
+        # COMPLETE while being unbuildable — the intake said nothing and the
+        # pipeline silently produced nothing, which is precisely the quiet
+        # failure this project exists to prevent. So ask for it.
+        # (SPI selects by chip-select and correctly needs no address.)
+        if dev.interface is not None and dev.address is None and \
+                str(dev.interface.value).upper() == "I2C":
+            qs.append(_q(f"{base}.address", MISSING_ADDRESS,
+                         f"What is the {label}'s 7-bit I2C address (for example "
+                         "'0x77')? Without it the device cannot be read."))
 
     if not spec.behaviors:
         qs.append(_q("behaviors", MISSING_BEHAVIOR,

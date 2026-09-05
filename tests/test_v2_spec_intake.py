@@ -86,7 +86,8 @@ GREEDY_RESPONSE = {
 
 FULL = (
     "Build a greenhouse controller on a Nucleo-F411RE board with an STM32F411RE "
-    "MCU. It reads a BME280 over I2C as the temperature sensor, and drives a "
+    "MCU. It reads a BME280 over I2C at address 0x76 as the temperature sensor, "
+    "and drives a "
     "SRD-05VDC relay module on pin PB5 as a GPIO output. When the temperature is "
     "above 30 C, turn the relay on. Sample every 500 ms. If the sensor read "
     "fails, hold the relay off and log an error. Produce a platformio-project."
@@ -100,6 +101,7 @@ FULL_RESPONSE = {
     "devices": [
         {"name": {"value": "BME280", "evidence": "reads a BME280 over I2C"},
          "interface": {"value": "I2C", "evidence": "reads a BME280 over I2C"},
+         "address": {"value": "0x76", "evidence": "at address 0x76"},
          "role": {"value": "temperature sensor",
                   "evidence": "as the temperature sensor"}},
         {"name": {"value": "SRD-05VDC",
@@ -277,6 +279,7 @@ ANSWERS = {
     "devices[0].name": "BME280",
     "devices[0].interface": "I2C",
     "devices[0].role": "temperature sensor",
+    "devices[0].address": "0x76",             # I2C parts are addressed on the wire
     "devices[1].name": "plain GPIO output",   # honest "there is no part number"
     "devices[1].interface": "GPIO",
     "devices[1].role": "relay output",
