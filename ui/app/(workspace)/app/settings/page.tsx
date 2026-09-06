@@ -84,9 +84,21 @@ export default function SettingsPage() {
             </p>
 
             {capErr && (
-              <p className="ins-mono text-[11px] text-red">
-                could not read capabilities — {capErr}
-              </p>
+              /* A 404 here is not a broken backend — it is a backend older than
+                 this endpoint. Saying so is more useful than a raw error, and
+                 still does not pretend to know what that deployment can do. */
+              <div className="ins-hazard-edge border border-amber/40 p-2.5">
+                <p className="ins-mono text-[11px] text-amber">
+                  {/404/.test(capErr)
+                    ? "this backend predates the capabilities endpoint"
+                    : "could not read capabilities"}
+                </p>
+                <p className="ins-mono mt-1 text-[10px] leading-relaxed text-ink-faint">
+                  {/404/.test(capErr)
+                    ? "Redeploy the API to see what this deployment can do. Nothing is shown in its place — an assumed toolchain would be a guess, and a guess about whether emulation can run is exactly the kind this product refuses to make."
+                    : capErr}
+                </p>
+              </div>
             )}
 
             {caps && (
