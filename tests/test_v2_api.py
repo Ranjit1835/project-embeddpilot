@@ -129,3 +129,39 @@ def test_build_refuses_a_map_with_nothing_readable(client):
         + list(result.get("derivation_notes", []))
         + list(result.get("notes", [])))
     assert "no data/output register" in reasons or "refusing" in reasons, reasons
+
+
+# --- capabilities: what this deployment can actually do ---------------------
+
+def test_capabilities_reports_toolchain_and_consequences(client):
+    """A missing tool must be legible BEFORE a run. 'emulation skipped' means
+    something very different when you can see the box has no Renode."""
+    body = client.get("/api/v2/capabilities").json()
+    assert set(body["toolchain"]) >= {"arm_none_eabi_gcc", "renode"}
+    for name, tool in body["toolchain"].items():
+        assert isinstance(tool["available"], bool)
+        # every tool must say what its absence COSTS, or the panel is just a
+        # row of red crosses the user cannot act on
+        assert name in body["consequences"] and body["consequences"][name]
+
+
+def test_capabilities_does_not_leak_the_api_key(client):
+    """The endpoint reports which provider is configured. It must never echo the
+    credential — this is the one place it would be easy to."""
+    import json
+    import os
+
+    raw = json.dumps(client.get("/api/v2/capabilities").json())
+    for var in ("GEMINI_API_KEY", "NVIDIA_API_KEY", "GROQ_API_KEY"):
+        secret = os.environ.get(var)
+        if secret:
+            assert secret not in raw, f"{var} leaked into /api/v2/capabilities"
+    assert "api_key" not in raw.lower()
+
+
+def test_capabilities_states_what_is_not_built(client):
+    """The same honesty the verdicts carry, applied to the feature list."""
+    body = client.get("/api/v2/capabilities").json()
+    joined = " ".join(body["not_built"]).lower()
+    assert "hardware" in joined      # flashing / dump prediction are not built
+    assert body["buses_supported"] == ["I2C", "SPI"]

@@ -337,7 +337,7 @@ export default function DocsPage() {
                 actually did? That is a bug — report it.
               </p>
               <div className="flex flex-col gap-3 sm:flex-row">
-                <ActionLink href="/" kind="primary">
+                <ActionLink href="/app" kind="primary">
                   Open the workspace
                 </ActionLink>
                 <ActionLink href="/contact" kind="default">

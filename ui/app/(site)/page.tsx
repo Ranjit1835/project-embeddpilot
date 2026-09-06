@@ -83,7 +83,7 @@ export default function HomePage() {
 
               <Reveal delay={0.24}>
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <ActionLink href="/" kind="primary" className="sm:!px-5">
+                  <ActionLink href="/app" kind="primary" className="sm:!px-5">
                     Open the workspace
                   </ActionLink>
                   <ActionLink href="/docs" kind="default">
@@ -231,7 +231,7 @@ export default function HomePage() {
                 </p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row">
-                <ActionLink href="/" kind="primary" className="sm:!px-5">
+                <ActionLink href="/app" kind="primary" className="sm:!px-5">
                   Open the workspace
                 </ActionLink>
                 <ActionLink href="/pricing" kind="default">

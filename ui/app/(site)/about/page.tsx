@@ -161,7 +161,7 @@ export default function AboutPage() {
               the transcript it produces.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <ActionLink href="/" kind="primary">
+              <ActionLink href="/app" kind="primary">
                 Open the workspace
               </ActionLink>
               <ActionLink href="/docs" kind="default">

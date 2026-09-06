@@ -337,6 +337,12 @@ export default function ResourceMapPage() {
               datasheet and want only the driver. Keep it one click away rather
               than buried at a URL nobody would guess. */}
           <a
+            href="/app/settings"
+            className="ins-mono text-[10px] uppercase tracking-[0.16em] text-ink-faint underline decoration-line underline-offset-4 transition-colors hover:text-accent"
+          >
+            settings
+          </a>
+          <a
             href="/driver"
             className="ins-mono text-[9.5px] uppercase tracking-[0.14em] text-ink-faint underline decoration-line underline-offset-4 transition-colors hover:text-accent sm:text-[10px] sm:tracking-[0.16em]"
           >

@@ -519,3 +519,61 @@ def _run_v2_build(job: Job, text: str, answers: dict, register_map, address,
         })
     except Exception as e:
         job.finish(error=f"v2 build crashed: {e}")
+
+
+@app.get("/api/v2/capabilities")
+async def v2_capabilities():
+    """What this deployment can actually do, right now.
+
+    Deliberately read-only and deliberately NOT a place to supply an API key.
+    On a shared deployment a key box is either a request to hand your credential
+    to someone else's server, or one key silently shared between strangers.
+    Keys stay in the environment (see the README); this endpoint only reports
+    what the environment yielded.
+
+    The value of reporting it is that a user can see BEFORE running whether a
+    check will be able to run at all — the difference between "emulation says
+    skipped because this box has no Renode" and the same word meaning something
+    went wrong.
+    """
+    import shutil
+
+    from validator.emulation_check import find_renode
+    from orchestration.v2_pipeline import find_arm_gcc
+
+    try:
+        from generation.provider import make_provider
+        p = make_provider()
+        provider = {"name": getattr(p, "name", "unknown"),
+                    "context_window": getattr(p, "context_window", None),
+                    "available": True}
+    except Exception as e:
+        provider = {"name": None, "available": False, "reason": str(e)[:200]}
+
+    renode = find_renode()
+    arm = find_arm_gcc()
+    return {
+        "provider": provider,
+        "toolchain": {
+            "arm_none_eabi_gcc": {"available": arm is not None, "path": arm},
+            "renode": {"available": renode is not None, "path": renode},
+            "cppcheck": {"available": shutil.which("cppcheck") is not None},
+            "arduino_cli": {"available": shutil.which("arduino-cli") is not None},
+        },
+        # what each missing tool costs you, so the report is actionable rather
+        # than a row of red crosses
+        "consequences": {
+            "arm_none_eabi_gcc": "without it, generated firmware cannot be "
+                                 "compiled and the build stops at 'compile skipped'",
+            "renode": "without it, firmware cannot be RUN — the emulation check "
+                      "reports 'skipped' and no application can reach "
+                      "'working (emulated)'",
+            "cppcheck": "without it, static analysis is skipped (V1 driver path)",
+            "arduino_cli": "without it, the Arduino target's multi-core compile "
+                           "is skipped (V1 driver path)",
+        },
+        "buses_supported": ["I2C", "SPI"],
+        "not_built": ["UART devices", "flashing to physical hardware",
+                      "hardware dump-success prediction",
+                      "timers / state-machine app logic"],
+    }

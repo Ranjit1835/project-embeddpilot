@@ -70,7 +70,7 @@ export function SiteHeader() {
           <div className="flex h-14 items-center justify-between gap-4">
             {/* ---------------------------------------------------- brand */}
             <Link
-              href="/home"
+              href="/"
               className="group flex items-center gap-2.5"
               aria-label="EmbeddPilot — home"
             >
@@ -193,7 +193,7 @@ export function SiteHeader() {
                 );
               })}
               <div className="pt-4">
-                <ActionLink href="/" kind="primary" className="w-full">
+                <ActionLink href="/app" kind="primary" className="w-full">
                   Open the workspace
                 </ActionLink>
               </div>
