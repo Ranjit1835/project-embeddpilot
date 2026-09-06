@@ -24,8 +24,8 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BoardView } from "../../components/resource-map/BoardView";
-import { ErrorPlate, Intake } from "../../components/resource-map/Intake";
+import { BoardView } from "../../../components/resource-map/BoardView";
+import { ErrorPlate, Intake } from "../../../components/resource-map/Intake";
 import {
   Bay,
   GLIDE,
@@ -36,7 +36,7 @@ import {
   Screws,
   StepRibbon,
   type LedTone,
-} from "../../components/resource-map/chrome";
+} from "../../../components/resource-map/chrome";
 import {
   DEMO_ANALYZE,
   DEMO_BUILD,
@@ -44,15 +44,15 @@ import {
   DEMO_TRACE,
   DEMO_UART,
   type DemoState,
-} from "../../lib/resource-map-mock";
-import { analyze, errorText, pollJob, startBuild } from "../../lib/v2-api";
+} from "../../../lib/resource-map-mock";
+import { analyze, errorText, pollJob, startBuild } from "../../../lib/v2-api";
 import type {
   AnalyzeResponse,
   BuildResult,
   ConsoleLine,
   LineTone,
   V2Stage,
-} from "../../lib/v2-types";
+} from "../../../lib/v2-types";
 import {
   activeStep,
   boardFrom,
@@ -62,7 +62,7 @@ import {
   verdictFor,
   type RailItem,
   type RailState,
-} from "../../lib/v2-view";
+} from "../../../lib/v2-view";
 
 const STAGES = ["requirements", "devices", "resource map", "code", "run"];
 

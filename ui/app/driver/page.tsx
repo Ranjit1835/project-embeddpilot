@@ -119,7 +119,7 @@ export default function Home() {
           </span>
           {/* the fuller product lives at the root; do not strand anyone here */}
           <a
-            href="/"
+            href="/app"
             className="font-mono text-[10px] text-ink-faint underline decoration-line underline-offset-4 transition-colors hover:text-accent"
           >
             ← build a whole application instead
