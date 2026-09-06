@@ -291,18 +291,46 @@ export default function ResourceMapPage() {
         ? "resolve the reported conflict first — the pipeline refuses to emulate a system whose resources collide"
         : "";
 
+  /* Intake is a MODE with two phases. The phase is read here as well as passed
+     down, because the requirement phase — the true empty state — gets the idle
+     board beside it while the question walker stays a focused single column. */
+  const intakePhase: "requirement" | "questions" =
+    analysis && analysis.questions.length > 0 ? "questions" : "requirement";
+
+  const intakeProps = {
+    requirement,
+    onRequirementChange: setRequirement,
+    questions: analysis?.questions ?? [],
+    answers,
+    busy: analyzing,
+    error: analyzeError,
+    phase: intakePhase,
+    onAnalyze,
+    onAnswer,
+    onDismiss: analysis ? () => setIntakeOpen(false) : null,
+    onUseDemo: () => setSource("demo"),
+  };
+
   /* -------------------------------------------------------------- render */
 
   return (
     <div className="ins-room relative flex min-h-screen flex-col">
-      {/* ------------------------------------------------ chassis header */}
-      <header className="ins-chassis relative flex items-center justify-between gap-6 border-b border-line px-5 py-2.5">
+      {/* ------------------------------------------------ chassis header
+
+          `.ins-head` is a grid, not a flex row: on a phone it deals the four
+          pieces into three rows (brand + source / tagline / stage ribbon), and
+          from lg it snaps back to the single row the bench has always had. A
+          grid rather than duplicated markup because the source switch carries
+          a layout animation and must remain ONE mounted element. */}
+      <header className="ins-head ins-chassis relative border-b border-line px-4 py-2.5 sm:px-5">
         <Screws />
-        <div className="flex items-baseline gap-3">
-          <span className="text-[13px] font-bold uppercase tracking-[0.3em] text-ink">
-            Embedd<span className="text-accent">Pilot</span>
-          </span>
-          <span className="ins-mono text-[10px] uppercase tracking-[0.18em] text-ink-faint">
+
+        <span className="ins-head-brand whitespace-nowrap text-[13px] font-bold uppercase tracking-[0.24em] text-ink sm:tracking-[0.3em]">
+          Embedd<span className="text-accent">Pilot</span>
+        </span>
+
+        <div className="ins-head-sub flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5">
+          <span className="ins-mono text-[9.5px] uppercase tracking-[0.14em] text-ink-faint sm:text-[10px] sm:tracking-[0.18em]">
             v2 · requirement → verified application
           </span>
           {/* V1 is a narrower tool, not a worse one: sometimes you have a
@@ -310,38 +338,45 @@ export default function ResourceMapPage() {
               than buried at a URL nobody would guess. */}
           <a
             href="/driver"
-            className="ins-mono text-[10px] uppercase tracking-[0.16em] text-ink-faint underline decoration-line underline-offset-4 transition-colors hover:text-accent"
+            className="ins-mono text-[9.5px] uppercase tracking-[0.14em] text-ink-faint underline decoration-line underline-offset-4 transition-colors hover:text-accent sm:text-[10px] sm:tracking-[0.16em]"
           >
             have a datasheet? → driver only
           </a>
         </div>
 
-        <StepRibbon steps={STAGES} active={step} />
+        <div className="ins-head-ribbon">
+          <StepRibbon steps={STAGES} active={step} />
+        </div>
 
-        <ModeSwitch<Source>
-          ariaLabel="Data source"
-          value={source}
-          onChange={setSource}
-          options={[
-            { value: "live", label: "live api", tone: "green" },
-            { value: "demo", label: "demo fixture", tone: "amber" },
-          ]}
-        />
+        <div className="ins-head-source">
+          <ModeSwitch<Source>
+            ariaLabel="Data source"
+            value={source}
+            onChange={setSource}
+            options={[
+              { value: "live", label: "live api", tone: "green" },
+              { value: "demo", label: "demo fixture", tone: "amber" },
+            ]}
+          />
+        </div>
       </header>
 
       {/* ------------------------------------------------- provenance strip */}
       <div
-        className={`flex flex-wrap items-center gap-x-4 gap-y-1 border-b px-4 py-1.5 ${
+        className={`flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b px-3 py-1.5 sm:px-4 ${
           demo ? "border-amber/40 bg-amber/5" : "border-line"
         }`}
       >
         {demo ? (
           <>
+            {/* the hazard banner reflows; it never shrinks away. On a phone it
+                takes the full first line so the words "not a live run" cannot
+                be pushed off the edge. */}
             <span className="ins-hazard h-[10px] w-[54px] shrink-0" aria-hidden />
-            <span className="ins-mono text-[10px] font-bold uppercase tracking-[0.2em] text-amber">
+            <span className="ins-mono min-w-0 text-[10px] font-bold uppercase tracking-[0.16em] text-amber sm:tracking-[0.2em]">
               demo — recorded fixture data, not a live run
             </span>
-            <span className="ins-mono text-[10px] text-ink-faint">
+            <span className="ins-mono min-w-0 basis-full text-[10px] text-ink-faint lg:basis-auto">
               nothing here was produced by the pipeline just now
             </span>
             <ModeSwitch<DemoState>
@@ -361,14 +396,14 @@ export default function ResourceMapPage() {
         ) : (
           <>
             <Led tone={analysis ? "green" : "off"} breathe={analyzing} />
-            <span className="ins-mono text-[10px] uppercase tracking-[0.18em] text-ink-dim">
+            <span className="ins-mono text-[10px] uppercase tracking-[0.16em] text-ink-dim sm:tracking-[0.18em]">
               live · /api/v2 · {analysis ? "reporting a real run" : "no run yet"}
             </span>
             {requirement && (
               <button
                 type="button"
                 onClick={() => setIntakeOpen(true)}
-                className="ins-mono max-w-[46ch] truncate text-left text-[10px] text-ink-faint underline decoration-line underline-offset-2 hover:text-ink-dim"
+                className="ins-mono min-w-0 max-w-full basis-full truncate text-left text-[10px] text-ink-faint underline decoration-line underline-offset-2 hover:text-ink-dim sm:max-w-[46ch] sm:basis-auto"
                 title={requirement}
               >
                 “{requirement}”
@@ -377,12 +412,12 @@ export default function ResourceMapPage() {
           </>
         )}
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           {!demo && (
             <button
               type="button"
               onClick={() => setIntakeOpen(true)}
-              className="ins-key border border-line px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim hover:text-ink"
+              className="ins-key min-h-[34px] border border-line px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-ink-dim hover:text-ink sm:min-h-0 sm:tracking-[0.18em]"
             >
               {analysis ? "revise requirement" : "new requirement"}
             </button>
@@ -392,7 +427,7 @@ export default function ResourceMapPage() {
             onClick={onBuild}
             disabled={!canBuild}
             title={buildBlockedReason || undefined}
-            className="ins-key border border-accent-dim px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-accent transition-colors hover:bg-accent/10 disabled:cursor-not-allowed disabled:border-line disabled:text-ink-faint"
+            className="ins-key min-h-[34px] border border-accent-dim px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-accent transition-colors hover:bg-accent/10 disabled:cursor-not-allowed disabled:border-line disabled:text-ink-faint sm:min-h-0 sm:tracking-[0.2em]"
           >
             {build?.running ? "building…" : demo ? "show recorded build ▸" : "build & prove ▸"}
           </button>
@@ -401,48 +436,38 @@ export default function ResourceMapPage() {
 
       {/* --------------------------------------------- intake, or the bench */}
       {!demo && intakeOpen ? (
-        <Intake
-          key={analyzeSeq}
-          requirement={requirement}
-          onRequirementChange={setRequirement}
-          questions={analysis?.questions ?? []}
-          answers={answers}
-          busy={analyzing}
-          error={analyzeError}
-          phase={
-            analysis && analysis.questions.length > 0 ? "questions" : "requirement"
-          }
-          onAnalyze={onAnalyze}
-          onAnswer={onAnswer}
-          onDismiss={analysis ? () => setIntakeOpen(false) : null}
-          onUseDemo={() => setSource("demo")}
-        />
+        intakePhase === "requirement" ? (
+          /* FIRST PAINT. The board leads even before anything has been
+             analysed: an unpopulated board with plated pads and silkscreen
+             still reads as an instrument, where a lone text box reads as a
+             form. On a phone the board is genuinely the first thing on screen;
+             from lg it sits to the left of intake exactly where it will sit
+             once the run populates it, so analysing fills this board in rather
+             than swapping to a different screen. */
+          <main className="grid min-h-0 flex-1 gap-3 p-3 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
+            <BoardBay
+              board={board}
+              tone="dim"
+              className="h-fit lg:h-auto lg:min-h-[420px]"
+            />
+            <Intake compact {...intakeProps} key={analyzeSeq} />
+          </main>
+        ) : (
+          <Intake {...intakeProps} key={analyzeSeq} />
+        )
       ) : (
       <main className="grid min-h-0 flex-1 gap-3 p-3 lg:grid-cols-[minmax(0,1.55fr)_minmax(360px,0.95fr)]">
-        <Bay
-          glass
+        <BoardBay
+          board={board}
           tone={failures.length ? "alarm" : current ? "accent" : "dim"}
-          legend={`target · ${board.target.mcu}`}
-          right={
-            <span className="ins-mono flex items-center gap-3 text-[10px] uppercase tracking-[0.16em] text-ink-faint">
-              {board.target.output && (
-                <span>
-                  output · <span className="text-ink-dim">{board.target.output}</span>
-                </span>
-              )}
-              <span>{board.target.board}</span>
-            </span>
-          }
-          className="min-h-[420px]"
-        >
-          <BoardView board={board} />
-        </Bay>
+          className="h-fit lg:h-auto lg:min-h-[420px]"
+        />
 
-        <div className="flex min-h-0 flex-col gap-3">
+        <div className="flex min-h-0 min-w-0 flex-col gap-3">
           <Bay
             legend="devices"
             right={<Count n={board.devices.length} />}
-            className="max-h-[46%]"
+            className="lg:max-h-[46%]"
           >
             <div className="min-h-0 overflow-auto">
               {board.devices.length === 0 ? (
@@ -539,9 +564,14 @@ export default function ResourceMapPage() {
 
       {/* -------------------------------------------------- verdict rail */}
       <footer className="ins-chassis border-t border-line px-3 py-2">
+        {/* The rail WRAPS; nothing here is dropped to buy width. On a phone the
+            verdict takes the first full line — it is the one thing a visitor
+            must not have to scroll sideways to read — and the per-check lamps
+            wrap underneath it, each keeping its own lamp, glyph and ink so
+            `not_applicable` and `skipped` still cannot be mistaken for a pass. */}
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
           {rail.length === 0 ? (
-            <span className="ins-mono text-[11px] text-ink-faint">
+            <span className="ins-mono min-w-0 text-[11px] leading-relaxed text-ink-faint">
               ○ no checks have run{" "}
               {current
                 ? "— the spec is still incomplete, so nothing was validated"
@@ -551,12 +581,15 @@ export default function ResourceMapPage() {
             rail.map((c) => {
               const s = RAIL_STYLE[c.state];
               return (
-                <div key={c.id} className="flex items-center gap-2">
+                <div key={c.id} className="flex min-w-0 max-w-full items-center gap-2">
                   <Led tone={s.tone} breathe={s.breathe} />
-                  <span className={`ins-mono text-[11px] ${s.ink}`}>
+                  <span className={`ins-mono shrink-0 text-[11px] ${s.ink}`}>
                     {s.mark} {c.label}
                   </span>
-                  <span className="ins-mono max-w-[34ch] truncate text-[10px] text-ink-faint" title={c.note}>
+                  <span
+                    className="ins-mono min-w-0 flex-1 truncate text-[10px] text-ink-faint sm:max-w-[34ch] sm:flex-none"
+                    title={c.note}
+                  >
                     {c.note}
                   </span>
                 </div>
@@ -564,10 +597,14 @@ export default function ResourceMapPage() {
             })
           )}
 
+          {/* stays last in the DOM (reading order: what was checked, then the
+              verdict) but jumps to the top line on a phone, where a plate
+              pushed to the end of a wrapped rail would be the first thing to
+              fall off the screen */}
           <motion.div
             layout
             transition={GLIDE}
-            className={`ml-auto flex items-center gap-2 border px-3 py-1 ${
+            className={`order-first flex w-full items-center justify-center gap-2 border px-3 py-1.5 sm:order-none sm:ml-auto sm:w-auto sm:justify-start sm:py-1 ${
               verdict.tone === "good"
                 ? "ins-glow border-accent-dim text-accent"
                 : verdict.tone === "bad"
@@ -577,7 +614,7 @@ export default function ResourceMapPage() {
                     : "border-line text-ink-faint"
             }`}
           >
-            <span className="ins-mono text-[11px] font-bold tracking-[0.18em]">
+            <span className="ins-mono text-center text-[11px] font-bold tracking-[0.14em] sm:text-left sm:tracking-[0.18em]">
               {verdict.label}
             </span>
           </motion.div>
@@ -607,6 +644,40 @@ export default function ResourceMapPage() {
 }
 
 /* ------------------------------------------------------------ sub-bays */
+
+/** The hero bay. One definition, used by both the idle screen and the bench,
+    so the board a first-time visitor meets is the same instrument that later
+    carries the run — not a decorative stand-in. */
+function BoardBay({
+  board,
+  tone,
+  className = "",
+}: {
+  board: ReturnType<typeof boardFrom>;
+  tone: "dim" | "accent" | "alarm";
+  className?: string;
+}) {
+  return (
+    <Bay
+      glass
+      tone={tone}
+      legend={`target · ${board.target.mcu}`}
+      right={
+        <span className="ins-mono flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] uppercase tracking-[0.16em] text-ink-faint">
+          {board.target.output && (
+            <span>
+              output · <span className="text-ink-dim">{board.target.output}</span>
+            </span>
+          )}
+          <span>{board.target.board}</span>
+        </span>
+      }
+      className={className}
+    >
+      <BoardView board={board} />
+    </Bay>
+  );
+}
 
 function Count({ n }: { n: number }) {
   return (

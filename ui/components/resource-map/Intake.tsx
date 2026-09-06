@@ -52,6 +52,9 @@ export interface IntakeProps {
   onDismiss: (() => void) | null;
   /** offered only on the error plate — the escape hatch when the API is down */
   onUseDemo: (() => void) | null;
+  /** true when intake is a column of the bench grid beside the idle board, so
+      it drops its own centring and padding and lets the grid own the gutters */
+  compact?: boolean;
 }
 
 export function Intake(props: IntakeProps) {
@@ -60,8 +63,16 @@ export function Intake(props: IntakeProps) {
      control someone needs when the reason they are stuck on this screen is that
      the backend is not answering. */
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-auto">
-      <div className="mx-auto flex w-full max-w-[880px] flex-1 flex-col gap-3 p-4">
+    <div
+      className={`flex min-h-0 min-w-0 flex-1 flex-col ${
+        props.compact ? "" : "overflow-auto"
+      }`}
+    >
+      <div
+        className={`flex w-full min-w-0 flex-1 flex-col gap-3 ${
+          props.compact ? "" : "mx-auto max-w-[880px] p-3 sm:p-4"
+        }`}
+      >
         {props.phase === "requirement" ? (
           <RequirementStep {...props} />
         ) : (
@@ -84,10 +95,10 @@ function RequirementStep({
   onUseDemo,
 }: IntakeProps) {
   return (
-    <div className="ins-chassis relative flex flex-1 flex-col gap-3">
+    <div className="ins-chassis relative flex min-w-0 flex-1 flex-col gap-3">
       <Screws />
       <header className="px-2 pt-1">
-        <h1 className="text-[15px] font-bold uppercase tracking-[0.3em] text-ink">
+        <h1 className="text-[15px] font-bold uppercase tracking-[0.22em] text-ink sm:tracking-[0.3em]">
           Requirement <span className="text-accent">intake</span>
         </h1>
         <p className="ins-mono mt-1 max-w-[62ch] text-[11px] leading-relaxed text-ink-dim">
@@ -108,7 +119,7 @@ function RequirementStep({
             onChange={(e) => onRequirementChange(e.target.value)}
             spellCheck={false}
             placeholder="e.g. On a <board> with a <mcu>, read the <sensor> over I2C at <address>, and …"
-            className="ins-face ins-mono min-h-[168px] flex-1 resize-none p-3 text-[12.5px] leading-relaxed text-ink outline-none placeholder:text-ink-faint"
+            className="ins-face ins-mono min-h-[128px] w-full flex-1 resize-none p-3 text-[12.5px] leading-relaxed text-ink outline-none placeholder:text-ink-faint sm:min-h-[168px]"
           />
 
           <div className="mt-3">
@@ -133,12 +144,12 @@ function RequirementStep({
 
       {error && <ErrorPlate text={error} onUseDemo={onUseDemo ?? undefined} />}
 
-      <div className="flex items-center gap-3 px-2 pb-1">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-2 pb-1">
         <button
           type="button"
           onClick={onAnalyze}
           disabled={busy || !requirement.trim()}
-          className="ins-key border border-accent-dim px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-accent transition-colors hover:bg-accent/10 disabled:cursor-not-allowed disabled:border-line disabled:text-ink-faint"
+          className="ins-key border border-accent-dim px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-accent transition-colors hover:bg-accent/10 disabled:cursor-not-allowed disabled:border-line disabled:text-ink-faint sm:tracking-[0.22em]"
         >
           {busy ? "analysing…" : "analyse requirement ▸"}
         </button>
@@ -212,12 +223,12 @@ function QuestionStep({
   if (!q) return null;
 
   return (
-    <div className="ins-chassis relative flex flex-1 flex-col gap-3">
+    <div className="ins-chassis relative flex min-w-0 flex-1 flex-col gap-3">
       <Screws />
 
-      <header className="flex items-start justify-between gap-4 px-2 pt-1">
-        <div>
-          <h1 className="text-[15px] font-bold uppercase tracking-[0.3em] text-ink">
+      <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-2 pt-1">
+        <div className="min-w-0">
+          <h1 className="text-[15px] font-bold uppercase tracking-[0.22em] text-ink sm:tracking-[0.3em]">
             Clarify <span className="text-accent">first</span>
           </h1>
           <p className="ins-mono mt-1 max-w-[62ch] text-[11px] leading-relaxed text-ink-dim">
@@ -225,7 +236,7 @@ function QuestionStep({
             will not fill them in for you and neither will this screen.
           </p>
         </div>
-        <div className="text-right">
+        <div className="shrink-0 text-right">
           <div className="ins-mono text-[10px] uppercase tracking-[0.18em] text-ink-faint">
             question {index + 1} of {ordered.length}
           </div>
@@ -281,8 +292,8 @@ function QuestionStep({
             }
             className="h-full"
           >
-            <div className="flex h-full flex-col gap-4 p-4">
-              <p className="max-w-[64ch] text-[15px] leading-relaxed text-ink">
+            <div className="flex h-full flex-col gap-4 p-3 sm:p-4">
+              <p className="max-w-[64ch] text-[14px] leading-relaxed text-ink sm:text-[15px]">
                 {q.text}
               </p>
 
@@ -328,7 +339,7 @@ function QuestionStep({
                       if (e.key === "Enter" && value.trim() && !isLast) advance();
                     }}
                     placeholder="your answer — in your words"
-                    className="ins-face ins-mono w-full max-w-[56ch] px-3 py-2.5 text-[13px] text-ink outline-none placeholder:text-ink-faint"
+                    className="ins-face ins-mono w-full max-w-full px-3 py-2.5 text-[13px] text-ink outline-none placeholder:text-ink-faint sm:max-w-[56ch]"
                   />
                 </div>
               )}
@@ -339,7 +350,7 @@ function QuestionStep({
                   : "Optional. Leave it blank and the run proceeds; the field simply stays unstated rather than being assumed."}
               </p>
 
-              <div className="mt-auto flex items-center gap-2">
+              <div className="mt-auto flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setIndex((i) => Math.max(0, i - 1))}

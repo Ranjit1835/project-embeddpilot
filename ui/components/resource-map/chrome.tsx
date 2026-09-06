@@ -4,7 +4,7 @@
    engraved sub-headers. Deliberately dumb — no state, no data. */
 
 import { motion } from "framer-motion";
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 
 export const SNAP = { duration: 0.22, ease: [0.22, 1, 0.36, 1] as const };
 export const GLIDE = { duration: 0.55, ease: [0.65, 0, 0.35, 1] as const };
@@ -103,13 +103,15 @@ export function Bay({
 }) {
   return (
     <section
-      className={`ins-panel flex min-h-0 flex-col ${glass ? "ins-glass" : ""} ${className}`}
+      className={`ins-panel flex min-h-0 min-w-0 flex-col ${glass ? "ins-glass" : ""} ${className}`}
     >
-      <header className="flex items-center justify-between gap-3 border-b border-line px-3 py-[7px]">
+      {/* wraps rather than overflows: a bay legend plus its right-hand readout
+          is wider than 360px more often than not */}
+      <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-line px-3 py-[7px]">
         <Legend tone={tone}>{legend}</Legend>
         {right}
       </header>
-      <div className="min-h-0 flex-1">{children}</div>
+      <div className="min-h-0 min-w-0 flex-1">{children}</div>
     </section>
   );
 }
@@ -126,8 +128,13 @@ export function ModeSwitch<T extends string>({
   onChange: (v: T) => void;
   ariaLabel: string;
 }) {
+  /* The knob is a shared-layout element, so its id must be unique PER SWITCH.
+     A literal "ins-mode-knob" made the source switch and the demo-state switch
+     one animation target: throwing either one flew the knob across the header
+     into the other. */
+  const knob = useId();
   return (
-    <div className="ins-switch" role="group" aria-label={ariaLabel}>
+    <div className="ins-switch shrink-0" role="group" aria-label={ariaLabel}>
       {options.map((o) => {
         const on = o.value === value;
         return (
@@ -136,13 +143,13 @@ export function ModeSwitch<T extends string>({
             type="button"
             aria-pressed={on}
             onClick={() => onChange(o.value)}
-            className={`relative flex items-center gap-2 rounded-[2px] px-3 py-[5px] text-[10px] font-semibold uppercase tracking-[0.2em] transition-colors ${
+            className={`relative flex items-center gap-1.5 rounded-[2px] px-2.5 py-[9px] text-[10px] font-semibold uppercase tracking-[0.16em] transition-colors sm:gap-2 sm:px-3 sm:py-[5px] sm:tracking-[0.2em] ${
               on ? "text-ink" : "text-ink-faint hover:text-ink-dim"
             }`}
           >
             {on && (
               <motion.span
-                layoutId="ins-mode-knob"
+                layoutId={knob}
                 transition={SNAP}
                 className="ins-key absolute inset-0 rounded-[2px]"
                 aria-hidden
@@ -159,17 +166,26 @@ export function ModeSwitch<T extends string>({
   );
 }
 
-/** Numbered stage strip. The active stage carries a sliding phosphor bar. */
+/** Numbered stage strip. The active stage carries a sliding phosphor bar.
+
+    Five stages do not fit across 360px, and the honest options are to drop
+    stages or to let the strip pan. It pans: every stage stays present and
+    legible, the strip scrolls inside its own track, and the page does not.
+    Above lg `.ins-scroll-x` reverts to `overflow: visible`, so the desktop
+    ribbon — including the bar that hangs 7px below it — is unchanged. */
 export function StepRibbon({ steps, active }: { steps: string[]; active: number }) {
   return (
-    <nav aria-label="Workspace stages" className="flex items-stretch">
+    <nav
+      aria-label="Workspace stages"
+      className="ins-scroll-x ins-fade-x flex max-w-full items-stretch lg:justify-end"
+    >
       {steps.map((s, i) => {
         const on = i === active;
         return (
           <span
             key={s}
             aria-current={on ? "step" : undefined}
-            className={`relative flex items-center gap-1.5 px-3 py-1 text-[10px] font-medium uppercase tracking-[0.18em] ${
+            className={`relative flex shrink-0 items-center gap-1.5 whitespace-nowrap px-2.5 py-1 pb-2 text-[10px] font-medium uppercase tracking-[0.14em] lg:px-3 lg:pb-1 lg:tracking-[0.18em] ${
               on ? "text-accent" : "text-ink-faint"
             }`}
           >
@@ -179,7 +195,7 @@ export function StepRibbon({ steps, active }: { steps: string[]; active: number 
               <motion.span
                 layoutId="ins-step-bar"
                 transition={SNAP}
-                className="absolute inset-x-1.5 -bottom-[7px] h-[2px] bg-accent"
+                className="absolute inset-x-1.5 bottom-[3px] h-[2px] bg-accent lg:-bottom-[7px]"
                 style={{ boxShadow: "0 0 8px #3fe081" }}
                 aria-hidden
               />

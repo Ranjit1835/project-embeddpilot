@@ -55,7 +55,11 @@
     inset 0 1px 0 rgb(255 255 255 / 0.07);
 }
 
-/* ventilation louvres down both flanks */
+/* ventilation louvres down both flanks.
+   pointer-events:none is load-bearing, not decoration: these span the full
+   height of the chassis, so without it the right-hand louvre sits on top of
+   whatever control is nearest the edge — on a narrow screen that is the
+   live/demo switch, and it became genuinely un-tappable. */
 .ins-chassis::before,
 .ins-chassis::after {
   content: "";
@@ -64,6 +68,7 @@
   bottom: 26px;
   width: 4px;
   border-radius: 2px;
+  pointer-events: none;
   background: repeating-linear-gradient(
     180deg,
     rgb(0 0 0 / 0.55) 0 3px,
@@ -85,6 +90,7 @@
 
 .ins-screw {
   position: absolute;
+  pointer-events: none;
   width: 11px;
   height: 11px;
   border-radius: 50%;
@@ -207,6 +213,86 @@
   10% { opacity: 0.5; }
   90% { opacity: 0.5; }
   100% { transform: translateX(108%); opacity: 0; }
+}
+
+/* ------------------------------------------------------ narrow-bench flow
+
+   The chassis is a fixed-width instrument on a bench and a stacked stripe of
+   modules on a phone. Everything below exists so the panel REFLOWS at 360px
+   instead of running off the edge — a page that scrolls sideways is a broken
+   instrument, and Chrome's shrink-to-fit turns the whole panel into unreadable
+   4px type rather than admitting it. */
+
+/* Header as a grid so brand / tagline / stage ribbon / source switch can trade
+   places between one row and three WITHOUT duplicating any control — the mode
+   switch has a layout animation and must stay a single mounted element. */
+.ins-head {
+  display: grid;
+  align-items: center;
+  gap: 5px 16px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "brand  source"
+    "sub    sub"
+    "ribbon ribbon";
+}
+.ins-head-brand  { grid-area: brand; }
+.ins-head-sub    { grid-area: sub; }
+.ins-head-ribbon { grid-area: ribbon; min-width: 0; }
+.ins-head-source { grid-area: source; justify-self: end; }
+
+@media (min-width: 1024px) {
+  .ins-head {
+    gap: 0 24px;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-areas: "brand sub ribbon source";
+  }
+}
+
+/* A strip that pans horizontally under the finger instead of widening the
+   page. Above lg it goes back to normal flow so the desktop panel is byte-for
+   -byte what it was — including the stage bar that hangs below the ribbon. */
+.ins-scroll-x {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.ins-scroll-x::-webkit-scrollbar {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .ins-scroll-x {
+    overflow: visible;
+  }
+}
+
+/* the right edge of a pannable strip dims, so "there is more" is visible
+   rather than implied by a clipped word */
+@media (max-width: 1023px) {
+  .ins-fade-x {
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      #000 0 84%,
+      rgb(0 0 0 / 0.25) 100%
+    );
+    mask-image: linear-gradient(90deg, #000 0 84%, rgb(0 0 0 / 0.25) 100%);
+  }
+}
+
+/* The board is the hero and must stay legible, so it does NOT shrink to fit a
+   phone — it keeps a readable minimum width and pans inside its own bay. The
+   overflow is contained here; the PAGE never scrolls sideways. */
+.ins-board-pan {
+  min-width: 560px;
+}
+@media (min-width: 640px) {
+  .ins-board-pan { min-width: 640px; }
+}
+@media (min-width: 768px) {
+  .ins-board-pan { min-width: 0; }
 }
 
 /* -------------------------------------------------------------- controls */

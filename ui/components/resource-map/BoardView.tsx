@@ -107,16 +107,28 @@ function describe(board: BoardModel): string {
     : `${base} No resource conflicts were reported.`;
 }
 
+/* Idle geometry. These are FOOTPRINTS, not claims: unlabelled pads, empty
+   peripheral slots and blank device outlines, drawn dashed and unlit. An
+   unpopulated board still reads as an instrument, which is the whole point —
+   but nothing here is given a name, a net or a lamp, because the run has not
+   said anything yet and a plausible-looking pinout is exactly the invented
+   fact the rest of this screen exists to refuse. */
+const IDLE_PAD_Y = [78, 112, 146, 180, 214, 248, 282, 316, 350, 384];
+const IDLE_DIE_Y = [86, 148, 210, 272, 334];
+const IDLE_DEV_Y = [78, 190, 302];
+
 export function BoardView({ board }: { board: BoardModel }) {
   const connected = new Set(board.nets.map((n) => n.id));
 
   return (
-    <svg
-      viewBox="0 0 860 480"
-      className="ins-mono h-auto w-full select-none"
-      role="img"
-      aria-label={describe(board)}
-    >
+    <div className="relative flex h-full min-h-0 w-full flex-col">
+      <div className="ins-scroll-x flex min-h-0 w-full flex-1 items-center">
+        <svg
+          viewBox="0 0 860 480"
+          className="ins-board-pan ins-mono h-auto w-full select-none"
+          role="img"
+          aria-label={describe(board)}
+        >
       <defs>
         <linearGradient id="rm-pcb" x1="0" y1="0" x2="0.4" y2="1">
           <stop offset="0%" stopColor="#0c1b17" />
@@ -417,11 +429,95 @@ export function BoardView({ board }: { board: BoardModel }) {
         </text>
       )}
 
+      {/* --------------------------------------------------- the idle board */}
       {board.empty && (
-        <text x="695" y="240" textAnchor="middle" fontSize="10" fill={C.silkDim} letterSpacing="1.2">
-          NO DEVICES COMPOSED
-        </text>
+        <g>
+          {/* bare header pads — plated, unwired, unnamed */}
+          {IDLE_PAD_Y.map((y) => (
+            <g key={`idle-pad-${y}`}>
+              <circle cx="76" cy={y} r="3.2" fill="#101b18" stroke="#1e3a30" strokeWidth="0.9" />
+              <rect
+                x="92"
+                y={y - 6}
+                width="16"
+                height="12"
+                rx="1.5"
+                fill="#161207"
+                stroke={C.goldDim}
+                strokeWidth="1.1"
+                opacity="0.85"
+              />
+              <path
+                d={`M 108 ${y} H 176`}
+                stroke={C.idle}
+                strokeWidth="1.1"
+                strokeDasharray="2 5"
+                fill="none"
+                opacity="0.75"
+              />
+            </g>
+          ))}
+
+          {/* empty peripheral slots inside the die */}
+          {IDLE_DIE_Y.map((y) => (
+            <rect
+              key={`idle-die-${y}`}
+              x="264"
+              y={y}
+              width="132"
+              height="34"
+              rx="2"
+              fill="#0b1117"
+              stroke="#1b242d"
+              strokeWidth="1"
+              strokeDasharray="5 4"
+            />
+          ))}
+
+          {/* standby lamp on the die corner — the bench is powered, idle */}
+          <circle cx="262" cy="68" r="3.4" fill={C.bus} opacity="0.6" className="ins-breathe" />
+
+          {/* blank device footprints */}
+          {IDLE_DEV_Y.map((y) => (
+            <g key={`idle-dev-${y}`}>
+              <rect
+                x="570"
+                y={y}
+                width="250"
+                height="72"
+                rx="3"
+                fill="url(#rm-dev)"
+                stroke="#1d2832"
+                strokeWidth="1.1"
+                strokeDasharray="6 5"
+                opacity="0.9"
+              />
+              <line x1="586" y1={y + 24} x2="700" y2={y + 24} stroke="#1d2832" strokeWidth="1" strokeDasharray="3 4" />
+              <line x1="586" y1={y + 42} x2="662" y2={y + 42} stroke="#1d2832" strokeWidth="1" strokeDasharray="3 4" />
+            </g>
+          ))}
+
+          <text x="695" y="42" textAnchor="middle" fontSize="9.5" fill={C.silkDim} letterSpacing="2.4">
+            NO DEVICES COMPOSED
+          </text>
+          <text x="86" y="425" fontSize="8.5" fill={C.silkDim} letterSpacing="1.6" opacity="0.9">
+            UNPOPULATED · NO PIN, PERIPHERAL OR DEVICE CLAIMS YET
+          </text>
+        </g>
       )}
-    </svg>
+        </svg>
+      </div>
+
+      {/* Pan affordance. The board keeps a legible minimum width on a phone and
+          scrolls inside this bay rather than widening the page, so say so — in
+          the flow, not over the silkscreen, which already carries the footnote
+          about what the map does and does not cover. */}
+      <span
+        className="ins-mono shrink-0 border-t border-line px-2 py-1 text-center text-[9px] uppercase tracking-[0.18em] text-ink-faint md:hidden"
+        aria-hidden
+      >
+        ◂ drag the board to pan ▸
+      </span>
+    </div>
   );
 }
