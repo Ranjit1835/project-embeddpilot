@@ -64,3 +64,223 @@ input.cell:focus {
   outline: none;
   background: var(--color-panel-2);
 }
+
+/* ==========================================================================
+   PLATFORM PAGES — route group `(site)`: /home /pricing /docs /contact /about
+   Everything below is namespaced under `.site-root` and is purely additive.
+   Nothing here can reach the workspace, driver or resource-map routes.
+   The vocabulary is deliberately the same instrument language as
+   `(workspace)/instrument.css`: etched legends, phosphor copper, glass.
+   ========================================================================== */
+
+.site-root {
+  --copper: var(--color-accent);
+  --copper-2: #2e88ad;
+  --gold: #c8a04a;
+  --solder: #8a97a5;
+
+  font-family: var(--font-site-sans), ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "tnum" 1;
+  /* every decorative layer below is absolutely positioned; this is the
+     backstop that guarantees no horizontal scroll at 360px */
+  overflow-x: clip;
+}
+
+.site-mono {
+  font-family: var(--font-site-mono), ui-monospace, "Cascadia Code", monospace;
+  font-variant-ligatures: none;
+}
+
+.site-legend {
+  font-family: var(--font-site-legend), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ------------------------------------------------------------- the bench */
+
+/* the page sits on a lab bench under a single overhead lamp */
+.site-bench {
+  background:
+    radial-gradient(110% 70% at 50% -8%, #17242e 0%, #0d1319 46%, #080b0f 100%);
+}
+
+/* fine sensor dust over the whole surface */
+.site-grain::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.45;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+}
+
+/* bare copper substrate: a fab grid with vias on the intersections */
+.site-pcb {
+  background-image:
+    linear-gradient(to right, rgb(63 224 129 / 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(63 224 129 / 0.055) 1px, transparent 1px),
+    radial-gradient(circle at 0 0, rgb(63 224 129 / 0.16) 1.1px, transparent 1.4px);
+  background-size: 68px 68px, 68px 68px, 68px 68px;
+}
+
+/* the same grid, faded out toward the edges — used behind hero blocks */
+.site-pcb-fade {
+  -webkit-mask-image: radial-gradient(80% 62% at 50% 26%, #000 0%, transparent 78%);
+  mask-image: radial-gradient(80% 62% at 50% 26%, #000 0%, transparent 78%);
+}
+
+/* --------------------------------------------------------- panel surfaces */
+
+.site-panel {
+  position: relative;
+  background: linear-gradient(180deg, #121a22 0%, #0d141a 100%);
+  box-shadow: inset 0 0 0 1px var(--color-line);
+}
+
+.site-chassis {
+  position: relative;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #26303b 0%, #161e26 12%, #121920 88%, #232c36 100%);
+  box-shadow:
+    0 0 0 1px #05080b,
+    0 40px 90px -40px rgb(0 0 0 / 0.95),
+    inset 0 1px 0 rgb(255 255 255 / 0.07);
+}
+
+/* glass over any readout: scanlines + a raking corner sheen */
+.site-glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    repeating-linear-gradient(180deg, rgb(255 255 255 / 0.02) 0 1px, transparent 1px 3px),
+    linear-gradient(118deg, rgb(255 255 255 / 0.045) 0%, transparent 32%);
+}
+
+.site-etch {
+  text-shadow: 0 1px 0 rgb(0 0 0 / 0.85), 0 -1px 0 rgb(255 255 255 / 0.05);
+}
+
+.site-glow {
+  text-shadow: 0 0 12px color-mix(in srgb, currentColor 50%, transparent);
+}
+
+/* a silk-screened hairline that fades at both ends */
+.site-rule {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-line-2) 18%,
+    var(--color-line-2) 82%,
+    transparent
+  );
+}
+
+/* hazard tape — reserved for the "not built yet" ledger spine */
+.site-hazard {
+  background: repeating-linear-gradient(
+    45deg,
+    rgb(224 166 60 / 0.7) 0 4px,
+    rgb(224 166 60 / 0.1) 4px 9px
+  );
+}
+
+/* ------------------------------------------------------------------ lamps */
+
+.site-led {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--led, #4d5a68);
+  box-shadow: 0 0 7px var(--led, #4d5a68), inset 0 0 2px rgb(255 255 255 / 0.5);
+}
+.site-led-off {
+  background: #1b242d;
+  box-shadow: inset 0 0 0 1px #26323d;
+}
+
+.site-blink { animation: site-blink 1.15s steps(1, end) infinite; }
+.site-breathe { animation: site-breathe 2.6s ease-in-out infinite; }
+
+@keyframes site-blink {
+  0%, 55% { opacity: 1; }
+  56%, 100% { opacity: 0.2; }
+}
+@keyframes site-breathe {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* --------------------------------------------------------------- current */
+
+/* a bright dash chasing a static trace: the bus is live */
+.site-flow {
+  stroke-dasharray: 4 14;
+  animation: site-flow 1.6s linear infinite;
+}
+@keyframes site-flow {
+  to { stroke-dashoffset: -36; }
+}
+
+/* the scope sweep behind the hero readout */
+.site-sweep { animation: site-sweep 5.5s linear infinite; }
+@keyframes site-sweep {
+  0% { transform: translateX(-10%); opacity: 0; }
+  12% { opacity: 0.42; }
+  88% { opacity: 0.42; }
+  100% { transform: translateX(110%); opacity: 0; }
+}
+
+.site-caret { animation: site-blink 1s steps(1, end) infinite; }
+
+/* -------------------------------------------------------------- controls */
+
+.site-key {
+  background: linear-gradient(180deg, #1b252f 0%, #121a23 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.09),
+    0 1px 0 rgb(0 0 0 / 0.7);
+}
+.site-key:active { transform: translateY(1px); }
+
+/* primary action: an illuminated phosphor key */
+.site-key-lit {
+  background: linear-gradient(180deg, #1c4f36 0%, #12351f 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(63 224 129 / 0.35),
+    0 0 0 1px var(--color-accent-dim),
+    0 6px 22px -10px rgb(63 224 129 / 0.65);
+}
+.site-key-lit:hover {
+  background: linear-gradient(180deg, #226042 0%, #164026 100%);
+}
+.site-key-lit:active { transform: translateY(1px); }
+
+/* --------------------------------------------------------- typographic */
+
+/* display headings: tight, confident, optically corrected */
+.site-display {
+  letter-spacing: -0.035em;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+
+.site-lede { text-wrap: pretty; }
+
+/* long identifiers inside prose must never widen the page */
+.site-break { overflow-wrap: anywhere; }
+
+/* ------------------------------------------------------- reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .site-root *,
+  .site-root *::before,
+  .site-root *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}
