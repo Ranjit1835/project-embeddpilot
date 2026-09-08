@@ -1,1193 +1,366 @@
 "use client";
 
-/* The V2 workspace. The BOARD is the screen — not a file tree, not a chat rail.
-   Left bay is the composed system rendered as copper; right bays are the
-   instruments reading it. Every lamp on this screen is lit by a value the
-   pipeline returned.
+/* The V2 workspace: one screen, conversation on the left, the generated repo on
+   the right. Replaces the wizard-and-bay-tabs layout engineers called clumsy —
+   and the specific failure that answering a question felt like starting over,
+   because the thread now IS the context.
 
    THE HONESTY CONTRACT THIS FILE IMPLEMENTS
    -----------------------------------------
-   * No verdict the backend did not return. `verdictFor` is a total map over
-     backend status strings; an unrecognised status is echoed, never smoothed
-     into a familiar one, and `verdict_note` is printed only when the run
-     carried one.
-   * The four check states stay four. `not_applicable` ("nothing to check") and
-     `skipped` ("could not check") get their own lamp, glyph and colour — see
-     RAIL_STYLE — because rendering either as a green tick would convert an open
-     question into evidence.
-   * Backend down says backend down. There is no silent fallback to fixtures;
-     demo mode is a switch the user throws, and while it is on the chassis wears
-     a hazard banner.
-   * Nothing is "working" while it is still running. A build in flight shows a
-     running lamp on the BUILD row only — the checks it has not reached keep
-     whatever state the last real report gave them. */
+   * `extraction_failed` is shown LOUDLY. It means the model never read the
+     requirement, so the questions are the whole list rather than the gaps —
+     which is indistinguishable from the product being obtuse unless we say so.
+   * A run always ends somewhere unmissable: building → completed / blocked /
+     did-not-work. Verdicts are the backend's; an unrecognised status is echoed,
+     never smoothed into a familiar one.
+   * `verdict_note` ("NOT evidence it works on physical hardware") is printed
+     whenever the run carried one.
+   * Backend unreachable says so. Nothing is shown in its place. */
 
-import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BoardView } from "../../../components/resource-map/BoardView";
-import { ErrorPlate, Intake } from "../../../components/resource-map/Intake";
+import { Conversation, type Turn } from "../../../components/workspace/Conversation";
+import { RepoPane } from "../../../components/workspace/RepoPane";
 import {
-  Bay,
-  GLIDE,
-  Led,
-  ModeSwitch,
-  Rule,
-  SNAP,
-  Screws,
-  StepRibbon,
-  type LedTone,
-} from "../../../components/resource-map/chrome";
-import {
-  DEMO_ANALYZE,
-  DEMO_BUILD,
-  DEMO_THRESHOLD_C,
-  DEMO_TRACE,
-  DEMO_UART,
-  type DemoState,
-} from "../../../lib/resource-map-mock";
-import { analyze, errorText, pollJob, startBuild } from "../../../lib/v2-api";
-import type {
-  AnalyzeResponse,
-  BuildResult,
-  ConsoleLine,
-  LineTone,
-  V2Stage,
-} from "../../../lib/v2-types";
-import {
-  activeStep,
-  boardFrom,
-  conflictsFrom,
-  railFrom,
-  targetFrom,
-  verdictFor,
-  type RailItem,
-  type RailState,
-} from "../../../lib/v2-view";
+  analyze,
+  errorText,
+  pollJob,
+  requirementFromFile,
+  startBuild,
+} from "../../../lib/v2-api";
+import type { AnalyzeResponse, BuildResult, V2Question } from "../../../lib/v2-types";
 
-const STAGES = ["requirements", "devices", "resource map", "code", "run"];
+type Phase = "idle" | "analysing" | "asking" | "ready" | "building" | "done";
 
-type Source = "live" | "demo";
-type BayKey = "stages" | "conflicts" | "code" | "run";
+const EXAMPLES = [
+  "Read the BMP180 over I2C at address 0x77 and print the raw temperature over UART.",
+  "On a Nucleo-F411RE with an STM32F411RET6, read the BMP180 over I2C at 0x77. When the raw reading is above 18500, turn on the relay on PB5. Sample every 500 ms, retry on a failed read, produce a cmake project.",
+];
 
-/* --- the visual vocabulary for check state -------------------------------
-
-   Four backend states plus two the UI owns. Each row differs in LAMP, GLYPH and
-   INK, so none of them can be mistaken for another at a glance:
-
-     pass            green  ✓   "checked, no findings"
-     fail            red    ✕   a conflict was reported
-     not_applicable  cyan   –   there was nothing to check
-     skipped         amber  ⊘   the check could not run — still unknown
-     running         green  ◌   (breathing lamp) in flight right now
-     pending         off    ○   not reached
-*/
-const RAIL_STYLE: Record<
-  RailState,
-  { tone: LedTone; mark: string; ink: string; breathe?: boolean }
-> = {
-  pass: { tone: "green", mark: "✓", ink: "text-accent" },
-  fail: { tone: "red", mark: "✕", ink: "text-red" },
-  not_applicable: { tone: "cyan", mark: "–", ink: "text-ink-dim" },
-  skipped: { tone: "amber", mark: "⊘", ink: "text-amber" },
-  running: { tone: "green", mark: "◌", ink: "text-accent-dim", breathe: true },
-  pending: { tone: "off", mark: "○", ink: "text-ink-faint" },
-};
-
-const STAGE_STYLE: Record<string, { tone: LedTone; ink: string }> = {
-  pass: { tone: "green", ink: "text-accent" },
-  fail: { tone: "red", ink: "text-red" },
-  blocked: { tone: "red", ink: "text-red" },
-  skipped: { tone: "amber", ink: "text-amber" },
-  not_applicable: { tone: "cyan", ink: "text-ink-dim" },
-};
-
-const LINE_CLASS: Record<LineTone, string> = {
-  dim: "text-ink-faint",
-  ink: "text-ink",
-  good: "text-accent",
-  warn: "text-amber",
-  bad: "text-red",
-};
-
-interface BuildRun {
-  jobId: string | null;
-  running: boolean;
-  result: BuildResult | null;
-  error: string | null;
-  startedAt: number;
-  /** true when this "run" is the recorded fixture, not a live job */
-  recorded: boolean;
-}
-
-export default function ResourceMapPage() {
-  const [source, setSource] = useState<Source>("live");
-  const [demoState, setDemoState] = useState<DemoState>("conflict");
-
+export default function Workspace() {
+  const [turns, setTurns] = useState<Turn[]>([]);
+  const [draft, setDraft] = useState("");
   const [requirement, setRequirement] = useState("");
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [analysis, setAnalysis] = useState<AnalyzeResponse | null>(null);
-  const [analyzing, setAnalyzing] = useState(false);
-  /* Bumped on every accepted analyze. Used as the Intake's key so the guided
-     walker always restarts at question 1 of the set it is now showing. Keying
-     on the question ids is NOT enough: a round can legitimately return the same
-     ids (the same fields are still unanswered), and an unchanged key strands
-     the cursor on the previous round's last question with no "next". */
-  const [analyzeSeq, setAnalyzeSeq] = useState(0);
-  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
-  const [intakeOpen, setIntakeOpen] = useState(true);
+  const [open, setOpen] = useState<V2Question[]>([]);
+  const [pending, setPending] = useState<string | null>(null);
+  const [phase, setPhase] = useState<Phase>("idle");
+  const [result, setResult] = useState<BuildResult | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [buildErr, setBuildErr] = useState<string | null>(null);
+  const [tab, setTab] = useState<"chat" | "repo">("chat");
+  const cancel = useRef<(() => void) | null>(null);
+  useEffect(() => () => cancel.current?.(), []);
 
-  const [build, setBuild] = useState<BuildRun | null>(null);
-  const [bay, setBay] = useState<BayKey>("stages");
-  const [now, setNow] = useState(Date.now());
-  const cancelPoll = useRef<(() => void) | null>(null);
+  const say = (text: string, tone?: Turn extends { tone?: infer T } ? T : never) =>
+    setTurns((t) => [...t, { kind: "system", text, tone } as Turn]);
 
-  const demo = source === "demo";
-
-  /* -- analyze ----------------------------------------------------------- */
+  const applyAnalysis = useCallback((res: AnalyzeResponse) => {
+    if (res.extraction_failed) {
+      say(
+        `The requirement was NOT read — every question below is being asked blind.\n${res.extraction_failed}`,
+        "bad" as never,
+      );
+    }
+    const blocking = res.questions.filter((q) => q.blocking);
+    setOpen(res.questions);
+    if (res.questions.length) {
+      setTurns((t) => [
+        ...t,
+        { kind: "questions", questions: res.questions, answered: {} },
+      ]);
+    }
+    if (!blocking.length) {
+      setPhase("ready");
+      say(
+        res.failures.length
+          ? `The spec is complete, but the composition has ${res.failures.length} conflict(s): ${res.failures
+              .map((f) => f.message)
+              .join("; ")}`
+          : "The spec is complete. Build it when you're ready.",
+        (res.failures.length ? "warn" : "good") as never,
+      );
+    } else {
+      setPhase("asking");
+    }
+  }, []);
 
   const runAnalyze = useCallback(
     async (text: string, acc: Record<string, string>) => {
-      setAnalyzing(true);
-      setAnalyzeError(null);
+      setPhase("analysing");
+      setPending("reading the requirement…");
       try {
         const res = await analyze(text, acc);
-        setAnalysis(res);
-        setAnswers(acc);
-        setAnalyzeSeq((n) => n + 1);
-        // the loop only closes when nothing blocking is left
-        const blocking = res.questions.filter((q) => q.blocking).length;
-        setIntakeOpen(blocking > 0);
-        if (blocking === 0) setBay(res.failures.length ? "conflicts" : "stages");
+        applyAnalysis(res);
       } catch (e) {
-        setAnalyzeError(errorText(e));
+        say(errorText(e), "bad" as never);
+        setPhase("idle");
       } finally {
-        setAnalyzing(false);
+        setPending(null);
       }
     },
-    [],
+    [applyAnalysis],
   );
 
-  const onAnalyze = useCallback(() => {
-    setBuild(null);
-    void runAnalyze(requirement, {});
-  }, [requirement, runAnalyze]);
-
-  const onAnswer = useCallback(
-    (add: Record<string, string>) => {
-      void runAnalyze(requirement, { ...answers, ...add });
-    },
-    [requirement, answers, runAnalyze],
-  );
-
-  /* -- build ------------------------------------------------------------- */
-
-  useEffect(() => () => cancelPoll.current?.(), []);
-
-  // an honest elapsed-time readout while a job is in flight
-  useEffect(() => {
-    if (!build?.running) return;
-    const t = setInterval(() => setNow(Date.now()), 250);
-    return () => clearInterval(t);
-  }, [build?.running]);
-
-  const onBuild = useCallback(async () => {
-    setBay("run");
-    if (demo) {
-      setBuild({
-        jobId: null,
-        running: false,
-        result: DEMO_BUILD,
-        error: null,
-        startedAt: Date.now(),
-        recorded: true,
-      });
-      return;
+  const send = useCallback(() => {
+    const text = draft.trim();
+    if (!text) return;
+    setDraft("");
+    if (phase === "asking" && open.length) {
+      // an answer applies to the first still-unanswered question in the thread
+      const q = open.find((x) => !answers[x.id]);
+      if (q) {
+        const next = { ...answers, [q.id]: text };
+        setAnswers(next);
+        setTurns((t) => [...t, { kind: "you", text }]);
+        setTurns((t) =>
+          t.map((x) =>
+            x.kind === "questions" ? { ...x, answered: next } : x,
+          ),
+        );
+        void runAnalyze(requirement, next);
+        return;
+      }
     }
-    setBuild({
-      jobId: null,
-      running: true,
-      result: null,
-      error: null,
-      startedAt: Date.now(),
-      recorded: false,
-    });
+    setRequirement(text);
+    setTurns((t) => [...t, { kind: "you", text }]);
+    void runAnalyze(text, {});
+  }, [draft, phase, open, answers, requirement, runAnalyze]);
+
+  const build = useCallback(async () => {
+    setPhase("building");
+    setBuildErr(null);
+    setResult(null);
+    setTab("repo");
+    say("generating the repo, cross-compiling it and running it under emulation…");
     try {
-      const jobId = await startBuild(requirement, answers);
-      setBuild((b) => (b ? { ...b, jobId } : b));
-      cancelPoll.current?.();
-      cancelPoll.current = pollJob(
-        jobId,
+      const id = await startBuild(requirement, answers);
+      setJobId(id);
+      cancel.current?.();
+      cancel.current = pollJob(
+        id,
         (snap) => {
-          if (snap.status === "done")
-            setBuild((b) =>
-              b ? { ...b, running: false, result: snap.result } : b,
-            );
-          else if (snap.status === "error")
-            setBuild((b) =>
-              b
-                ? { ...b, running: false, error: snap.error ?? "job failed" }
-                : b,
-            );
+          if (snap.status === "done") {
+            setResult(snap.result);
+            setPhase("done");
+            const r = snap.result;
+            if (r) {
+              const ok = r.status === "working-emulated";
+              say(
+                `${r.status.replace(/[-_]/g, " ")}${
+                  r.verdict_note ? `\n${r.verdict_note}` : ""
+                }`,
+                (ok ? "good" : "warn") as never,
+              );
+            }
+          } else if (snap.status === "error") {
+            setBuildErr(snap.error ?? "the build failed");
+            setPhase("done");
+          }
         },
-        (err) =>
-          setBuild((b) => (b ? { ...b, running: false, error: err.message } : b)),
+        (err) => {
+          setBuildErr(errorText(err));
+          setPhase("done");
+        },
       );
     } catch (e) {
-      setBuild((b) =>
-        b ? { ...b, running: false, error: errorText(e) } : b,
-      );
+      setBuildErr(errorText(e));
+      setPhase("done");
     }
-  }, [demo, requirement, answers]);
+  }, [requirement, answers]);
 
-  /* -- what is actually on screen ---------------------------------------- */
-
-  const current: AnalyzeResponse | null = demo ? DEMO_ANALYZE[demoState] : analysis;
-  const result = build?.result ?? null;
-
-  /* A finished build is the newer and fuller report, so it supersedes the
-     analyze snapshot for checks/stages/failures. The resource map and spec only
-     ever come from analyze — build does not return them. */
-  const status = result?.status ?? current?.status ?? null;
-  const stages: V2Stage[] = result?.stages ?? current?.stages ?? [];
-  const checks = result?.checks ?? current?.checks ?? {};
-  const failures = result?.failures ?? current?.failures ?? [];
-  const devices = result?.devices ?? current?.devices ?? [];
-
-  const board = boardFrom(
-    devices,
-    current?.resource_map ?? null,
-    failures,
-    current?.spec,
-    targetFrom(current?.spec),
-  );
-
-  const conflicts = conflictsFrom(failures);
-  const blockingQuestions = current?.questions.filter((q) => q.blocking).length ?? 0;
-
-  const rail: RailItem[] = railFrom(checks, stages, failures);
-  if (build?.running)
-    rail.unshift({
-      id: "build",
-      label: "build",
-      state: "running",
-      note: "generate → compile → emulate",
-    });
-
-  const verdict = build?.running
-    ? { label: "BUILD RUNNING", tone: "idle" as const }
-    : verdictFor(status, failures, blockingQuestions);
-
-  const step = activeStep(status, stages, Boolean(build?.running));
-  const canBuild =
-    !!current &&
-    blockingQuestions === 0 &&
-    !build?.running &&
-    status !== "blocked-resource-conflict";
-  const buildBlockedReason = !current
-    ? "analyse a requirement first"
-    : blockingQuestions > 0
-      ? `${blockingQuestions} blocking question(s) still unanswered`
-      : status === "blocked-resource-conflict"
-        ? "resolve the reported conflict first — the pipeline refuses to emulate a system whose resources collide"
-        : "";
-
-  /* Intake is a MODE with two phases. The phase is read here as well as passed
-     down, because the requirement phase — the true empty state — gets the idle
-     board beside it while the question walker stays a focused single column. */
-  const intakePhase: "requirement" | "questions" =
-    analysis && analysis.questions.length > 0 ? "questions" : "requirement";
-
-  const intakeProps = {
-    requirement,
-    onRequirementChange: setRequirement,
-    questions: analysis?.questions ?? [],
-    answers,
-    busy: analyzing,
-    error: analyzeError,
-    phase: intakePhase,
-    onAnalyze,
-    onAnswer,
-    onDismiss: analysis ? () => setIntakeOpen(false) : null,
-    onUseDemo: () => setSource("demo"),
-    /* When the model cannot be reached the pipeline asks for EVERY field. That
-       is the safe degradation, but on screen it is indistinguishable from
-       normal behaviour — which is exactly how a retired model looked like
-       "it interrogates me even when I give full detail". Say it plainly. */
-    extractionFailed: analysis?.extraction_failed ?? null,
+  const upload = async (f: File) => {
+    setPending(`reading ${f.name}…`);
+    try {
+      const r = await requirementFromFile(f);
+      setDraft((d) => (d ? `${d}\n\n${r.text}` : r.text));
+      say(
+        `read ${r.filename} — ${r.chars} characters${
+          r.pages ? ` from ${r.pages} pages` : ""
+        }. Check it in the box before sending; extraction can be lossy.`,
+      );
+    } catch (e) {
+      say(errorText(e), "bad" as never);
+    } finally {
+      setPending(null);
+    }
   };
 
-  /* -------------------------------------------------------------- render */
+  const files = result?.files;
+  const banner = runBanner(phase, result, buildErr);
 
   return (
-    <div className="ins-room relative flex min-h-screen flex-col">
-      {/* ------------------------------------------------ chassis header
-
-          `.ins-head` is a grid, not a flex row: on a phone it deals the four
-          pieces into three rows (brand + source / tagline / stage ribbon), and
-          from lg it snaps back to the single row the bench has always had. A
-          grid rather than duplicated markup because the source switch carries
-          a layout animation and must remain ONE mounted element. */}
-      <header className="ins-head ins-chassis relative border-b border-line px-4 py-2.5 sm:px-5">
-        <Screws />
-
-        <span className="ins-head-brand whitespace-nowrap text-[13px] font-bold uppercase tracking-[0.24em] text-ink sm:tracking-[0.3em]">
-          Embedd<span className="text-accent">Pilot</span>
-        </span>
-
-        <div className="ins-head-sub flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5">
-          <span className="ins-mono text-[9.5px] uppercase tracking-[0.14em] text-ink-faint sm:text-[10px] sm:tracking-[0.18em]">
-            v2 · requirement → verified application
+    <div className="flex h-screen flex-col bg-bg">
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-line px-4 py-2.5">
+        <div className="flex items-baseline gap-3">
+          <a href="/" className="text-[13px] font-bold tracking-tight text-ink">
+            Embedd<span className="text-accent">Pilot</span>
+          </a>
+          <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-faint">
+            requirement → verified application
           </span>
-          {/* V1 is a narrower tool, not a worse one: sometimes you have a
-              datasheet and want only the driver. Keep it one click away rather
-              than buried at a URL nobody would guess. */}
-          <a
-            href="/app/settings"
-            className="ins-mono text-[10px] uppercase tracking-[0.16em] text-ink-faint underline decoration-line underline-offset-4 transition-colors hover:text-accent"
-          >
-            settings
-          </a>
-          <a
-            href="/driver"
-            className="ins-mono text-[9.5px] uppercase tracking-[0.14em] text-ink-faint underline decoration-line underline-offset-4 transition-colors hover:text-accent sm:text-[10px] sm:tracking-[0.16em]"
-          >
-            have a datasheet? → driver only
-          </a>
         </div>
-
-        <div className="ins-head-ribbon">
-          <StepRibbon steps={STAGES} active={step} />
-        </div>
-
-        <div className="ins-head-source">
-          <ModeSwitch<Source>
-            ariaLabel="Data source"
-            value={source}
-            onChange={setSource}
-            options={[
-              { value: "live", label: "live api", tone: "green" },
-              { value: "demo", label: "demo fixture", tone: "amber" },
-            ]}
-          />
-        </div>
+        <nav className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-faint">
+          <a href="/app/settings" className="hover:text-accent">settings</a>
+          <a href="/driver" className="hover:text-accent">driver only</a>
+        </nav>
       </header>
 
-      {/* ------------------------------------------------- provenance strip */}
-      <div
-        className={`flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b px-3 py-1.5 sm:px-4 ${
-          demo ? "border-amber/40 bg-amber/5" : "border-line"
-        }`}
-      >
-        {demo ? (
-          <>
-            {/* the hazard banner reflows; it never shrinks away. On a phone it
-                takes the full first line so the words "not a live run" cannot
-                be pushed off the edge. */}
-            <span className="ins-hazard h-[10px] w-[54px] shrink-0" aria-hidden />
-            <span className="ins-mono min-w-0 text-[10px] font-bold uppercase tracking-[0.16em] text-amber sm:tracking-[0.2em]">
-              demo — recorded fixture data, not a live run
-            </span>
-            <span className="ins-mono min-w-0 basis-full text-[10px] text-ink-faint lg:basis-auto">
-              nothing here was produced by the pipeline just now
-            </span>
-            <ModeSwitch<DemoState>
-              ariaLabel="Demo board state"
-              value={demoState}
-              onChange={(v) => {
-                setDemoState(v);
-                setBuild(null);
-                setBay(v === "conflict" ? "conflicts" : "stages");
-              }}
-              options={[
-                { value: "conflict", label: "as designed", tone: "red" },
-                { value: "resolved", label: "after fix", tone: "green" },
-              ]}
-            />
-          </>
-        ) : (
-          <>
-            <Led tone={analysis ? "green" : "off"} breathe={analyzing} />
-            <span className="ins-mono text-[10px] uppercase tracking-[0.16em] text-ink-dim sm:tracking-[0.18em]">
-              live · /api/v2 · {analysis ? "reporting a real run" : "no run yet"}
-            </span>
-            {requirement && (
+      {banner}
+
+      {/* one screen: conversation and repo side by side */}
+      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+        <section
+          className={`flex min-h-0 min-w-0 flex-col md:flex-1 md:border-r md:border-line ${
+            tab === "chat" ? "flex-1" : "hidden md:flex"
+          }`}
+        >
+          <Conversation turns={turns} pending={pending} />
+
+          <div className="shrink-0 border-t border-line p-3">
+            {turns.length === 0 && (
+              <div className="mb-2 flex flex-col gap-1">
+                {EXAMPLES.map((ex) => (
+                  <button
+                    key={ex}
+                    type="button"
+                    onClick={() => setDraft(ex)}
+                    className="truncate rounded border border-line px-2 py-1 text-left font-mono text-[10.5px] text-ink-faint transition-colors hover:border-accent-dim hover:text-ink"
+                  >
+                    {ex}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="flex items-end gap-2">
+              <textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) send();
+                }}
+                rows={3}
+                placeholder={
+                  phase === "asking"
+                    ? "your answer — in your words"
+                    : "describe the system you want…"
+                }
+                className="min-h-[64px] flex-1 resize-none rounded border border-line bg-panel p-2.5 font-mono text-[12px] leading-relaxed text-ink outline-none placeholder:text-ink-faint focus:border-accent-dim"
+              />
+              <div className="flex flex-col gap-1.5">
+                <label className="cursor-pointer rounded border border-line px-2 py-1 text-center font-mono text-[10px] uppercase text-ink-faint hover:text-ink">
+                  file
+                  <input
+                    type="file"
+                    accept=".txt,.md,.rst,.log,.pdf,.docx"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = "";
+                      if (f) void upload(f);
+                    }}
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={send}
+                  disabled={!draft.trim() || phase === "analysing"}
+                  className="rounded border border-accent-dim px-2 py-1 font-mono text-[10px] uppercase text-accent transition-colors hover:bg-accent/10 disabled:border-line disabled:text-ink-faint"
+                >
+                  send
+                </button>
+              </div>
+            </div>
+            {phase === "ready" && (
               <button
                 type="button"
-                onClick={() => setIntakeOpen(true)}
-                className="ins-mono min-w-0 max-w-full basis-full truncate text-left text-[10px] text-ink-faint underline decoration-line underline-offset-2 hover:text-ink-dim sm:max-w-[46ch] sm:basis-auto"
-                title={requirement}
+                onClick={build}
+                className="mt-2 w-full rounded border border-accent-dim bg-accent/5 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-accent transition-colors hover:bg-accent/10"
               >
-                “{requirement}”
+                build &amp; prove ▸
               </button>
             )}
-          </>
-        )}
+          </div>
+        </section>
 
-        <div className="ml-auto flex shrink-0 items-center gap-2">
-          {!demo && (
-            <button
-              type="button"
-              onClick={() => setIntakeOpen(true)}
-              className="ins-key min-h-[34px] border border-line px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-ink-dim hover:text-ink sm:min-h-0 sm:tracking-[0.18em]"
-            >
-              {analysis ? "revise requirement" : "new requirement"}
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={onBuild}
-            disabled={!canBuild}
-            title={buildBlockedReason || undefined}
-            className="ins-key min-h-[34px] border border-accent-dim px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-accent transition-colors hover:bg-accent/10 disabled:cursor-not-allowed disabled:border-line disabled:text-ink-faint sm:min-h-0 sm:tracking-[0.2em]"
-          >
-            {build?.running ? "building…" : demo ? "show recorded build ▸" : "build & prove ▸"}
-          </button>
-        </div>
+        <section
+          className={`flex min-h-0 min-w-0 flex-col md:flex-1 ${
+            tab === "repo" ? "flex-1" : "hidden md:flex"
+          }`}
+        >
+          <RepoPane files={files} jobId={jobId} building={phase === "building"} />
+        </section>
       </div>
 
-      {/* ------------------------------------------------- terminal state.
-          Engineers reported "generate ayindha ledha teliyatledhu" — you could
-          not tell whether a run had finished. The verdict WAS rendered, but as
-          corner text inside one bay tab: invisible unless you were already
-          looking at it. A run must resolve somewhere you cannot miss, whatever
-          tab is open and whatever the viewport. */}
-      <RunBanner build={build} demo={demo} now={now} />
-
-      {/* --------------------------------------------- intake, or the bench */}
-      {!demo && intakeOpen ? (
-        intakePhase === "requirement" ? (
-          /* FIRST PAINT. The board leads even before anything has been
-             analysed: an unpopulated board with plated pads and silkscreen
-             still reads as an instrument, where a lone text box reads as a
-             form. On a phone the board is genuinely the first thing on screen;
-             from lg it sits to the left of intake exactly where it will sit
-             once the run populates it, so analysing fills this board in rather
-             than swapping to a different screen. */
-          <main className="grid min-h-0 flex-1 gap-3 p-3 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
-            <BoardBay
-              board={board}
-              tone="dim"
-              className="h-fit lg:h-auto lg:min-h-[420px]"
-            />
-            <Intake compact {...intakeProps} key={analyzeSeq} />
-          </main>
-        ) : (
-          <Intake {...intakeProps} key={analyzeSeq} />
-        )
-      ) : (
-      <main className="grid min-h-0 flex-1 gap-3 p-3 lg:grid-cols-[minmax(0,1.55fr)_minmax(360px,0.95fr)]">
-        <BoardBay
-          board={board}
-          tone={failures.length ? "alarm" : current ? "accent" : "dim"}
-          className="h-fit lg:h-auto lg:min-h-[420px]"
-        />
-
-        <div className="flex min-h-0 min-w-0 flex-col gap-3">
-          <Bay
-            legend="devices"
-            right={<Count n={board.devices.length} />}
-            className="lg:max-h-[46%]"
-          >
-            <div className="min-h-0 overflow-auto">
-              {board.devices.length === 0 ? (
-                <p className="ins-mono p-3 text-[10.5px] leading-relaxed text-ink-faint">
-                  {current
-                    ? "the spec has not named a device yet — nothing to compose"
-                    : "no run yet"}
-                </p>
-              ) : (
-                <ul className="divide-y divide-line">
-                  {board.devices.map((d) => (
-                    <li key={d.id} className="flex items-start gap-3 px-3 py-2">
-                      <Led tone={d.status === "conflict" ? "red" : "green"} />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-[12px] font-semibold tracking-wide text-ink">
-                            {d.name}
-                          </span>
-                          <span className="ins-mono text-[10px] text-ink-faint">
-                            {d.iface}
-                            {d.addr ? ` · ${d.addr}` : ""}
-                          </span>
-                        </div>
-                        <p className="truncate text-[10px] uppercase tracking-[0.14em] text-ink-faint">
-                          {d.role}
-                        </p>
-                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
-                          {d.facts.map((f) => (
-                            <span
-                              key={f}
-                              className={`ins-mono text-[10px] ${
-                                d.status === "conflict" ? "text-red" : "text-accent-dim"
-                              }`}
-                            >
-                              {f}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </Bay>
-
-          <Bay
-            tone={bay === "conflicts" && conflicts.length ? "alarm" : "dim"}
-            legend={
-              <Tabs
-                value={bay}
-                onChange={setBay}
-                items={[
-                  { key: "stages", label: "stages", badge: stages.length },
-                  { key: "conflicts", label: "conflicts", badge: conflicts.length, alarm: conflicts.length > 0 },
-                  { key: "code", label: "code",
-                    badge: Object.keys(result?.files ?? {}).length },
-                  { key: "run", label: "run", badge: result ? 1 : 0 },
-                ]}
-              />
-            }
-            className="min-h-0 flex-1"
-          >
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={bay}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={SNAP}
-                className="h-full min-h-0 overflow-auto"
-              >
-                {bay === "stages" && <StagesBay stages={stages} current={current} />}
-                {bay === "conflicts" && <ConflictsBay conflicts={conflicts} hasRun={!!current} />}
-                {bay === "code" && (
-                  <CodeBay files={result?.files} jobId={build?.jobId ?? null} demo={demo} />
-                )}
-                {bay === "run" && (
-                  <RunBay
-                    build={build}
-                    demo={demo}
-                    now={now}
-                    blockedReason={buildBlockedReason}
-                  />
-                )}
-              </motion.div>
-            </AnimatePresence>
-          </Bay>
-        </div>
-      </main>
-      )}
-
-      {/* live-mode failure surfaces here, never as silent fixture data */}
-      {!demo && analyzeError && !intakeOpen && (
-        <div className="px-3 pb-2">
-          <ErrorPlate text={analyzeError} />
-        </div>
-      )}
-
-      {/* -------------------------------------------------- verdict rail */}
-      <footer className="ins-chassis border-t border-line px-3 py-2">
-        {/* The rail WRAPS; nothing here is dropped to buy width. On a phone the
-            verdict takes the first full line — it is the one thing a visitor
-            must not have to scroll sideways to read — and the per-check lamps
-            wrap underneath it, each keeping its own lamp, glyph and ink so
-            `not_applicable` and `skipped` still cannot be mistaken for a pass. */}
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          {rail.length === 0 ? (
-            <span className="ins-mono min-w-0 text-[11px] leading-relaxed text-ink-faint">
-              ○ no checks have run{" "}
-              {current
-                ? "— the spec is still incomplete, so nothing was validated"
-                : "— nothing has been analysed yet"}
-            </span>
-          ) : (
-            rail.map((c) => {
-              const s = RAIL_STYLE[c.state];
-              return (
-                <div key={c.id} className="flex min-w-0 max-w-full items-center gap-2">
-                  <Led tone={s.tone} breathe={s.breathe} />
-                  <span className={`ins-mono shrink-0 text-[11px] ${s.ink}`}>
-                    {s.mark} {c.label}
-                  </span>
-                  <span
-                    className="ins-mono min-w-0 flex-1 truncate text-[10px] text-ink-faint sm:max-w-[34ch] sm:flex-none"
-                    title={c.note}
-                  >
-                    {c.note}
-                  </span>
-                </div>
-              );
-            })
-          )}
-
-          {/* stays last in the DOM (reading order: what was checked, then the
-              verdict) but jumps to the top line on a phone, where a plate
-              pushed to the end of a wrapped rail would be the first thing to
-              fall off the screen */}
-          <motion.div
-            layout
-            transition={GLIDE}
-            className={`order-first flex w-full items-center justify-center gap-2 border px-3 py-1.5 sm:order-none sm:ml-auto sm:w-auto sm:justify-start sm:py-1 ${
-              verdict.tone === "good"
-                ? "ins-glow border-accent-dim text-accent"
-                : verdict.tone === "bad"
-                  ? "ins-blink border-red/50 text-red"
-                  : verdict.tone === "warn"
-                    ? "border-amber/50 text-amber"
-                    : "border-line text-ink-faint"
-            }`}
-          >
-            <span className="ins-mono text-center text-[11px] font-bold tracking-[0.14em] sm:text-left sm:tracking-[0.18em]">
-              {verdict.label}
-            </span>
-          </motion.div>
-        </div>
-
-        {/* the sentence that says emulation is not hardware. Printed only when
-            the run returned one — never composed here. */}
-        {result?.verdict_note && (
-          <p className="ins-mono mt-1.5 text-[10px] leading-relaxed text-ink-dim">
-            <span className="text-accent-dim">verdict note ·</span>{" "}
-            {result.verdict_note}
-            {build?.recorded && (
-              <span className="text-amber"> (recorded fixture run)</span>
-            )}
-          </p>
-        )}
-        {result && !result.verdict_note && (
-          <p className="ins-mono mt-1.5 text-[10px] text-ink-faint">
-            the run returned no verdict note — it did not reach a working
-            verdict, so there is nothing to qualify
-          </p>
-        )}
-      </footer>
-
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------ sub-bays */
-
-/** The hero bay. One definition, used by both the idle screen and the bench,
-    so the board a first-time visitor meets is the same instrument that later
-    carries the run — not a decorative stand-in. */
-function BoardBay({
-  board,
-  tone,
-  className = "",
-}: {
-  board: ReturnType<typeof boardFrom>;
-  tone: "dim" | "accent" | "alarm";
-  className?: string;
-}) {
-  return (
-    <Bay
-      glass
-      tone={tone}
-      legend={`target · ${board.target.mcu}`}
-      right={
-        <span className="ins-mono flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] uppercase tracking-[0.16em] text-ink-faint">
-          {board.target.output && (
-            <span>
-              output · <span className="text-ink-dim">{board.target.output}</span>
-            </span>
-          )}
-          <span>{board.target.board}</span>
-        </span>
-      }
-      className={className}
-    >
-      <BoardView board={board} />
-    </Bay>
-  );
-}
-
-function Count({ n }: { n: number }) {
-  return (
-    <span className="ins-mono text-[10px] tracking-[0.16em] text-ink-faint">
-      {String(n).padStart(2, "0")}
-    </span>
-  );
-}
-
-function Tabs<T extends string>({
-  value,
-  onChange,
-  items,
-}: {
-  value: T;
-  onChange: (v: T) => void;
-  items: { key: T; label: string; badge: number; alarm?: boolean }[];
-}) {
-  return (
-    <span className="flex items-center gap-1" role="tablist">
-      {items.map((it) => {
-        const on = it.key === value;
-        return (
+      {/* mobile: the two panes are one screen conceptually, two tabs in practice */}
+      <div className="flex shrink-0 border-t border-line md:hidden">
+        {(["chat", "repo"] as const).map((t) => (
           <button
-            key={it.key}
+            key={t}
             type="button"
-            role="tab"
-            aria-selected={on}
-            onClick={() => onChange(it.key)}
-            className={`px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] transition-colors ${
-              on
-                ? it.alarm
-                  ? "text-red"
-                  : "text-accent"
-                : "text-ink-faint hover:text-ink-dim"
+            onClick={() => setTab(t)}
+            className={`flex-1 py-2 font-mono text-[10px] uppercase tracking-[0.16em] ${
+              tab === t ? "bg-accent/10 text-accent" : "text-ink-faint"
             }`}
           >
-            {it.label}
-            {it.badge > 0 && (
-              <span className={`ml-1 ${it.alarm ? "text-red" : "text-ink-faint"}`}>
-                {it.badge}
-              </span>
-            )}
+            {t}
+            {t === "repo" && files ? ` · ${Object.keys(files).length}` : ""}
           </button>
-        );
-      })}
-    </span>
-  );
-}
-
-function StagesBay({
-  stages,
-  current,
-}: {
-  stages: V2Stage[];
-  current: AnalyzeResponse | null;
-}) {
-  if (!stages.length)
-    return (
-      <p className="ins-mono p-3 text-[10.5px] text-ink-faint">
-        {current
-          ? "the pipeline reported no stages for this run"
-          : "no run yet — analyse a requirement to see the pipeline's own stage report"}
-      </p>
-    );
-  return (
-    <ul className="divide-y divide-line">
-      {stages.map((s, i) => {
-        const style = STAGE_STYLE[s.state] ?? { tone: "off" as LedTone, ink: "text-ink-faint" };
-        return (
-          <li key={`${s.stage}-${i}`} className="flex items-start gap-3 px-3 py-2">
-            <span className="mt-[3px]">
-              <Led tone={style.tone} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="text-[12px] font-semibold uppercase tracking-[0.16em] text-ink">
-                  {s.stage}
-                </span>
-                <span className={`ins-mono text-[10px] uppercase tracking-[0.14em] ${style.ink}`}>
-                  {s.state.replace(/_/g, " ")}
-                </span>
-              </div>
-              {s.detail && (
-                <p className="ins-mono mt-0.5 text-[10px] leading-relaxed text-ink-dim">
-                  {s.detail}
-                </p>
-              )}
-            </div>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-function ConflictsBay({
-  conflicts,
-  hasRun,
-}: {
-  conflicts: ReturnType<typeof conflictsFrom>;
-  hasRun: boolean;
-}) {
-  if (!conflicts.length)
-    return (
-      <p className="ins-mono p-3 text-[10.5px] leading-relaxed text-ink-faint">
-        {hasRun
-          ? "no resource conflicts were reported for this composition. That is the cross-check's finding, not a claim that every pin can carry its function — the alternate-function table needed for that is not available and is not guessed."
-          : "no run yet"}
-      </p>
-    );
-
-  return (
-    <div className="flex h-full flex-col">
-      <div className="ins-hazard h-[6px] shrink-0" aria-hidden />
-      <ul className="flex min-h-0 flex-1 flex-col divide-y divide-line overflow-auto">
-        {conflicts.map((c) => (
-          <li key={c.id} className="flex flex-col gap-1.5 px-3 py-2.5">
-            <div className="flex items-baseline gap-2">
-              <span className="ins-blink text-red">⚠</span>
-              <span className="text-[13px] font-bold tracking-wide text-red">
-                {c.resource}
-              </span>
-              <span className="ins-mono ml-auto text-[10px] text-ink-faint">
-                {c.check}
-              </span>
-            </div>
-            {/* the backend's own words, including its own remedy. This screen
-                does not propose a fix: the pipeline explicitly refuses to
-                reassign a pin behind the user's back, and a suggestion invented
-                here would be that same lie one layer up. */}
-            <p className="ins-mono text-[10.5px] leading-relaxed text-ink-dim">
-              {c.message}
-            </p>
-          </li>
         ))}
-      </ul>
-      <div className="shrink-0 border-t border-line px-3 py-2">
-        <p className="ins-mono text-[10px] leading-relaxed text-ink-faint">
-          Resolving this is a decision, not an autofix — revise the requirement
-          or your answers and re-analyse.
-        </p>
       </div>
     </div>
   );
 }
 
-function RunBay({
-  build,
-  demo,
-  now,
-  blockedReason,
-}: {
-  build: BuildRun | null;
-  demo: boolean;
-  now: number;
-  blockedReason: string;
-}) {
-  if (!build)
+/* A run must resolve somewhere it cannot be missed — the engineers' report was
+   that they could not tell whether anything had happened. */
+function runBanner(phase: Phase, result: BuildResult | null, err: string | null) {
+  if (phase === "building")
     return (
-      <p className="ins-mono p-3 text-[10.5px] leading-relaxed text-ink-faint">
-        no build has been run.{" "}
-        {blockedReason
-          ? `“build & prove” is disabled: ${blockedReason}.`
-          : "press “build & prove” to generate the firmware, cross-compile it and run it under emulation."}
-      </p>
-    );
-
-  if (build.running)
-    return (
-      <div className="flex flex-col gap-2 p-3">
-        <div className="flex items-center gap-2">
-          <Led tone="green" breathe />
-          <span className="ins-mono text-[11px] uppercase tracking-[0.18em] text-accent">
-            build running · {((now - build.startedAt) / 1000).toFixed(1)}s
-          </span>
-        </div>
-        <p className="ins-mono text-[10px] leading-relaxed text-ink-faint">
-          job {build.jobId ?? "…"} · generate → cross-compile → emulate.
-        </p>
-        <Rule />
-        <p className="ins-mono text-[10px] leading-relaxed text-ink-faint">
-          The V2 build job reports its stages once, when the pipeline returns —
-          it emits no intermediate progress. Rather than animate stages that have
-          not been reported, this bay shows only what is true right now: the job
-          is in flight.
-        </p>
-      </div>
-    );
-
-  if (build.error)
-    return (
-      <div className="p-3">
-        <ErrorPlate text={build.error} />
-      </div>
-    );
-
-  const r = build.result;
-  if (!r) return null;
-
-  return (
-    <div className="flex h-full min-h-0 flex-col">
-      {demo && build.recorded && (
-        <>
-          <Scope trace={DEMO_TRACE} threshold={DEMO_THRESHOLD_C} />
-          <Rule />
-        </>
-      )}
-
-      <div className="flex items-center justify-between gap-3 px-3 py-2">
-        <span className="ins-mono text-[10px] uppercase tracking-[0.16em] text-ink-dim">
-          firmware origin ·{" "}
-          <span className={r.firmware_origin === "generated" ? "text-accent" : "text-amber"}>
-            {r.firmware_origin ?? "none — no firmware was produced"}
-          </span>
-        </span>
-        <span className="ins-mono text-[10px] uppercase tracking-[0.16em] text-ink-faint">
-          {r.status.replace(/[-_]/g, " ")}
-        </span>
-      </div>
-      <Rule />
-
-      <div className="ins-face min-h-0 flex-1 overflow-auto p-2.5">
-        {demo && build.recorded
-          ? DEMO_UART.map((l, i) => <ConsoleRow key={i} line={l} index={i} />)
-          : reportLines(r).map((l, i) => <ConsoleRow key={i} line={l} index={i} />)}
-        <span className="ins-caret ins-mono text-[10.5px] text-accent">▌</span>
-      </div>
-    </div>
-  );
-}
-
-/** A live build returns stages, notes and failures — not a UART capture. So the
-    live console prints exactly those, and never a fabricated transcript. */
-function reportLines(r: BuildResult): ConsoleLine[] {
-  const out: ConsoleLine[] = [];
-  out.push({ t: "", text: "── pipeline ───────────────────────────", tone: "dim" });
-  const stageTone: Record<string, LineTone> = {
-    pass: "good",
-    skipped: "warn",
-    not_applicable: "dim",
-    fail: "bad",
-    blocked: "bad",
-  };
-  for (const s of r.stages)
-    out.push({
-      t: "",
-      text: `${s.stage.padEnd(10)} ${s.state.toUpperCase()}${s.detail ? `  ${s.detail}` : ""}`,
-      tone: stageTone[s.state] ?? "ink",
-    });
-  if (Object.keys(r.checks).length) {
-    out.push({ t: "", text: "── checks ─────────────────────────────", tone: "dim" });
-    for (const [k, v] of Object.entries(r.checks))
-      out.push({
-        t: "",
-        text: `${k.padEnd(20)} ${v.toUpperCase()}`,
-        tone: v === "pass" ? "good" : v === "fail" ? "bad" : "warn",
-      });
-  }
-  if (r.failures.length) {
-    out.push({ t: "", text: "── failures ───────────────────────────", tone: "dim" });
-    for (const f of r.failures) out.push({ t: "", text: f.message, tone: "bad" });
-  }
-  if (r.notes.length) {
-    out.push({ t: "", text: "── notes ──────────────────────────────", tone: "dim" });
-    for (const n of r.notes) out.push({ t: "", text: n, tone: "ink" });
-  }
-  if (r.derivation_notes?.length) {
-    out.push({ t: "", text: "── read plan ──────────────────────────", tone: "dim" });
-    for (const n of r.derivation_notes) out.push({ t: "", text: n, tone: "ink" });
-  }
-  return out;
-}
-
-function ConsoleRow({ line, index }: { line: ConsoleLine; index: number }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: Math.min(index * 0.03, 0.9), duration: 0.2 }}
-      className="flex gap-2"
-    >
-      {line.t && <span className="ins-mono text-[10px] text-ink-faint">{line.t}</span>}
-      <span className={`ins-mono whitespace-pre-wrap text-[10.5px] ${LINE_CLASS[line.tone]}`}>
-        {line.text}
-      </span>
-    </motion.div>
-  );
-}
-
-/** Temperature trace with the threshold that trips the relay. Demo only — a
-    live V2 build returns no sample stream, so there is nothing to plot. */
-function Scope({ trace, threshold }: { trace: number[]; threshold: number }) {
-  const W = 320;
-  const H = 64;
-  const lo = 22;
-  const hi = 33;
-  const x = (i: number) => (i / (trace.length - 1)) * W;
-  const y = (t: number) => H - ((t - lo) / (hi - lo)) * H;
-  const d = trace
-    .map((t, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(t).toFixed(1)}`)
-    .join(" ");
-  const trip = trace.findIndex((t) => t > threshold);
-
-  return (
-    <div className="relative px-2.5 pt-2">
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="h-[64px] w-full"
-        role="img"
-        aria-label={`Recorded temperature trace crossing the ${threshold} degree threshold`}
-      >
-        <line
-          x1={0}
-          x2={W}
-          y1={y(threshold)}
-          y2={y(threshold)}
-          stroke="#e0a63c"
-          strokeWidth={1}
-          strokeDasharray="3 3"
-          opacity={0.7}
-        />
-        <motion.path
-          d={d}
-          fill="none"
-          stroke="#3fe081"
-          strokeWidth={1.6}
-          strokeLinejoin="round"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 1.1, ease: "easeOut" }}
-          style={{ filter: "drop-shadow(0 0 4px #3fe081)" }}
-        />
-        {trip > -1 && <circle cx={x(trip)} cy={y(trace[trip])} r={3} fill="#e0a63c" />}
-      </svg>
-      <span className="ins-mono absolute right-3 top-2 text-[9px] text-amber">
-        {threshold.toFixed(1)} °C
-      </span>
-    </div>
-  );
-}
-
-/* --- the generated repo ---------------------------------------------------
-   The product's claim is a complete repo, so it has to be inspectable. Showing
-   a verdict about an artifact nobody can read asks for trust that the whole
-   design is built to avoid needing. */
-function CodeBay({
-  files,
-  jobId,
-  demo,
-}: {
-  files?: Record<string, string>;
-  jobId: string | null;
-  demo: boolean;
-}) {
-  const names = Object.keys(files ?? {}).sort();
-  const [open, setOpen] = useState<string | null>(null);
-  const shown = open && files?.[open] ? open : names[0];
-
-  if (!names.length) {
-    return (
-      <Bay legend="generated repo" tone="dim" className="h-full">
-        <p className="ins-mono p-3 text-[10.5px] leading-relaxed text-ink-faint">
-          {demo
-            ? "the recorded fixture carries verdicts, not a repo — run a live build to generate one"
-            : "no repo yet. A build that was blocked, or that used a firmware source you supplied, produces none — nothing is shown in its place."}
-        </p>
-      </Bay>
-    );
-  }
-
-  return (
-    <Bay
-      legend="generated repo"
-      tone="accent"
-      right={
-        jobId && !demo ? (
-          <a
-            href={`/api/v2/jobs/${jobId}/repo.zip`}
-            className="ins-key border border-accent-dim px-2 py-[3px] ins-mono text-[10px] uppercase tracking-[0.16em] text-accent hover:bg-accent/10"
-          >
-            download .zip
-          </a>
-        ) : null
-      }
-      className="h-full"
-    >
-      <div className="flex h-full min-h-0 flex-col">
-        <div className="ins-scroll-x flex shrink-0 gap-1 border-b border-line px-2 py-1.5">
-          {names.map((n) => (
-            <button
-              key={n}
-              type="button"
-              onClick={() => setOpen(n)}
-              className={`ins-mono shrink-0 px-2 py-[3px] text-[10px] transition-colors ${
-                n === shown
-                  ? "text-accent underline decoration-accent underline-offset-4"
-                  : "text-ink-faint hover:text-ink"
-              }`}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
-        <pre className="ins-face min-h-0 flex-1 overflow-auto p-2.5 ins-mono text-[10.5px] leading-relaxed text-ink-dim">
-          {shown ? files?.[shown] : ""}
-        </pre>
-      </div>
-    </Bay>
-  );
-}
-
-/* --- terminal state -------------------------------------------------------
-   Every run ends somewhere unmistakable. The states are the backend's, not
-   invented here: a status we do not recognise is echoed rather than smoothed
-   into a familiar one. */
-function RunBanner({
-  build,
-  demo,
-  now,
-}: {
-  build: BuildRun | null;
-  demo: boolean;
-  now: number;
-}) {
-  if (!build) return null;
-
-  if (build.running) {
-    return (
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-accent-dim/40 bg-accent/5 px-4 py-2">
-        <Led tone="green" breathe />
-        <span className="ins-mono text-[11px] font-bold uppercase tracking-[0.16em] text-accent">
-          building — {((now - build.startedAt) / 1000).toFixed(0)}s
-        </span>
-        <span className="ins-mono text-[10px] text-ink-faint">
-          generate → cross-compile → emulate. This takes minutes; the job
-          reports its stages when it returns.
+      <div className="flex shrink-0 items-center gap-2 border-b border-accent-dim/40 bg-accent/5 px-4 py-1.5">
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
+        <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-accent">
+          building — generate → compile → emulate
         </span>
       </div>
     );
-  }
-
-  if (build.error) {
+  if (err)
     return (
-      <div className="border-b border-red/50 bg-red/10 px-4 py-2">
-        <span className="ins-mono text-[11px] font-bold uppercase tracking-[0.16em] text-red">
+      <div className="shrink-0 border-b border-red/50 bg-red/10 px-4 py-1.5">
+        <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-red">
           ✕ build failed
         </span>
-        <span className="ins-mono ml-2 text-[10px] text-ink-faint">{build.error}</span>
+        <span className="ml-2 font-mono text-[10px] text-ink-faint">{err}</span>
       </div>
     );
-  }
+  if (!result) return null;
 
-  const r = build.result;
-  if (!r) return null;
-
-  const ok = r.status === "working-emulated";
-  const blocked = r.status.startsWith("blocked") || r.status === "needs-clarification";
-  const tone = ok ? "green" : blocked ? "amber" : "red";
-  const border = ok ? "border-accent-dim/50 bg-accent/5"
-    : blocked ? "border-amber/50 bg-amber/10" : "border-red/50 bg-red/10";
-  const ink = ok ? "text-accent" : blocked ? "text-amber" : "text-red";
-  const mark = ok ? "✓ completed" : blocked ? "⚠ blocked" : "✕ did not work";
-  const what = ok
-    ? "the application was generated, compiled and ran under emulation"
-    : blocked
-      ? "nothing was generated — the run stopped before producing code"
-      : "it generated and ran, but did not behave as the requirement specifies";
-
+  const ok = result.status === "working-emulated";
+  const blocked =
+    result.status.startsWith("blocked") || result.status === "needs-clarification";
   return (
-    <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-4 py-2 ${border}`}>
-      <Led tone={tone as LedTone} />
-      <span className={`ins-mono text-[11px] font-bold uppercase tracking-[0.16em] ${ink}`}>
-        {mark}
+    <div
+      className={`shrink-0 border-b px-4 py-1.5 ${
+        ok
+          ? "border-accent-dim/50 bg-accent/5"
+          : blocked
+            ? "border-amber/50 bg-amber/10"
+            : "border-red/50 bg-red/10"
+      }`}
+    >
+      <span
+        className={`font-mono text-[11px] font-bold uppercase tracking-[0.14em] ${
+          ok ? "text-accent" : blocked ? "text-amber" : "text-red"
+        }`}
+      >
+        {ok ? "✓ completed" : blocked ? "⚠ blocked" : "✕ did not work"}
       </span>
-      <span className="ins-mono text-[10px] uppercase tracking-[0.14em] text-ink-dim">
-        {r.status.replace(/[-_]/g, " ")}
+      <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-dim">
+        {result.status.replace(/[-_]/g, " ")}
       </span>
-      <span className="ins-mono text-[10px] text-ink-faint">{what}</span>
-      {ok && Object.keys(r.files ?? {}).length > 0 && (
-        <span className="ins-mono text-[10px] text-accent-dim">
-          · {Object.keys(r.files ?? {}).length} files in the CODE tab
+      {result.verdict_note && (
+        <span className="ml-2 font-mono text-[10px] text-ink-faint">
+          {result.verdict_note}
         </span>
-      )}
-      {demo && build.recorded && (
-        <span className="ins-mono text-[10px] text-amber">· recorded fixture</span>
       )}
     </div>
   );
