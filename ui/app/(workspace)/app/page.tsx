@@ -445,6 +445,14 @@ export default function ResourceMapPage() {
         </div>
       </div>
 
+      {/* ------------------------------------------------- terminal state.
+          Engineers reported "generate ayindha ledha teliyatledhu" — you could
+          not tell whether a run had finished. The verdict WAS rendered, but as
+          corner text inside one bay tab: invisible unless you were already
+          looking at it. A run must resolve somewhere you cannot miss, whatever
+          tab is open and whatever the viewport. */}
+      <RunBanner build={build} demo={demo} now={now} />
+
       {/* --------------------------------------------- intake, or the bench */}
       {!demo && intakeOpen ? (
         intakePhase === "requirement" ? (
@@ -1103,5 +1111,84 @@ function CodeBay({
         </pre>
       </div>
     </Bay>
+  );
+}
+
+/* --- terminal state -------------------------------------------------------
+   Every run ends somewhere unmistakable. The states are the backend's, not
+   invented here: a status we do not recognise is echoed rather than smoothed
+   into a familiar one. */
+function RunBanner({
+  build,
+  demo,
+  now,
+}: {
+  build: BuildRun | null;
+  demo: boolean;
+  now: number;
+}) {
+  if (!build) return null;
+
+  if (build.running) {
+    return (
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-accent-dim/40 bg-accent/5 px-4 py-2">
+        <Led tone="green" breathe />
+        <span className="ins-mono text-[11px] font-bold uppercase tracking-[0.16em] text-accent">
+          building — {((now - build.startedAt) / 1000).toFixed(0)}s
+        </span>
+        <span className="ins-mono text-[10px] text-ink-faint">
+          generate → cross-compile → emulate. This takes minutes; the job
+          reports its stages when it returns.
+        </span>
+      </div>
+    );
+  }
+
+  if (build.error) {
+    return (
+      <div className="border-b border-red/50 bg-red/10 px-4 py-2">
+        <span className="ins-mono text-[11px] font-bold uppercase tracking-[0.16em] text-red">
+          ✕ build failed
+        </span>
+        <span className="ins-mono ml-2 text-[10px] text-ink-faint">{build.error}</span>
+      </div>
+    );
+  }
+
+  const r = build.result;
+  if (!r) return null;
+
+  const ok = r.status === "working-emulated";
+  const blocked = r.status.startsWith("blocked") || r.status === "needs-clarification";
+  const tone = ok ? "green" : blocked ? "amber" : "red";
+  const border = ok ? "border-accent-dim/50 bg-accent/5"
+    : blocked ? "border-amber/50 bg-amber/10" : "border-red/50 bg-red/10";
+  const ink = ok ? "text-accent" : blocked ? "text-amber" : "text-red";
+  const mark = ok ? "✓ completed" : blocked ? "⚠ blocked" : "✕ did not work";
+  const what = ok
+    ? "the application was generated, compiled and ran under emulation"
+    : blocked
+      ? "nothing was generated — the run stopped before producing code"
+      : "it generated and ran, but did not behave as the requirement specifies";
+
+  return (
+    <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-4 py-2 ${border}`}>
+      <Led tone={tone as LedTone} />
+      <span className={`ins-mono text-[11px] font-bold uppercase tracking-[0.16em] ${ink}`}>
+        {mark}
+      </span>
+      <span className="ins-mono text-[10px] uppercase tracking-[0.14em] text-ink-dim">
+        {r.status.replace(/[-_]/g, " ")}
+      </span>
+      <span className="ins-mono text-[10px] text-ink-faint">{what}</span>
+      {ok && Object.keys(r.files ?? {}).length > 0 && (
+        <span className="ins-mono text-[10px] text-accent-dim">
+          · {Object.keys(r.files ?? {}).length} files in the CODE tab
+        </span>
+      )}
+      {demo && build.recorded && (
+        <span className="ins-mono text-[10px] text-amber">· recorded fixture</span>
+      )}
+    </div>
   );
 }

@@ -225,6 +225,10 @@ function QuestionStep({
     (x) => x.blocking && (draft[x.id] ?? "").trim(),
   ).length;
   const ready = answeredBlocking === blockingTotal;
+  /* what the user has typed this round, and what will still be outstanding
+     after it is sent — the label says both rather than only refusing */
+  const answeredCount = Object.values(draft).filter((v) => v.trim()).length;
+  const remaining = Math.max(0, blockingTotal - answeredBlocking);
   const value = q ? (draft[q.id] ?? "") : "";
 
   const set = (v: string) =>
@@ -387,22 +391,31 @@ function QuestionStep({
                     {value.trim() ? "next ▸" : q.blocking ? "later ▸" : "skip ▸"}
                   </button>
                 )}
+                {/* Submitting is ALWAYS available. It used to be disabled until
+                    every blocking question was answered, which made "later ▸" a
+                    trap: you walked to the end, the button stayed dead, and the
+                    answers you HAD given were never saved. The backend is
+                    incremental — answer_questions keeps what you give it and
+                    re-asks the rest — so partial submission is the correct loop
+                    and the UI was fighting its own pipeline. */}
                 <button
                   type="button"
                   onClick={submit}
-                  disabled={!ready || busy}
+                  disabled={busy || answeredCount === 0}
                   title={
-                    ready
-                      ? undefined
-                      : `${blockingTotal - answeredBlocking} blocking question(s) still unanswered`
+                    answeredCount === 0
+                      ? "answer at least one question first"
+                      : remaining > 0
+                        ? `${remaining} blocking question(s) will be asked again`
+                        : undefined
                   }
                   className="ins-key ml-auto border border-accent-dim px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-accent transition-colors hover:bg-accent/10 disabled:cursor-not-allowed disabled:border-line disabled:text-ink-faint"
                 >
                   {busy
                     ? "re-analysing…"
-                    : ready
-                      ? "re-analyse with these answers ▸"
-                      : `${blockingTotal - answeredBlocking} blocking left`}
+                    : remaining > 0
+                      ? `submit ${answeredCount} · ${remaining} still needed ▸`
+                      : "re-analyse with these answers ▸"}
                 </button>
               </div>
             </div>
