@@ -9,6 +9,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import uuid
 import threading
 import urllib.error
 import urllib.parse
@@ -619,3 +620,81 @@ async def v2_download_repo(job_id: str):
         buf, media_type="application/zip",
         headers={"Content-Disposition":
                  f'attachment; filename="embeddpilot-{job_id[:8]}.zip"'})
+
+
+# --- requirements from a document -------------------------------------------
+
+REQUIREMENT_TEXT_EXT = {".txt", ".md", ".rst", ".log"}
+REQUIREMENT_DOC_EXT = {".pdf", ".docx"}
+REQUIREMENT_IMAGE_EXT = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"}
+
+
+@app.post("/api/v2/requirement-from-file")
+async def v2_requirement_from_file(file: UploadFile = File(...)):
+    """A requirement is not always typed. Accept it as a document and return the
+    TEXT — which the caller then reviews before analysing.
+
+    Returning text for review rather than analysing straight through is
+    deliberate: extraction from a PDF is lossy, and a requirement the user never
+    saw is a requirement they cannot correct. They confirm what we read.
+    """
+    name = os.path.basename(file.filename or "requirement")
+    ext = os.path.splitext(name)[1].lower()
+
+    if ext in REQUIREMENT_IMAGE_EXT:
+        # Honest gap rather than a silent failure or a fabricated read: images
+        # need a vision-capable model and that path is not wired yet.
+        raise HTTPException(
+            415,
+            f"'{name}' is an image. Reading a requirement from an image needs a "
+            "vision-capable model, which is not wired up yet — paste the text, "
+            "or upload it as a PDF, Word or text file.")
+
+    if ext not in REQUIREMENT_TEXT_EXT | REQUIREMENT_DOC_EXT:
+        raise HTTPException(
+            415,
+            f"cannot read '{name}'. Supported: "
+            f"{', '.join(sorted(REQUIREMENT_TEXT_EXT | REQUIREMENT_DOC_EXT))}")
+
+    raw = await file.read()
+    if len(raw) > 20 * 1024 * 1024:
+        raise HTTPException(413, "requirement documents are limited to 20MB")
+
+    if ext in REQUIREMENT_TEXT_EXT:
+        try:
+            text = raw.decode("utf-8")
+        except UnicodeDecodeError:
+            text = raw.decode("latin-1", errors="replace")
+        pages = None
+    else:
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+        path = os.path.join(UPLOAD_DIR, f"req_{uuid.uuid4().hex[:10]}{ext}")
+        with open(path, "wb") as f:
+            f.write(raw)
+        try:
+            from ingestion.loader import IngestionError, load_document
+            doc = load_document(path)
+        except IngestionError as e:
+            raise HTTPException(422, f"could not read '{name}': {e}")
+        finally:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+        text = "\n\n".join((p.text or "").strip() for p in doc.pages).strip()
+        pages = len(doc.pages)
+        if not text:
+            raise HTTPException(
+                422,
+                f"'{name}' has no readable text — it may be a scan. OCR is not "
+                "wired up, so nothing was extracted rather than guessed.")
+
+    return {
+        "filename": name,
+        "text": text,
+        "pages": pages,
+        "chars": len(text),
+        # the caller must confirm: extraction is lossy and a requirement the
+        # user never saw is one they cannot correct
+        "review_required": True,
+    }

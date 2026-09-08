@@ -25,6 +25,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useState } from "react";
+import { errorText, requirementFromFile } from "../../lib/v2-api";
 import type { V2Question } from "../../lib/v2-types";
 import { Bay, Led, Rule, SNAP, Screws } from "./chrome";
 
@@ -96,6 +97,7 @@ function RequirementStep({
   onUseDemo,
   extractionFailed,
 }: IntakeProps) {
+  const [fileNote, setFileNote] = useState<string | null>(null);
   return (
     <div className="ins-chassis relative flex min-w-0 flex-1 flex-col gap-3">
       <Screws />
@@ -140,6 +142,49 @@ function RequirementStep({
             placeholder="e.g. On a <board> with a <mcu>, read the <sensor> over I2C at <address>, and …"
             className="ins-face ins-mono min-h-[128px] w-full flex-1 resize-none p-3 text-[12.5px] leading-relaxed text-ink outline-none placeholder:text-ink-faint sm:min-h-[168px]"
           />
+
+          {/* A requirement is not always typed. What comes back is TEXT the
+              user then reviews: extraction from a PDF is lossy, and a
+              requirement they never saw is one they cannot correct. */}
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <label className="ins-key cursor-pointer border border-line px-3 py-1.5 ins-mono text-[10px] uppercase tracking-[0.16em] text-ink-dim transition-colors hover:text-ink">
+              upload a document
+              <input
+                type="file"
+                accept=".txt,.md,.rst,.log,.pdf,.docx"
+                className="hidden"
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!f) return;
+                  setFileNote(`reading ${f.name}…`);
+                  try {
+                    const r = await requirementFromFile(f);
+                    onRequirementChange(
+                      requirement ? `${requirement}
+
+${r.text}` : r.text,
+                    );
+                    setFileNote(
+                      `read ${r.filename} — ${r.chars} characters${
+                        r.pages ? ` from ${r.pages} pages` : ""
+                      }. Check it below before analysing.`,
+                    );
+                  } catch (err) {
+                    setFileNote(errorText(err));
+                  }
+                }}
+              />
+            </label>
+            <span className="ins-mono text-[10px] text-ink-faint">
+              .txt .md .pdf .docx
+            </span>
+          </div>
+          {fileNote && (
+            <p className="mt-1.5 ins-mono text-[10px] leading-relaxed text-ink-dim">
+              {fileNote}
+            </p>
+          )}
 
           <div className="mt-3">
             <span className="ins-mono text-[10px] uppercase tracking-[0.18em] text-ink-faint">

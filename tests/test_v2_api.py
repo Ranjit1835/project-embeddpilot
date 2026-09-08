@@ -213,3 +213,34 @@ def test_repo_zip_is_offered_and_refuses_when_there_is_nothing(client):
     assert z.status_code == 404
     assert "nothing to download" in z.text or "no repo" in z.text
     assert client.get("/api/v2/jobs/does-not-exist/repo.zip").status_code == 404
+
+
+# --- a requirement can arrive as a document, not only as typed text ---------
+
+def test_requirement_from_a_text_file(client):
+    text = ("On a Nucleo-F411RE with an STM32F411RET6, read the BMP180 over "
+            "I2C at address 0x77 and print the raw temperature over UART.")
+    r = client.post("/api/v2/requirement-from-file",
+                    files={"file": ("req.txt", text.encode(), "text/plain")})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["text"] == text
+    # extraction is lossy and a requirement the user never saw is one they
+    # cannot correct — the caller must confirm what we read
+    assert body["review_required"] is True
+
+
+def test_image_requirement_is_refused_honestly(client):
+    """Not silently ignored and not fabricated: images need a vision model and
+    that path is not wired, so say which and offer the alternative."""
+    r = client.post("/api/v2/requirement-from-file",
+                    files={"file": ("spec.png", b"\x89PNG\r\n", "image/png")})
+    assert r.status_code == 415
+    assert "vision-capable" in r.text and "PDF" in r.text
+
+
+def test_unreadable_type_is_refused_with_the_supported_list(client):
+    r = client.post("/api/v2/requirement-from-file",
+                    files={"file": ("a.zip", b"PK\x03\x04", "application/zip")})
+    assert r.status_code == 415
+    assert ".pdf" in r.text and ".docx" in r.text

@@ -146,3 +146,31 @@ export function errorText(e: unknown): string {
   if (e instanceof Error) return e.message;
   return String(e);
 }
+
+/** A requirement can arrive as a document. Returns the extracted TEXT for the
+ *  user to review — extraction is lossy, and a requirement they never saw is
+ *  one they cannot correct, so this never analyses straight through. */
+export async function requirementFromFile(
+  file: File,
+): Promise<{ filename: string; text: string; pages: number | null; chars: number }> {
+  const form = new FormData();
+  form.append("file", file);
+  const path = "/api/v2/requirement-from-file";
+  let res: Response;
+  try {
+    res = await fetch(path, { method: "POST", body: form });
+  } catch (cause) {
+    throw new BackendUnreachable(path, cause);
+  }
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`;
+    try {
+      const j = await res.json();
+      if (j?.detail) detail = String(j.detail);
+    } catch {
+      /* keep the status */
+    }
+    throw new Error(detail);
+  }
+  return res.json();
+}
