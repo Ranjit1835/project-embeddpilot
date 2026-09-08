@@ -40,6 +40,17 @@ Verified Driver + Proof  (5/5 PASS)
 
 ## Quick Start
 
+**Testing V2 (requirement → verified application)?** See **[TESTING.md](TESTING.md)**
+— setup, what each tool does, what the verdicts mean, and the known gaps.
+
+```bash
+cp .env.example .env        # set EMBEDDPILOT_PROVIDER + your key
+uvicorn api.main:app --port 8000
+cd ui && npm run dev        # http://localhost:3000, workspace at /app
+```
+
+### V1 pipeline (datasheet → driver)
+
 ```bash
 # Full pipeline: validate → generate → guard → compile → simulate → package
 python embeddpilot.py

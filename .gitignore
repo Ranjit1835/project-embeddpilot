@@ -2,6 +2,8 @@ __pycache__/
 *.pyc
 .env
 .env.*
+# the template carries no values — it is the only .env that ships
+!.env.example
 *.key
 secrets.*
 # API keys are passed via environment only (GROQ_API_KEY / NVIDIA_API_KEY) —
