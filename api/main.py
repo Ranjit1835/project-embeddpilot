@@ -407,6 +407,14 @@ async def v2_analyze(payload: dict):
         "failures": ([{"check": f.check, "message": f.message}
                       for f in report.failures] if report is not None else []),
         "spec": _spec_json(result.get("spec")),
+        # A dead provider degrades to "ask every field", which is safe but is
+        # INDISTINGUISHABLE from normal behaviour unless we say so. Engineers
+        # reported "it asks even when I gave full detail"; the cause was a
+        # retired model and the system had recorded it in a note nobody
+        # surfaced. Hoist it so the UI can shout.
+        "extraction_failed": next(
+            (n for n in ((result.get("spec").notes if result.get("spec") else []) or [])
+             if "extraction unavailable" in n), None),
     }
 
 

@@ -52,6 +52,7 @@ export interface IntakeProps {
   onDismiss: (() => void) | null;
   /** offered only on the error plate — the escape hatch when the API is down */
   onUseDemo: (() => void) | null;
+  extractionFailed?: string | null;
   /** true when intake is a column of the bench grid beside the idle board, so
       it drops its own centring and padding and lets the grid own the gutters */
   compact?: boolean;
@@ -93,11 +94,29 @@ function RequirementStep({
   onAnalyze,
   onDismiss,
   onUseDemo,
+  extractionFailed,
 }: IntakeProps) {
   return (
     <div className="ins-chassis relative flex min-w-0 flex-1 flex-col gap-3">
       <Screws />
       <header className="px-2 pt-1">
+      {extractionFailed && (
+        /* The engineers' "it asks even when I gave full detail" was THIS: a
+           retired model, a safe fall-back to asking everything, and no way to
+           tell the two apart. */
+        <div className="mb-3 border border-red/50 bg-red/5 p-2.5">
+          <p className="ins-mono text-[11px] font-bold uppercase tracking-[0.14em] text-red">
+            the requirement was NOT read — every field below is being asked blind
+          </p>
+          <p className="ins-mono mt-1 text-[10px] leading-relaxed text-ink-faint">
+            {extractionFailed}
+          </p>
+          <p className="ins-mono mt-1 text-[10px] leading-relaxed text-ink-faint">
+            Answering still works, but the questions are the full list rather
+            than the gaps — the model that reads your text could not be reached.
+          </p>
+        </div>
+      )}
         <h1 className="text-[15px] font-bold uppercase tracking-[0.22em] text-ink sm:tracking-[0.3em]">
           Requirement <span className="text-accent">intake</span>
         </h1>

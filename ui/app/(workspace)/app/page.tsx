@@ -309,6 +309,11 @@ export default function ResourceMapPage() {
     onAnswer,
     onDismiss: analysis ? () => setIntakeOpen(false) : null,
     onUseDemo: () => setSource("demo"),
+    /* When the model cannot be reached the pipeline asks for EVERY field. That
+       is the safe degradation, but on screen it is indistinguishable from
+       normal behaviour — which is exactly how a retired model looked like
+       "it interrogates me even when I give full detail". Say it plainly. */
+    extractionFailed: analysis?.extraction_failed ?? null,
   };
 
   /* -------------------------------------------------------------- render */

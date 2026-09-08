@@ -119,6 +119,9 @@ export interface V2Spec {
 }
 
 export interface AnalyzeResponse {
+  /** set when the model could not be reached: the question list is then
+   *  "everything", which is safe but looks identical to normal behaviour */
+  extraction_failed?: string | null;
   /** "needs-clarification" | "blocked-resource-conflict" | "no-firmware"
       | "working-emulated" | "not-working" | "failed" | "incomplete" | ... */
   status: string;
