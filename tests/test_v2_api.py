@@ -165,3 +165,51 @@ def test_capabilities_states_what_is_not_built(client):
     joined = " ".join(body["not_built"]).lower()
     assert "hardware" in joined      # flashing / dump prediction are not built
     assert body["buses_supported"] == ["I2C", "SPI"]
+
+
+# --- the generated repo must be visible, not just verdicts about it ---------
+
+def test_build_result_carries_the_generated_files(client, monkeypatch):
+    """The product's claim is a complete REPO. A run that reports 'working' and
+    shows you nothing is a verdict about an artifact you cannot inspect."""
+    import time
+
+    captured = {}
+
+    def fake_pipeline(*a, **kw):
+        captured["called"] = True
+        return {"status": "working-emulated", "stages": [],
+                "devices": [], "firmware_origin": "generated",
+                "verdict_note": "emulated only",
+                "files": {"src/main.c": "int main(void){return 0;}",
+                          "Makefile": "all:\n", "README.md": "# app\n"},
+                "report": None, "questions": [], "spec": None}
+
+    monkeypatch.setattr("orchestration.v2_pipeline.run_application_pipeline",
+                        fake_pipeline)
+    r = client.post("/api/v2/build", json={"requirement": REQ,
+                                           "answers": COMPLETE_ANSWERS})
+    jid = r.json()["job_id"]
+    for _ in range(50):
+        snap = client.get(f"/api/jobs/{jid}").json()
+        if snap.get("status") in ("done", "error"):
+            break
+        time.sleep(0.1)
+    files = (snap.get("result") or {}).get("files") or {}
+    assert "src/main.c" in files and "Makefile" in files
+
+
+def test_repo_zip_is_offered_and_refuses_when_there_is_nothing(client):
+    """A blocked run has no repo; saying so is better than an empty zip that
+    looks like output."""
+    r = client.post("/api/v2/build", json={"requirement": REQ})
+    jid = r.json()["job_id"]
+    import time
+    for _ in range(40):
+        if client.get(f"/api/jobs/{jid}").json().get("status") in ("done", "error"):
+            break
+        time.sleep(0.1)
+    z = client.get(f"/api/v2/jobs/{jid}/repo.zip")
+    assert z.status_code == 404
+    assert "nothing to download" in z.text or "no repo" in z.text
+    assert client.get("/api/v2/jobs/does-not-exist/repo.zip").status_code == 404

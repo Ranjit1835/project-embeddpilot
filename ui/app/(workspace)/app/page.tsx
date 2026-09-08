@@ -67,7 +67,7 @@ import {
 const STAGES = ["requirements", "devices", "resource map", "code", "run"];
 
 type Source = "live" | "demo";
-type BayKey = "stages" | "conflicts" | "run";
+type BayKey = "stages" | "conflicts" | "code" | "run";
 
 /* --- the visual vocabulary for check state -------------------------------
 
@@ -529,6 +529,8 @@ export default function ResourceMapPage() {
                 items={[
                   { key: "stages", label: "stages", badge: stages.length },
                   { key: "conflicts", label: "conflicts", badge: conflicts.length, alarm: conflicts.length > 0 },
+                  { key: "code", label: "code",
+                    badge: Object.keys(result?.files ?? {}).length },
                   { key: "run", label: "run", badge: result ? 1 : 0 },
                 ]}
               />
@@ -546,6 +548,9 @@ export default function ResourceMapPage() {
               >
                 {bay === "stages" && <StagesBay stages={stages} current={current} />}
                 {bay === "conflicts" && <ConflictsBay conflicts={conflicts} hasRun={!!current} />}
+                {bay === "code" && (
+                  <CodeBay files={result?.files} jobId={build?.jobId ?? null} demo={demo} />
+                )}
                 {bay === "run" && (
                   <RunBay
                     build={build}
@@ -1023,5 +1028,75 @@ function Scope({ trace, threshold }: { trace: number[]; threshold: number }) {
         {threshold.toFixed(1)} °C
       </span>
     </div>
+  );
+}
+
+/* --- the generated repo ---------------------------------------------------
+   The product's claim is a complete repo, so it has to be inspectable. Showing
+   a verdict about an artifact nobody can read asks for trust that the whole
+   design is built to avoid needing. */
+function CodeBay({
+  files,
+  jobId,
+  demo,
+}: {
+  files?: Record<string, string>;
+  jobId: string | null;
+  demo: boolean;
+}) {
+  const names = Object.keys(files ?? {}).sort();
+  const [open, setOpen] = useState<string | null>(null);
+  const shown = open && files?.[open] ? open : names[0];
+
+  if (!names.length) {
+    return (
+      <Bay legend="generated repo" tone="dim" className="h-full">
+        <p className="ins-mono p-3 text-[10.5px] leading-relaxed text-ink-faint">
+          {demo
+            ? "the recorded fixture carries verdicts, not a repo — run a live build to generate one"
+            : "no repo yet. A build that was blocked, or that used a firmware source you supplied, produces none — nothing is shown in its place."}
+        </p>
+      </Bay>
+    );
+  }
+
+  return (
+    <Bay
+      legend="generated repo"
+      tone="accent"
+      right={
+        jobId && !demo ? (
+          <a
+            href={`/api/v2/jobs/${jobId}/repo.zip`}
+            className="ins-key border border-accent-dim px-2 py-[3px] ins-mono text-[10px] uppercase tracking-[0.16em] text-accent hover:bg-accent/10"
+          >
+            download .zip
+          </a>
+        ) : null
+      }
+      className="h-full"
+    >
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="ins-scroll-x flex shrink-0 gap-1 border-b border-line px-2 py-1.5">
+          {names.map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => setOpen(n)}
+              className={`ins-mono shrink-0 px-2 py-[3px] text-[10px] transition-colors ${
+                n === shown
+                  ? "text-accent underline decoration-accent underline-offset-4"
+                  : "text-ink-faint hover:text-ink"
+              }`}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+        <pre className="ins-face min-h-0 flex-1 overflow-auto p-2.5 ins-mono text-[10.5px] leading-relaxed text-ink-dim">
+          {shown ? files?.[shown] : ""}
+        </pre>
+      </div>
+    </Bay>
   );
 }

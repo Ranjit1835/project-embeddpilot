@@ -61,6 +61,20 @@ ARM_GCC_GLOB = os.path.expanduser(
     "~/.platformio/packages/toolchain-gccarmnoneeabi/bin/arm-none-eabi-gcc*")
 
 
+def _linker_script() -> str:
+    """The linker script the generated repo ships so it builds standalone.
+
+    It is a BUILD INPUT that happens to live under tests/fixtures — a generated
+    repo that assumed the user already had one would not actually build, which
+    is the whole point of shipping a repo rather than a source file."""
+    path = os.path.join(FIXTURE_DIR, "stm32f4.ld")
+    try:
+        with open(path, encoding="utf-8") as f:
+            return f.read()
+    except OSError:
+        return ""
+
+
 def find_arm_gcc() -> str | None:
     """Path to arm-none-eabi-gcc, or None.
 
@@ -150,6 +164,8 @@ def run_application_pipeline(
     read_plan=None,
     register_map: dict | None = None,
     measurement: str | None = None,
+    behavior=None,
+    samples: int = 1,
 ) -> dict:
     """Run requirement -> verdict. See the module docstring for the contract.
 
@@ -244,15 +260,28 @@ def run_application_pipeline(
                 stage("generate", "skipped",
                       "; ".join(derive_notes)[:300] or "no read plan derivable")
     if firmware_source is None and read_plan is not None:
-        # WS4: GENERATE the application firmware from the spec + the device's
-        # register facts. This is the difference between a demo and a product:
-        # the pipeline now produces the artifact it claims to produce.
-        from generation.app_worker import generate_application
-        firmware_source = os.path.join(workdir, "app.c")
-        with open(firmware_source, "w", encoding="utf-8") as f:
-            f.write(generate_application(read_plan))
+        # WS4: GENERATE the application. The product's claim is a complete
+        # REPO — src/, a Makefile, the linker script and a README that states
+        # what was and was not verified — so emit the repo, not a loose .c file.
+        # Writing only app.c meant the Makefile and README the README promised
+        # were never produced by an actual run.
+        from generation.app_worker import generate_project
+        files = generate_project(
+            read_plan, behavior=behavior, samples=samples,
+            has_math_oracle=bool((register_map or {}).get("math_oracle")),
+            linker_script=_linker_script(),
+        )
+        for rel, content in files.items():
+            path = os.path.join(workdir, rel)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(content)
+        # the caller gets the repo itself, not just a verdict about it
+        result["files"] = files
+        firmware_source = os.path.join(workdir, "src", "main.c")
         stage("generate", "pass",
-              f"application firmware generated for {read_plan.chip}")
+              f"application repo generated for {read_plan.chip} "
+              f"({len(files)} files)")
     if firmware_source is None:
         result["status"] = "no-firmware"
         stage("firmware", "skipped",

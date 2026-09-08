@@ -145,6 +145,8 @@ export interface ConsoleLine {
 }
 
 export interface BuildResult {
+  /** the generated repo: relative path -> file contents */
+  files?: Record<string, string>;
   status: string;
   /** "generated" | "fixture" | null — load-bearing: presenting a hand-written
       fixture as generated output would be a lie about what the system can do. */

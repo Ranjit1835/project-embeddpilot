@@ -516,6 +516,10 @@ def _run_v2_build(job: Job, text: str, answers: dict, register_map, address,
             "failures": ([{"check": f.check, "message": f.message}
                           for f in report.failures] if report is not None else []),
             "notes": (report.notes if report is not None else []),
+            # The product's claim is a complete REPO. Returning only a verdict
+            # meant the artifact was invisible: you were told it worked and
+            # never shown the thing that did.
+            "files": result.get("files", {}),
         })
     except Exception as e:
         job.finish(error=f"v2 build crashed: {e}")
@@ -577,3 +581,33 @@ async def v2_capabilities():
                       "hardware dump-success prediction",
                       "timers / state-machine app logic"],
     }
+
+
+@app.get("/api/v2/jobs/{job_id}/repo.zip")
+async def v2_download_repo(job_id: str):
+    """The generated application repo as a zip.
+
+    Serving the files the JOB recorded rather than re-reading the working
+    directory: the zip must be exactly what the run verified, not whatever that
+    directory happens to hold now."""
+    import io
+    import zipfile
+
+    job = STORE.get(job_id)
+    if job is None:
+        raise HTTPException(404, "unknown job")
+    files = ((job.result or {}).get("files") or {}) if job.result else {}
+    if not files:
+        raise HTTPException(
+            404, "this job produced no repo — a run that was blocked, or that "
+                 "used a supplied firmware source, has nothing to download")
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for rel, content in files.items():
+            z.writestr(rel, content)
+    buf.seek(0)
+    return StreamingResponse(
+        buf, media_type="application/zip",
+        headers={"Content-Disposition":
+                 f'attachment; filename="embeddpilot-{job_id[:8]}.zip"'})
