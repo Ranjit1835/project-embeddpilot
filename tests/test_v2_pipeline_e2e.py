@@ -314,7 +314,8 @@ def test_generated_repo_is_complete_and_self_building():
     files = generate_project(_plan_from_map(),
                              Behavior(threshold=18500, unit="raw"),
                              linker_script=open(LD, encoding="utf-8").read())
-    assert set(files) == {"src/main.c", "Makefile", "README.md", "link/stm32f4.ld"}
+    assert set(files) == {"src/main.c", "include/config.h", "Makefile",
+                          "README.md", "link/stm32f4.ld"}
     readme = files["README.md"]
     assert "NOT performed" in readme      # raw -> engineering units
     assert "NOT verified" in readme       # physical hardware
@@ -636,3 +637,60 @@ def test_spi_firmware_runs_against_a_mocked_spi_sensor():
     assert run(expectations_for_spi("LM74", behavior=beh)) == "pass"
     # and the SPI assertion must be capable of failing, or it proves nothing
     assert run(["LM74-RAW=", "NEVER-EMITTED-BY-THIS-FIRMWARE"]) == "fail"
+
+
+# --- the repo's configuration must be real, not decoration -----------------
+#
+# A config.h that advertises a knob nothing reads is the same lie in a friendlier
+# font: it invites the user to change a value and silently ignores them. These
+# assert the knobs actually reach the binary.
+
+def test_repo_ships_a_configuration_header():
+    files = generate_project(_plan_from_map(),
+                             Behavior(threshold=18500, unit="raw"),
+                             linker_script=open(LD, encoding="utf-8").read())
+    assert "include/config.h" in files
+    cfg = files["include/config.h"]
+    # provenance is preserved INSIDE the config: a register offset is not the
+    # same kind of value as one the user chose, and blurring them invites
+    # someone to "fix" an address that was cross-checked against the datasheet
+    assert "NOT chosen by you" in cfg
+    assert "APP_THRESHOLD_RAW" in cfg
+
+
+@pytest.mark.skipif(find_arm_gcc() is None, reason="no arm-none-eabi-gcc")
+def test_changing_config_changes_the_firmware():
+    """The proof that config.h is wired: edit a value, get a different binary.
+    If these ever compile identically the header has become decoration."""
+    import hashlib
+    import subprocess
+    import tempfile
+
+    files = generate_project(_plan_from_map(),
+                             Behavior(threshold=18500, unit="raw"),
+                             linker_script=open(LD, encoding="utf-8").read())
+
+    def build(mutate):
+        d = tempfile.mkdtemp()
+        for rel, content in files.items():
+            path = os.path.join(d, rel)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(mutate(rel, content))
+        proc = subprocess.run(
+            [find_arm_gcc(), "-mcpu=cortex-m4", "-mthumb", "-Os", "-ffreestanding",
+             "-nostdlib", "-nostartfiles", "-Wall", "-Wextra", "-Iinclude",
+             "-T", "link/stm32f4.ld", "src/main.c", "-o", "fw.elf", "-lgcc"],
+            cwd=d, capture_output=True, text=True, timeout=240)
+        assert proc.returncode == 0, proc.stderr[:500]
+        assert "warning:" not in proc.stderr, proc.stderr[:400]
+        with open(os.path.join(d, "fw.elf"), "rb") as f:
+            return hashlib.sha256(f.read()).hexdigest()
+
+    base = build(lambda r, c: c)
+    addr = build(lambda r, c: c.replace("0x77u", "0x76u")
+                 if r == "include/config.h" else c)
+    thr = build(lambda r, c: c.replace("18500u", "19000u")
+                if r == "include/config.h" else c)
+    assert base != addr, "the bus address in config.h is not wired to anything"
+    assert base != thr, "the threshold in config.h is not wired to anything"
