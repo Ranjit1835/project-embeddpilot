@@ -19,6 +19,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Conversation, type Turn } from "../../../components/workspace/Conversation";
+import { CheckStrip } from "../../../components/workspace/CheckStrip";
 import { RepoPane } from "../../../components/workspace/RepoPane";
 import {
   analyze,
@@ -28,6 +29,7 @@ import {
   startBuild,
 } from "../../../lib/v2-api";
 import type { AnalyzeResponse, BuildResult, V2Question } from "../../../lib/v2-types";
+import { railFrom } from "../../../lib/v2-view";
 
 type Phase = "idle" | "analysing" | "asking" | "ready" | "building" | "done";
 
@@ -206,6 +208,9 @@ export default function Workspace() {
       </header>
 
       {banner}
+      {result && (
+        <CheckStrip items={railFrom(result.checks, result.stages, result.failures)} />
+      )}
 
       {/* one screen: conversation and repo side by side */}
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
