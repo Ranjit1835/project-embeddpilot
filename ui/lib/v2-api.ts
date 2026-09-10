@@ -152,7 +152,18 @@ export function errorText(e: unknown): string {
  *  one they cannot correct, so this never analyses straight through. */
 export async function requirementFromFile(
   file: File,
-): Promise<{ filename: string; text: string; pages: number | null; chars: number }> {
+): Promise<{
+  filename: string;
+  text: string;
+  pages: number | null;
+  chars: number;
+  /** Set when the backend judges the read needs confirming before it is used. */
+  review_required?: boolean;
+  /** The backend's own words when the text was machine-read from an image.
+   *  Carried through so the caller can restate it verbatim — dropping it here
+   *  would silently downgrade the loudest warning the image path produces. */
+  transcription_warning?: string;
+}> {
   const form = new FormData();
   form.append("file", file);
   const path = "/api/v2/requirement-from-file";

@@ -180,6 +180,10 @@ export default function Workspace() {
           r.pages ? ` from ${r.pages} pages` : ""
         }. Check it in the box before sending; extraction can be lossy.`,
       );
+      // An image was READ BY A MODEL, not parsed. Restate the backend's warning
+      // verbatim: a confidently misread 0x77 looks exactly like a correct one,
+      // and every check downstream would then pass against the wrong address.
+      if (r.transcription_warning) say(r.transcription_warning, "warn" as never);
     } catch (e) {
       say(errorText(e), "bad" as never);
     } finally {

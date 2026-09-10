@@ -61,8 +61,38 @@ class LLMProvider(Protocol):
     def complete_json(self, system: str, user: str) -> dict: ...
 
 
+class VisionCapableProvider(Protocol):
+    """A provider that can transcribe an image to text.
+
+    This is a SEPARATE, explicitly-named capability — it does NOT extend
+    complete_json.  Vision transcription is a fundamentally different
+    operation (binary image in, prose out) and must never silently replace
+    or overload the JSON-generation contract that the rest of the pipeline
+    depends on.
+    """
+
+    name: str
+
+    def transcribe_image(self, image_bytes: bytes, mime_type: str) -> str:
+        """Send `image_bytes` to a vision model and return a plain-text
+        transcription.
+
+        The transcription is LOSSY and UNCERTAIN.  Callers MUST label the
+        result as a machine read that requires human review before it is
+        used as a requirement.  Raises ProviderError on any failure —
+        callers must NOT silently degrade to a blank or partial read
+        presented as complete.
+        """
+        ...
+
+
 class GroqProvider:
     """Groq chat completions with JSON-object response format."""
+
+    # Vision transcription is not supported on this provider.  The flag is
+    # checked by callers so they can refuse honestly rather than failing
+    # with a cryptic AttributeError.
+    has_vision: bool = False
 
     def __init__(self, model: str | None = None):
         self.model = model or os.environ.get("GROQ_MODEL", DEFAULT_GROQ_MODEL)
@@ -162,6 +192,9 @@ class NVIDIAProvider:
     window, so the both-maps V1.7 prompt (device map + MCU map + complete-driver
     output) fits where Groq's ~8000 TPM free tier 413s."""
 
+    # Vision transcription is not supported on this provider.
+    has_vision: bool = False
+
     def __init__(self, model: str | None = None):
         self.model = model or os.environ.get("NVIDIA_MODEL", DEFAULT_NVIDIA_MODEL)
         self.name = f"nvidia/{self.model}"
@@ -237,7 +270,15 @@ FREE_GEMINI_MODELS = {
 class GeminiProvider:
     """Google Gemini through the OpenAI-compatible endpoint. Free-tier models have
     a large (~1M-token) context window, so the both-maps V1.7 job fits (like
-    NVIDIA, unlike Groq's 8000-TPM free tier)."""
+    NVIDIA, unlike Groq's 8000-TPM free tier).
+
+    GeminiProvider is the only provider that supports vision transcription
+    (has_vision = True).  The OpenAI-compatible endpoint accepts image_url
+    parts in the messages array, which Gemini's multimodal models handle
+    natively.
+    """
+
+    has_vision: bool = True
 
     def __init__(self, model: str | None = None):
         self.model = model or os.environ.get("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
@@ -303,8 +344,123 @@ class GeminiProvider:
             )
         return _parse_json(text)
 
+    def transcribe_image(self, image_bytes: bytes, mime_type: str) -> str:
+        """Transcribe `image_bytes` to plain text via Gemini's vision capability.
+
+        The Gemini OpenAI-compatible endpoint accepts an `image_url` part
+        carrying a base64 data URI in the messages array.  The model is asked
+        to transcribe faithfully and to flag any uncertainty explicitly rather
+        than smoothing it over — an uncertain transcription must surface as
+        such, not vanish into a clean-looking but invented read.
+
+        Raises ProviderError on any failure.  Callers MUST NOT catch this and
+        substitute a blank or partial transcription — a refusal is the correct
+        degradation; a fabricated read is not.
+        """
+        import base64
+        import openai
+
+        b64 = base64.b64encode(image_bytes).decode("ascii")
+        data_uri = f"data:{mime_type};base64,{b64}"
+
+        # Thinking model (gemini-3.6-flash): reasoning tokens share the output
+        # budget, so we need a generous max_tokens ceiling.  24000 was measured
+        # sufficient for a one-page datasheet image; 8000 truncated output.
+        max_tokens = int(os.environ.get("GEMINI_MAX_TOKENS", "24000"))
+
+        system_msg = (
+            "You are a technical transcription assistant for an embedded-systems "
+            "tool. Your only job is to convert what is written in the supplied "
+            "image into clean, plain text that can be pasted into a requirement "
+            "document.\n\n"
+            "TRANSCRIPTION RULES:\n"
+            "1. Reproduce all text exactly as written, including numbers, units, "
+            "pin names, part numbers, addresses, and register names.\n"
+            "2. Preserve structure: headings, bullet points, tables (render each "
+            "table row as a comma-separated line), and numbered lists.\n"
+            "3. If any portion is illegible or ambiguous, write "
+            "[ILLEGIBLE: <description>] or [UNCERTAIN: <what you think it says>] "
+            "in-line. Do NOT silently omit or guess silently.\n"
+            "4. If the image contains a diagram or schematic rather than text, "
+            "write a brief structural description in square brackets, e.g. "
+            "[DIAGRAM: block diagram showing MCU connected to sensor via I2C].\n"
+            "5. Output ONLY the transcribed content. No preamble, no commentary, "
+            "no summary. Start directly with the first word on the image."
+        )
+        user_content = [
+            {"type": "image_url", "image_url": {"url": data_uri}},
+            {"type": "text", "text": "Transcribe all text in this image."},
+        ]
+
+        delay = float(os.environ.get("GEMINI_RETRY_DELAY", "10"))
+        resp = None
+        for attempt in range(3):
+            try:
+                resp = self._client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_msg},
+                        {"role": "user", "content": user_content},
+                    ],
+                    temperature=0.1,   # low temperature: we want a faithful read
+                    max_tokens=max_tokens,
+                )
+                break
+            except openai.APIStatusError as e:
+                if e.status_code in (429, 503) and attempt < 2:
+                    time.sleep(delay)
+                    delay = min(delay * 2, 60)
+                    continue
+                raise ProviderError(
+                    f"gemini vision API error {e.status_code}: {e.message}"
+                ) from e
+            except openai.APIConnectionError as e:
+                raise ProviderError(f"gemini vision connection error: {e}") from e
+
+        if resp is None:
+            raise ProviderError("gemini vision: no response received")
+
+        choice = resp.choices[0]
+        text = (choice.message.content or "").strip()
+
+        if getattr(choice, "finish_reason", None) == "length":
+            # Output hit the token ceiling.  A truncated transcription is worse
+            # than a refusal — it looks complete when it is not.  Raise so the
+            # caller can surface this as a refusal rather than a partial read.
+            raise ProviderError(
+                f"image transcription truncated at the {max_tokens}-token ceiling "
+                "(finish_reason=length): the image may be too large or too dense. "
+                "Raise GEMINI_MAX_TOKENS or split the image into smaller sections."
+            )
+
+        if not text:
+            raise ProviderError(
+                "gemini vision returned an empty transcription — the image may be "
+                "blank, unreadable, or in a format the model cannot process. "
+                "Upload the requirement as a PDF or text file instead."
+            )
+
+        return text
+
 
 PROVIDERS = {"nvidia": NVIDIAProvider, "groq": GroqProvider, "gemini": GeminiProvider}
+
+
+def make_vision_provider() -> "GeminiProvider":
+    """Return a vision-capable provider, or raise ProviderError if none is configured.
+
+    Currently only GeminiProvider supports image transcription.  GEMINI_API_KEY
+    must be set.  This function raises ProviderError rather than returning None
+    so every call site gets an honest, specific refusal — never a silent fallback
+    to a blank transcription or a fabricated read.
+    """
+    if not os.environ.get("GEMINI_API_KEY") and not os.environ.get("GOOGLE_API_KEY"):
+        raise ProviderError(
+            "image transcription requires a vision-capable model (Gemini), but "
+            "GEMINI_API_KEY is not set. Set it in the environment to enable image "
+            "uploads, or paste the requirement text directly."
+        )
+    return GeminiProvider()
 
 
 def make_provider() -> "LLMProvider":
@@ -328,19 +484,39 @@ def make_provider() -> "LLMProvider":
 
 
 class MockProvider:
-    """Deterministic provider for tests: pops canned responses in order."""
+    """Deterministic provider for tests: pops canned responses in order.
 
-    def __init__(self, responses: list[dict]):
+    Pass `vision_response` to make this provider simulate vision capability.
+    Leave it as None (the default) to simulate a provider that does not
+    support vision — `transcribe_image` will then raise ProviderError, just
+    as a real non-vision provider would.
+    """
+
+    def __init__(self, responses: list[dict],
+                 vision_response: str | None = None):
         self.name = "mock"
         self.context_window = 1_000_000  # tests never hit the fit check
         self._responses = list(responses)
         self.calls: list[tuple[str, str]] = []  # (system, user) per call
+        self._vision_response = vision_response
+        # has_vision mirrors GeminiProvider's attribute so tests can inspect it
+        self.has_vision: bool = vision_response is not None
+        self.vision_calls: list[tuple[bytes, str]] = []  # (image_bytes, mime)
 
     def complete_json(self, system: str, user: str) -> dict:
         self.calls.append((system, user))
         if not self._responses:
             raise ProviderError("mock provider exhausted")
         return self._responses.pop(0)
+
+    def transcribe_image(self, image_bytes: bytes, mime_type: str) -> str:
+        self.vision_calls.append((image_bytes, mime_type))
+        if self._vision_response is None:
+            raise ProviderError(
+                "this mock provider was not configured with a vision_response — "
+                "vision transcription is not available"
+            )
+        return self._vision_response
 
 
 def _parse_json(text: str) -> dict:

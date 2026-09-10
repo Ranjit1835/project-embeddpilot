@@ -230,9 +230,16 @@ def test_requirement_from_a_text_file(client):
     assert body["review_required"] is True
 
 
-def test_image_requirement_is_refused_honestly(client):
-    """Not silently ignored and not fabricated: images need a vision model and
-    that path is not wired, so say which and offer the alternative."""
+def test_image_requirement_is_refused_honestly_when_no_provider(client,
+                                                                  monkeypatch):
+    """When no vision provider is configured, the refusal must name the gap and
+    offer a text/PDF alternative — never silently fail or fabricate a read."""
+    from generation.provider import ProviderError
+
+    def _no_vision():
+        raise ProviderError("GEMINI_API_KEY is not set")
+
+    monkeypatch.setattr("generation.provider.make_vision_provider", _no_vision)
     r = client.post("/api/v2/requirement-from-file",
                     files={"file": ("spec.png", b"\x89PNG\r\n", "image/png")})
     assert r.status_code == 415

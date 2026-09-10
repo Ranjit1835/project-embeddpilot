@@ -642,13 +642,75 @@ async def v2_requirement_from_file(file: UploadFile = File(...)):
     ext = os.path.splitext(name)[1].lower()
 
     if ext in REQUIREMENT_IMAGE_EXT:
-        # Honest gap rather than a silent failure or a fabricated read: images
-        # need a vision-capable model and that path is not wired yet.
-        raise HTTPException(
-            415,
-            f"'{name}' is an image. Reading a requirement from an image needs a "
-            "vision-capable model, which is not wired up yet — paste the text, "
-            "or upload it as a PDF, Word or text file.")
+        # Transcribe the image to text via a vision-capable model (Gemini),
+        # then return the transcription for USER REVIEW before any analysis.
+        # This preserves the same invariant as the PDF path: the user sees and
+        # confirms what was read before it reaches the spec pipeline.
+        #
+        # If no vision provider is available, or the call fails for any reason,
+        # we refuse honestly — exactly as the old code did, never substituting
+        # a blank or partial read.
+        raw = await file.read()
+        if len(raw) > 20 * 1024 * 1024:
+            raise HTTPException(413, "image files are limited to 20MB")
+        if not raw:
+            raise HTTPException(422, f"'{name}' is empty")
+
+        # Infer MIME type from extension for the data URI.
+        _MIME = {
+            ".png": "image/png",
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".gif": "image/gif",
+            ".webp": "image/webp",
+            ".bmp": "image/bmp",
+        }
+        mime_type = _MIME.get(ext, "image/png")
+
+        try:
+            from generation.provider import ProviderError, make_vision_provider
+            vision_provider = make_vision_provider()
+        except Exception as exc:
+            # No vision provider configured (missing key, import error, etc.).
+            # Refuse honestly — this is a correct outcome.
+            raise HTTPException(
+                415,
+                f"'{name}' is an image. Transcribing it requires a "
+                "vision-capable model (Gemini), but none is configured: "
+                f"{exc}. Set GEMINI_API_KEY, or paste the requirement text "
+                "directly, or upload it as a PDF, Word or text file."
+            )
+
+        try:
+            transcription = vision_provider.transcribe_image(raw, mime_type)
+        except Exception as exc:
+            # Transcription failed (network error, model error, truncated
+            # output).  Refuse with the specific reason — never substitute a
+            # blank or partial read presented as complete.
+            raise HTTPException(
+                422,
+                f"Could not transcribe '{name}': {exc}. Upload the requirement "
+                "as a PDF or text file, or paste the text directly."
+            )
+
+        return {
+            "filename": name,
+            "text": transcription,
+            "pages": None,
+            "chars": len(transcription),
+            # Image transcription is inherently lossy — the model may miss
+            # text, misread characters, or mark portions as [ILLEGIBLE].  The
+            # user MUST review and confirm before this feeds analysis.
+            "review_required": True,
+            # Surface the warning AS loudly as the PDF path does for scanned
+            # pages — the caller/UI must display this, not hide it.
+            "transcription_warning": (
+                "MACHINE READ (LOSSY): this text was transcribed from an image "
+                "by a vision model and has NOT been verified. It may contain "
+                "errors, omissions, or [ILLEGIBLE] markers. Review it carefully "
+                "before confirming it as your requirement."
+            ),
+        }
 
     if ext not in REQUIREMENT_TEXT_EXT | REQUIREMENT_DOC_EXT:
         raise HTTPException(
