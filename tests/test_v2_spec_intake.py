@@ -32,10 +32,13 @@ from generation.spec import (
     MISSING_UNITS,
     SCHEMA_PATH,
     ApplicationSpec,
+    Behavior,
+    Device,
     Field,
     SpecError,
     SpecIncompleteError,
     SpecProvenanceError,
+    Trigger,
     analyze_requirement,
     answer_questions,
     assert_spec_complete,
@@ -176,7 +179,9 @@ def test_vague_requirement_produces_questions_and_no_invented_values():
         MISSING_TARGET,            # no board / no MCU
         AMBIGUOUS_CHIP,            # "a temp sensor" / "a relay" — which part?
         MISSING_INTERFACE,         # devices named with no bus
-        MISSING_ROLE,
+        # MISSING_ROLE is deliberately absent: "turn on a relay" names the relay
+        # in the behaviour's action, which states what it is for. See
+        # test_role_is_not_asked_when_a_behaviour_already_states_it.
         MISSING_TRIGGER_SOURCE,
         MISSING_COMPARATOR,
         MISSING_THRESHOLD,         # "when it gets hot" has no number
@@ -184,6 +189,81 @@ def test_vague_requirement_produces_questions_and_no_invented_values():
         MISSING_FAILURE_BEHAVIOR,  # nothing said about a failed read
         MISSING_OUTPUT_TARGET,
     }
+
+
+# --- role: asked when unknown, not asked when the requirement already said it ----
+
+def _f(v):
+    return Field(value=v, provenance="user", evidence=str(v))
+
+
+def _spec(devices, behaviours):
+    return ApplicationSpec(requirement_text="t", devices=devices,
+                           behaviors=behaviours)
+
+
+def _roles_asked(spec):
+    return [q for q in detect_ambiguities(spec) if q.kind == MISSING_ROLE]
+
+
+def test_role_is_not_asked_when_a_behaviour_action_names_the_device():
+    """"turn on the relay on PB5" states what the relay is for. Asking anyway
+    blocks the build on an answer that reaches no generated code."""
+    dev = Device(name=_f("relay"), interface=_f("GPIO"), pin=_f("PB5"))
+    spec = _spec([dev], [Behavior(action=_f("turn on the relay on PB5"))])
+    assert _roles_asked(spec) == []
+
+
+def test_role_is_not_asked_when_the_device_is_the_trigger_source():
+    dev = Device(name=_f("BMP180"), interface=_f("I2C"), address=_f("0x77"))
+    beh = Behavior(trigger=Trigger(source=_f("BMP180"), comparator=_f(">"),
+                                   threshold=_f(18500)),
+                   action=_f("turn on the relay"))
+    assert _roles_asked(_spec([dev], [beh])) == []
+
+
+def test_role_is_still_asked_when_nothing_mentions_the_device():
+    """The suppression must be narrow. A device no behaviour refers to has an
+    unstated job, and that question still has to be asked."""
+    dev = Device(name=_f("SSD1306"), interface=_f("I2C"), address=_f("0x3C"))
+    beh = Behavior(trigger=Trigger(source=_f("BMP180")),
+                   action=_f("turn on the relay on PB5"))
+    asked = _roles_asked(_spec([dev], [beh]))
+    assert len(asked) == 1 and asked[0].field == "devices[0].role"
+
+
+def test_role_suppression_survives_the_device_being_renamed():
+    """Answering the part-number question renames 'relay' to 'plain GPIO
+    output' while the action still reads 'the relay on PB5'. Matching the pin
+    as well as the name keeps the question closed instead of re-opening it."""
+    dev = Device(name=_f("plain GPIO output"), interface=_f("GPIO"),
+                 pin=_f("PB5"))
+    spec = _spec([dev], [Behavior(action=_f("turn on the relay on PB5"))])
+    assert _roles_asked(spec) == []
+
+
+def test_role_match_does_not_fire_on_a_substring():
+    """'PB5' must not be satisfied by 'PB50' — a near-miss pin would close a
+    question about a different device entirely."""
+    dev = Device(name=_f("buzzer"), interface=_f("GPIO"), pin=_f("PB5"))
+    spec = _spec([dev], [Behavior(action=_f("drive the siren on PB50"))])
+    assert len(_roles_asked(spec)) == 1
+
+
+def test_detect_and_completeness_check_agree_about_role():
+    """These two MUST use the same condition. If detect stops asking while the
+    completeness check still demands an answer, the spec reports zero open
+    questions and then fails hard — a dead end with nothing on screen to fix."""
+    dev = Device(name=_f("relay"), interface=_f("GPIO"), pin=_f("PB5"))
+    spec = _spec([dev], [Behavior(action=_f("turn on the relay on PB5"))])
+    assert _roles_asked(spec) == []
+    try:
+        assert_spec_complete(spec)
+    except SpecIncompleteError as exc:
+        assert "role" not in str(exc).lower(), (
+            f"detect_ambiguities suppressed the role question but "
+            f"assert_spec_complete still demands it: {exc}"
+        )
 
 
 def test_questions_are_specific_and_answerable():

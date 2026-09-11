@@ -825,6 +825,57 @@ def _device_label(dev: Device, index: int) -> str:
     return f"device #{index + 1}"
 
 
+def _mentions(text: str, token: str) -> bool:
+    """Does `text` name `token` on word-ish boundaries? So 'PB5' does not match
+    'PB50', and 'relay' does not match 'relays'."""
+    if not token:
+        return False
+    hay, needle = text.lower(), token.lower()
+    i = hay.find(needle)
+    while i != -1:
+        before = " " if i == 0 else hay[i - 1]
+        after = " " if i + len(needle) >= len(hay) else hay[i + len(needle)]
+        if not (before.isalnum() or before == "_") and \
+                not (after.isalnum() or after == "_"):
+            return True
+        i = hay.find(needle, i + 1)
+    return False
+
+
+def _role_is_stated(spec: ApplicationSpec, dev: Device) -> bool:
+    """Has the spec ALREADY said what this device is for?
+
+    A behaviour that reads a device as its trigger source, or names it in its
+    action, has stated that device's job as plainly as a `role` answer would.
+    Asking anyway blocks the build on an answer that changes nothing: `role`
+    reaches no generated code (app_worker never reads it, and the read plan's
+    measurand arrives as an explicit `measurement` argument) — it only labels
+    the device on screen. "when the BMP180 reads above X, turn on the relay on
+    PB5" says what both parts are for.
+
+    This is NOT inference of a missing value: nothing is written into `role`.
+    It only declines to block on a question the requirement already answered.
+
+    Matches the PIN as well as the name because answering the part-number
+    question RENAMES a device ('relay' -> 'plain GPIO output') while the action
+    still reads 'the relay on PB5'. Keying on the name alone would re-open this
+    question the moment a different one was answered.
+    """
+    tokens = [str(f.value) for f in (dev.name, dev.pin) if f is not None]
+    if not tokens:
+        return False
+    for beh in spec.behaviors:
+        src = beh.trigger.source
+        if src is not None and any(
+                str(src.value).strip().lower() == t.strip().lower()
+                for t in tokens):
+            return True
+        if beh.action is not None and any(
+                _mentions(str(beh.action.value), t) for t in tokens):
+            return True
+    return False
+
+
 def detect_ambiguities(spec: ApplicationSpec) -> list[Question]:
     """Every question this spec still needs answered, derived purely from what
     is present and absent. Deterministic: no model, no randomness, same spec ->
@@ -862,7 +913,7 @@ def detect_ambiguities(spec: ApplicationSpec) -> list[Question]:
             qs.append(_q(f"{base}.interface", MISSING_INTERFACE,
                          f"How is the {label} connected - which interface?",
                          options=list(INTERFACES)))
-        if dev.role is None:
+        if dev.role is None and not _role_is_stated(spec, dev):
             qs.append(_q(f"{base}.role", MISSING_ROLE,
                          f"What is the {label} for in this application (what does "
                          "it measure, display or actuate)?"))
@@ -1233,7 +1284,12 @@ def assert_spec_complete(spec: ApplicationSpec) -> None:
         label = _device_label(dev, i)
         _require(f"Device {i + 1} part number", dev.name)
         _require(f"Device '{label}' interface", dev.interface)
-        _require(f"Device '{label}' role", dev.role)
+        # Same condition detect_ambiguities uses. These two MUST agree: if the
+        # question stops being asked while this still demands an answer, the
+        # spec reports zero open questions and then fails hard — a dead end with
+        # nothing on screen to resolve it.
+        if not _role_is_stated(spec, dev):
+            _require(f"Device '{label}' role", dev.role)
         iface = canonical_interface(dev.interface.value)
         if iface is None or iface not in INTERFACES:
             raise SpecIncompleteError(
