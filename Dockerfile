@@ -7,6 +7,11 @@ FROM python:3.12-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
         gcc libc6-dev gcc-arm-none-eabi libnewlib-arm-none-eabi \
         libnewlib-dev cppcheck curl ca-certificates \
+        # make and cmake: required by the repo-build check (WS4c). Without
+        # them the check is reported as 'skipped' and the README discloses
+        # that the repo build was not verified.  They are small packages and
+        # the correctness claim warrants the layer cost.
+        make cmake \
         # Renode is a .NET application and refuses to start without ICU:
         # "Couldn't find a valid ICU package installed on the system".
         # The slim base image does not carry it, so emulation died at machine

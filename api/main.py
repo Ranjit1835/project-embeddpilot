@@ -552,6 +552,7 @@ async def v2_capabilities():
     import shutil
 
     from validator.emulation_check import find_renode
+    from orchestration.targets import supported_targets
     from orchestration.v2_pipeline import find_arm_gcc
 
     try:
@@ -572,6 +573,8 @@ async def v2_capabilities():
             "renode": {"available": renode is not None, "path": renode},
             "cppcheck": {"available": shutil.which("cppcheck") is not None},
             "arduino_cli": {"available": shutil.which("arduino-cli") is not None},
+            "make": {"available": shutil.which("make") is not None},
+            "cmake": {"available": shutil.which("cmake") is not None},
         },
         # what each missing tool costs you, so the report is actionable rather
         # than a row of red crosses
@@ -584,7 +587,15 @@ async def v2_capabilities():
             "cppcheck": "without it, static analysis is skipped (V1 driver path)",
             "arduino_cli": "without it, the Arduino target's multi-core compile "
                            "is skipped (V1 driver path)",
+            "make": "without it, a generated Makefile repo is never built "
+                    "through its own build system — the repo_build check "
+                    "reports 'skipped' and 'buildable repo' stays a claim",
+            "cmake": "without it, the same is true of a generated CMake repo",
         },
+        # Which parts this pipeline can genuinely build for. Reported here so
+        # "can it do my chip?" is answerable without running a build and
+        # discovering the refusal at the end.
+        "targets_supported": supported_targets(),
         "buses_supported": ["I2C", "SPI"],
         "not_built": ["UART devices", "flashing to physical hardware",
                       "hardware dump-success prediction",
